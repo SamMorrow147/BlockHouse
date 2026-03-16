@@ -44,7 +44,7 @@ body {
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
@@ -63,6 +63,40 @@ body {
   align-items: center;
 }
 
+.wall-card .wall-content .wall-parametric-wrap {
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+
+.wall-card .wall-data-row {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.wall-card .wall-data-row .wall-data-summary {
+  flex: 1;
+  min-width: 0;
+}
+
+.wall-card .wall-data-row .sliding-door-column,
+.wall-card .wall-data-row .opening-diagram-column {
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  background: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .wall-card .wall-data-row {
+    flex-direction: column;
+  }
+}
+
 .wall-label {
   margin: 0 0 0.35rem 0;
   font-size: 0.8rem;
@@ -76,8 +110,7 @@ body {
 }
 
 .wall-parametric-wrap {
-  width: 100%;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
   padding: 0.5rem 0;
   border-top: 1px dashed #ccc;
 }
@@ -94,6 +127,14 @@ body {
   border-radius: 6px;
   padding: 0.5rem 0.75rem;
   margin-bottom: 0.5rem;
+  overflow: visible;
+}
+
+.wall-data-summary .sliding-door-wrap,
+.sliding-door-column .sliding-door-wrap,
+.opening-diagram-column .sliding-door-wrap {
+  overflow: visible;
+  min-width: 0;
 }
 
 .wall-data-summary strong {
