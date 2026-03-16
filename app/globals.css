@@ -1,0 +1,119 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #f5f5f0;
+  color: #1a1a1a;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  padding: 1rem 1.5rem;
+  background: #2d2d2d;
+  color: #fff;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  padding: 1rem;
+}
+
+.walls-grid {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.wall-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.wall-card h3 {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  background: #e8e8e8;
+  border-bottom: 1px solid #ddd;
+}
+
+.wall-card .wall-content {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.wall-label {
+  margin: 0 0 0.35rem 0;
+  font-size: 0.8rem;
+  color: #555;
+  font-weight: 500;
+}
+
+.wall-svg-wrap {
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+
+.wall-parametric-wrap {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0;
+  border-top: 1px dashed #ccc;
+}
+
+.wall-parametric-wrap .wall-label {
+  margin-bottom: 0.25rem;
+}
+
+.wall-data-summary {
+  width: 100%;
+  font-size: 0.8rem;
+  background: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.wall-data-summary strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.wall-data-summary ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.wall-data-summary li {
+  margin-bottom: 0.2rem;
+}
+
+.wall-card svg,
+.wall-card .wall-svg {
+  width: 100%;
+  height: auto;
+  max-height: 720px;
+  display: block;
+}

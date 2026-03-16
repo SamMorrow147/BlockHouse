@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 773.12 502.12">
+  <defs>
+    <style>
+      .cls-1 {
+        stroke-width: 1.5px;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4 {
+        fill: none;
+      }
+
+      .cls-1, .cls-2, .cls-4 {
+        stroke: #010101;
+      }
+
+      .cls-1, .cls-4 {
+        stroke-linecap: square;
+      }
+
+      .cls-5 {
+        font-family: CourierNewPS-BoldMT, 'Courier New';
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .cls-5, .cls-6, .cls-7 {
+        fill: #010101;
+      }
+
+      .cls-5, .cls-6, .cls-7, .cls-8 {
+        isolation: isolate;
+      }
+
+      .cls-6 {
+        font-size: 10px;
+      }
+
+      .cls-6, .cls-7, .cls-8 {
+        font-family: CourierNewPSMT, 'Courier New';
+      }
+
+      .cls-2 {
+        stroke-width: .6px;
+      }
+
+      .cls-3 {
+        stroke: #ababab;
+        stroke-dasharray: 6 4;
+        stroke-width: .8px;
+      }
+
+      .cls-7 {
+        font-size: 8px;
+      }
+
+      .cls-8 {
+        fill: #454545;
+        font-size: 8.5px;
+      }
+
+      .cls-4 {
+        stroke-width: 2px;
+      }
+    </style>
+  </defs>
+  <g id="Layer_1-2" data-name="Layer 1">
+    <line class="cls-4" x1="71.86" y1="32.35" x2="741.36" y2="32.35"/>
+    <line class="cls-4" x1="71.86" y1="38.35" x2="741.36" y2="38.35"/>
+    <line class="cls-4" x1="71.86" y1="44.35" x2="741.36" y2="44.35"/>
+    <line class="cls-4" x1="71.86" y1="410.35" x2="233.36" y2="410.35"/>
+    <line class="cls-4" x1="71.86" y1="416.35" x2="233.36" y2="416.35"/>
+    <line class="cls-4" x1="549.36" y1="410.35" x2="741.36" y2="410.35"/>
+    <line class="cls-4" x1="549.36" y1="416.35" x2="741.36" y2="416.35"/>
+    <rect class="cls-1" x="71.86" y="44.35" width="6" height="366"/>
+    <rect class="cls-1" x="735.36" y="44.35" width="6" height="366"/>
+    <rect class="cls-1" x="135.86" y="44.35" width="6" height="366"/>
+    <rect class="cls-1" x="227.36" y="44.35" width="6" height="366"/>
+    <rect class="cls-1" x="233.36" y="132.35" width="6" height="284"/>
+    <rect class="cls-1" x="543.36" y="132.35" width="6" height="284"/>
+    <rect class="cls-1" x="549.36" y="44.35" width="6" height="366"/>
+    <rect class="cls-1" x="233.36" y="112.35" width="316" height="10"/>
+    <rect class="cls-1" x="233.36" y="122.35" width="316" height="10"/>
+    <rect class="cls-1" x="297.36" y="44.35" width="6" height="68"/>
+    <rect class="cls-1" x="361.36" y="44.35" width="6" height="68"/>
+    <rect class="cls-1" x="425.36" y="44.35" width="6" height="68"/>
+    <rect class="cls-1" x="489.36" y="44.35" width="6" height="68"/>
+    <rect class="cls-3" x="239.36" y="132.35" width="310" height="284"/>
+    <line class="cls-3" x1="391.36" y1="132.35" x2="391.36" y2="416.35"/>
+    <rect class="cls-1" x="613.36" y="44.35" width="6" height="366"/>
+    <rect class="cls-1" x="677.36" y="44.35" width="6" height="366"/>
+    <line class="cls-2" x1="71.86" y1="456.35" x2="741.36" y2="456.35"/>
+    <line class="cls-2" x1="71.86" y1="450.35" x2="71.86" y2="462.35"/>
+    <line class="cls-2" x1="741.36" y1="450.35" x2="741.36" y2="462.35"/>
+    <text class="cls-6" transform="translate(283.59 470.35)"><tspan x="0" y="0">167.375&quot; TOTAL INTERIOR FRAMING (13&apos;-11&quot;)</tspan></text>
+    <line class="cls-2" x1="71.86" y1="440.35" x2="233.36" y2="440.35"/>
+    <line class="cls-2" x1="71.86" y1="435.35" x2="71.86" y2="445.35"/>
+    <line class="cls-2" x1="233.36" y1="435.35" x2="233.36" y2="445.35"/>
+    <text class="cls-6" transform="translate(116.6 434.35)"><tspan x="0" y="0">40.375&quot; LEFT</tspan></text>
+    <line class="cls-2" x1="233.36" y1="440.35" x2="549.36" y2="440.35"/>
+    <line class="cls-2" x1="549.36" y1="435.35" x2="549.36" y2="445.35"/>
+    <text class="cls-6" transform="translate(334.35 434.35)"><tspan x="0" y="0">79&quot; SLIDING DOOR RO</tspan></text>
+    <line class="cls-2" x1="549.36" y1="440.35" x2="741.36" y2="440.35"/>
+    <line class="cls-2" x1="741.36" y1="435.35" x2="741.36" y2="445.35"/>
+    <text class="cls-6" transform="translate(618.35 434.35)"><tspan x="0" y="0">48&quot; RIGHT</tspan></text>
+    <line class="cls-2" x1="31.86" y1="32.35" x2="31.86" y2="416.35"/>
+    <line class="cls-2" x1="25.86" y1="32.35" x2="37.86" y2="32.35"/>
+    <line class="cls-2" x1="25.86" y1="416.35" x2="37.86" y2="416.35"/>
+    <text class="cls-6" transform="translate(7.86 260.36) rotate(-90)"><tspan x="0" y="0">8&apos;-0&quot; (96&quot;)</tspan></text>
+    <line class="cls-2" x1="51.86" y1="132.35" x2="51.86" y2="416.35"/>
+    <line class="cls-2" x1="45.86" y1="132.35" x2="57.86" y2="132.35"/>
+    <line class="cls-2" x1="45.86" y1="416.35" x2="57.86" y2="416.35"/>
+    <text class="cls-6" transform="translate(37.86 310.36) rotate(-90)"><tspan x="0" y="0">5&apos;-11&quot; DOOR</tspan></text>
+    <text class="cls-5" transform="translate(71.86 10.35)"><tspan x="0" y="0">EAST WALL — INTERIOR FRAMING ELEVATION</tspan></text>
+    <text class="cls-8" transform="translate(38.6 496.35)"><tspan x="0" y="0">2×4 STUDS @ 16&quot; OC | DBL TOP PLATE | SINGLE BOTTOM PLATE | DBL 2×10 HEADER | SLIDING DOOR 6&apos;7&quot;×5&apos;11&quot; | 1&quot; GAP TO CMU ALL SIDES | SCALE: 4px = 1&quot;</tspan></text>
+    <text class="cls-7" transform="translate(142.25 227.35)"><tspan x="0" y="0">LEFT</tspan></text>
+    <text class="cls-7" transform="translate(135.05 239.35)"><tspan x="0" y="0">40.375&quot;</tspan></text>
+    <text class="cls-7" transform="translate(362.55 262.35)"><tspan x="0" y="0">SLIDING DOOR</tspan></text>
+    <text class="cls-7" transform="translate(362.55 274.35)"><tspan x="0" y="0">6&apos;7&quot; × 5&apos;11&quot;</tspan></text>
+    <text class="cls-7" transform="translate(614.15 227.35)"><tspan x="0" y="0">RIGHT SECTION</tspan></text>
+    <text class="cls-7" transform="translate(594.95 239.35)"><tspan x="0" y="0">48&quot; / 3 BAYS @ 16&quot; OC</tspan></text>
+  </g>
+</svg>

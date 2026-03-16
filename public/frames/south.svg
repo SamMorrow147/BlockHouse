@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1268.89 1027.8">
+  <defs>
+    <style>
+      .cls-1 {
+        stroke-width: 1.5px;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5 {
+        fill: none;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-5 {
+        stroke: #010101;
+      }
+
+      .cls-1, .cls-5 {
+        stroke-linecap: square;
+      }
+
+      .cls-6 {
+        font-family: CourierNewPS-BoldMT, 'Courier New';
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .cls-6, .cls-7, .cls-8 {
+        fill: #010101;
+      }
+
+      .cls-6, .cls-7, .cls-8, .cls-9 {
+        isolation: isolate;
+      }
+
+      .cls-7 {
+        font-size: 10px;
+      }
+
+      .cls-7, .cls-8, .cls-9 {
+        font-family: CourierNewPSMT, 'Courier New';
+      }
+
+      .cls-2 {
+        stroke-width: .6px;
+      }
+
+      .cls-3 {
+        stroke-width: .5px;
+      }
+
+      .cls-4 {
+        stroke: #ababab;
+        stroke-dasharray: 6 4;
+        stroke-width: .8px;
+      }
+
+      .cls-8 {
+        font-size: 8px;
+      }
+
+      .cls-9 {
+        fill: #454545;
+        font-size: 8.5px;
+      }
+
+      .cls-5 {
+        stroke-width: 2px;
+      }
+    </style>
+  </defs>
+  <g id="Layer_1-2" data-name="Layer 1">
+    <line class="cls-5" x1="1" y1="558.02" x2="1149" y2="558.02"/>
+    <line class="cls-5" x1="1" y1="564.02" x2="1149" y2="564.02"/>
+    <line class="cls-5" x1="1" y1="570.02" x2="1149" y2="570.02"/>
+    <line class="cls-5" x1="1" y1="936.02" x2="1149" y2="936.02"/>
+    <line class="cls-5" x1="1" y1="942.02" x2="1149" y2="942.02"/>
+    <rect class="cls-1" x="1143" y="570.02" width="6" height="366" transform="translate(2292 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="1262.14" y="570.02" width="6" height="366"/>
+    <rect class="cls-1" x="1079" y="570.02" width="6" height="366" transform="translate(2164 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="1015" y="570.02" width="6" height="366" transform="translate(2036 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="951" y="570.02" width="6" height="366" transform="translate(1908 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="887" y="570.02" width="6" height="366" transform="translate(1780 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="823" y="570.02" width="6" height="366" transform="translate(1652 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="759" y="570.02" width="6" height="366" transform="translate(1524 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="737" y="570.02" width="6" height="366" transform="translate(1480 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="731" y="570.02" width="6" height="16" transform="translate(1468 1156.05) rotate(-180)"/>
+    <rect class="cls-1" x="731" y="804.02" width="6" height="132" transform="translate(1468 1740.05) rotate(-180)"/>
+    <rect class="cls-1" x="617" y="570.02" width="6" height="16" transform="translate(1240 1156.05) rotate(-180)"/>
+    <rect class="cls-1" x="617" y="804.02" width="6" height="132" transform="translate(1240 1740.05) rotate(-180)"/>
+    <rect class="cls-1" x="611" y="570.02" width="6" height="366" transform="translate(1228 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="617" y="586.02" width="120" height="10" transform="translate(1354 1182.05) rotate(-180)"/>
+    <rect class="cls-1" x="617" y="596.02" width="120" height="10" transform="translate(1354 1202.05) rotate(-180)"/>
+    <rect class="cls-1" x="680" y="570.02" width="6" height="16" transform="translate(1366 1156.05) rotate(-180)"/>
+    <rect class="cls-1" x="617" y="798.02" width="120" height="6" transform="translate(1354 1602.05) rotate(-180)"/>
+    <rect class="cls-1" x="680" y="804.02" width="6" height="132" transform="translate(1366 1740.05) rotate(-180)"/>
+    <rect class="cls-4" x="623" y="606.02" width="108" height="192" transform="translate(1354 1404.05) rotate(-180)"/>
+    <rect class="cls-1" x="541" y="570.02" width="6" height="366" transform="translate(1088 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="477" y="570.02" width="6" height="366" transform="translate(960 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="413" y="570.02" width="6" height="366" transform="translate(832 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="349" y="570.02" width="6" height="366" transform="translate(704 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="285" y="570.02" width="6" height="366" transform="translate(576 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="221" y="570.02" width="6" height="366" transform="translate(448 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="157" y="570.02" width="6" height="366" transform="translate(320 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="93" y="570.02" width="6" height="366" transform="translate(192 1506.05) rotate(-180)"/>
+    <rect class="cls-1" x="29" y="570.02" width="6" height="366" transform="translate(64 1506.05) rotate(-180)"/>
+    <line class="cls-2" x1="1" y1="982.02" x2="1149" y2="982.02"/>
+    <line class="cls-2" x1="1149" y1="988.02" x2="1149" y2="976.02"/>
+    <line class="cls-2" x1="1268.14" y1="976.02" x2="1268.14" y2="988.02"/>
+    <text class="cls-7" transform="translate(560.45 996.02)"><tspan x="0" y="0">287&quot; TOTAL INTERIOR FRAMING (23&apos;-11&quot;)</tspan></text>
+    <line class="cls-2" x1="737" y1="966.02" x2="1149" y2="966.02"/>
+    <line class="cls-2" x1="1149" y1="971.02" x2="1149" y2="961.02"/>
+    <line class="cls-2" x1="737" y1="971.02" x2="737" y2="961.02"/>
+    <text class="cls-7" transform="translate(970.01 960.02)"><tspan x="0" y="0">103&quot; </tspan></text>
+    <line class="cls-2" x1="617" y1="966.02" x2="737" y2="966.02"/>
+    <line class="cls-2" x1="617" y1="971.02" x2="617" y2="961.02"/>
+    <text class="cls-7" transform="translate(675.01 960.02)"><tspan x="0" y="0">30&quot; </tspan></text>
+    <line class="cls-2" x1="1" y1="966.02" x2="617" y2="966.02"/>
+    <line class="cls-2" x1="1268.14" y1="961.02" x2="1268.14" y2="971.02"/>
+    <text class="cls-7" transform="translate(339.01 960.02)"><tspan x="0" y="0">154&quot; </tspan></text>
+    <line class="cls-2" x1="1189" y1="942.02" x2="1189" y2="558.02"/>
+    <line class="cls-2" x1="1183" y1="558.02" x2="1195" y2="558.02"/>
+    <line class="cls-2" x1="1183" y1="942.02" x2="1195" y2="942.02"/>
+    <text class="cls-7" transform="translate(1203 786.04) rotate(-90) scale(1 -1)"><tspan x="0" y="0">8&apos;-0&quot; (96&quot;)</tspan></text>
+    <line class="cls-2" x1="1171" y1="798.02" x2="1171" y2="606.02"/>
+    <line class="cls-2" x1="1165" y1="606.02" x2="1177" y2="606.02"/>
+    <line class="cls-2" x1="1165" y1="798.02" x2="1177" y2="798.02"/>
+    <text class="cls-7" transform="translate(1185 739.04) rotate(-90) scale(1 -1)"><tspan x="0" y="0">48&quot; (4&apos;-0&quot;)</tspan></text>
+    <line class="cls-2" x1="1171" y1="942.02" x2="1171" y2="798.02"/>
+    <line class="cls-2" x1="1165" y1="942.02" x2="1177" y2="942.02"/>
+    <text class="cls-7" transform="translate(1185 907.04) rotate(-90) scale(1 -1)"><tspan x="0" y="0">36&quot; SILL HT</tspan></text>
+    <text class="cls-6" transform="translate(662.18 536.02)"><tspan x="0" y="0">SOUTH WALL — INTERIOR FRAMING ELEVATION</tspan></text>
+    <text class="cls-9" transform="translate(294 1022.02)"><tspan x="0" y="0">2×4 STUDS @ 16&quot; OC | DBL TOP PLATE | SINGLE BOTTOM PLATE | DBL 2×10 HEADER | WINDOW 2&apos;6&quot;×4&apos; | SILL @ 36&quot; | 1&quot; GAP TO CMU ALL SIDES | SCALE: 4px = 1&quot;</tspan></text>
+    <text class="cls-8" transform="translate(971.81 753.02) rotate(-180) scale(1 -1)"><tspan x="0" y="0">LEFT SECTION</tspan></text>
+    <text class="cls-8" transform="translate(995.81 765.02) rotate(-180) scale(1 -1)"><tspan x="0" y="0">103&quot; / 6 BAYS @ 16&quot; OC</tspan></text>
+    <text class="cls-8" transform="translate(340.21 753.02) rotate(-180) scale(1 -1)"><tspan x="0" y="0">RIGHT SECTION</tspan></text>
+    <text class="cls-8" transform="translate(361.81 765.02) rotate(-180) scale(1 -1)"><tspan x="0" y="0">154&quot; / 9 BAYS @ 16&quot; OC</tspan></text>
+    <text class="cls-8" transform="translate(698.61 696.02)"><tspan x="0" y="0">2&apos;6&quot; × 4&apos;</tspan></text>
+    <text class="cls-8" transform="translate(698.61 708.02)"><tspan x="0" y="0">WINDOW RO</tspan></text>
+    <line class="cls-3" x1="455.16" y1="548" x2="455.16" y2="0"/>
+  </g>
+</svg>
