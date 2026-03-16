@@ -351,7 +351,7 @@ export function WallElevationView({
 
           const positions: number[] = [];
           for (let x = 0; x <= wallLen; x += OC) positions.push(x);
-          if (positions[positions.length - 1] < wallLen) positions.push(wallLen);
+          if (wallLen - positions[positions.length - 1] > JOIST_W * 2) positions.push(wallLen);
 
           const jFill   = "#e8e4dc";
           const jStroke = "#444";

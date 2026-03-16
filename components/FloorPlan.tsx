@@ -274,8 +274,6 @@ export function FloorPlan() {
           .fp-stair-cut   { fill: none; stroke: #333; stroke-width: 1.2px; stroke-dasharray: 6 3; }
           .fp-up-arrow    { fill: none; stroke: #333; stroke-width: 1px; marker-end: url(#arrowhead); }
           .fp-fixture-lbl { fill: #666; font-size: 7.5px; font-family: ui-monospace, monospace; text-anchor: middle; }
-          .fp-person-head { fill: none; stroke: #888; stroke-width: 1px; }
-          .fp-person-body { fill: none; stroke: #888; stroke-width: 1px; }
         `}</style>
       <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
         <path d="M0,0 L0,6 L6,3 z" fill="#333" />
@@ -353,28 +351,6 @@ export function FloorPlan() {
       <rect className="fp-room"
         x={px(FW_IN)} y={py(FN_IN)}
         width={pf(FE_IN - FW_IN)} height={pf(FS_IN - FN_IN)} />
-
-      {/* ── Human figure — plan-view scale reference (center of open space) ── */}
-      {(() => {
-        const cx      = (FW_IN + FE_IN) / 2;              // 152" — room center E-W
-        const cy      = FN_IN + (FS_IN - FN_IN) * 0.38;  // ~77" — upper open zone
-        const HEAD_R  = 9;    // head radius ~18" diameter
-        const SH_RX   = 14;   // shoulder half-width ~28"
-        const SH_RY   = 9;    // shoulder half-depth ~18"
-        const HEAD_OFF = SH_RY + HEAD_R + 2; // head sits NORTH of shoulder center
-        return (
-          <g opacity="0.5">
-            {/* Shoulders */}
-            <ellipse className="fp-person-body"
-              cx={px(cx)} cy={py(cy)}
-              rx={pf(SH_RX)} ry={pf(SH_RY)} />
-            {/* Head — north (subtract HEAD_OFF to go up/north in room coords) */}
-            <circle className="fp-person-head"
-              cx={px(cx)} cy={py(cy - HEAD_OFF)}
-              r={pf(HEAD_R)} />
-          </g>
-        );
-      })()}
 
       {/* ── Counter — L-shape: north wall → west wall → partition top ───── */}
       {(() => {
