@@ -24,6 +24,8 @@ export interface WallElevation {
   /** Sections left-to-right: e.g. [left, underOpening, right] or [left, right] */
   sections: Section[];
   openings: Opening[];
+  /** Per-stud position tweaks keyed by generated stud ID (e.g. "south-stud-17") */
+  studOverrides?: Record<string, { dx?: number; dy?: number }>;
 }
 
 export const PX_PER_INCH = 4;

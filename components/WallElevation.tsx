@@ -2,8 +2,15 @@
 
 import { useState, useRef, useCallback } from "react";
 import type { WallElevation } from "@/lib/types";
-import { computeWallLayout, type Rect } from "@/lib/layout-calculator";
+import { computeWallLayout, type Rect, SW, PLATE_H, TOP_H } from "@/lib/layout-calculator";
 import { PX_PER_INCH } from "@/lib/types";
+import {
+  CMU_BLOCK_W, CMU_BLOCK_H, CMU_EXT_TOP, CMU_EXT_SIDE,
+  FR_D, INT_D, PARTITION_WALL_R, COUNTER_H,
+  STAIR_TOTAL_RISERS, STAIR_TREAD_DEPTH, STAIR_LAND_RISERS,
+  TJI_DEPTH, TJI_FLANGE_H, TJI_WEB_W, TJI_RIM_T, TJI_OC, SUBFLOOR_T,
+  BATH_JOIST_H, BATH_JOIST_OC, BATH_CLEAT_H, BATH_SUBFLOOR_T,
+} from "@/lib/framing-data";
 
 // ── Tooltip type ────────────────────────────────────────────────────────────
 interface Tip {
@@ -13,10 +20,6 @@ interface Tip {
 }
 
 // ── CMU block layer ─────────────────────────────────────────────────────────
-const CMU_W        = 16;
-const CMU_H        = 8;
-const CMU_EXT_SIDE = 8;
-const CMU_EXT_TOP  = 8;
 
 function CMULayer({
   wall, px, wx, wy,
@@ -29,7 +32,7 @@ function CMULayer({
   const cmuLeft  = -CMU_EXT_SIDE;
   const cmuRight = wall.totalLengthInches + CMU_EXT_SIDE;
   const cmuTop   = wall.wallHeightInches  + CMU_EXT_TOP;
-  const numCourses = Math.ceil(cmuTop / CMU_H);
+  const numCourses = Math.ceil(cmuTop / CMU_BLOCK_H);
 
   const voids = wall.openings.map((op) => ({
     left:   op.positionFromLeftInches,
@@ -41,13 +44,13 @@ function CMULayer({
   const blocks: React.ReactNode[] = [];
 
   for (let course = 0; course < numCourses; course++) {
-    const yBot = course * CMU_H;
-    const yTop = yBot + CMU_H;
-    const startX = course % 2 === 0 ? cmuLeft : cmuLeft + CMU_W / 2;
+    const yBot = course * CMU_BLOCK_H;
+    const yTop = yBot + CMU_BLOCK_H;
+    const startX = course % 2 === 0 ? cmuLeft : cmuLeft - CMU_BLOCK_W / 2;
 
-    for (let bx = startX; bx < cmuRight; bx += CMU_W) {
+    for (let bx = startX; bx < cmuRight; bx += CMU_BLOCK_W) {
       const cx1 = Math.max(cmuLeft, bx);
-      const cx2 = Math.min(cmuRight, bx + CMU_W);
+      const cx2 = Math.min(cmuRight, bx + CMU_BLOCK_W);
       if (cx2 <= cx1) continue;
 
       let segs: { x1: number; x2: number }[] = [{ x1: cx1, x2: cx2 }];
@@ -71,8 +74,8 @@ function CMULayer({
           <rect
             key={`cmu-${course}-${bx.toFixed(1)}-${seg.x1.toFixed(1)}`}
             className="cmu"
-            x={wx(seg.x1)} y={wy(yBot, CMU_H)}
-            width={px(seg.x2 - seg.x1)} height={px(CMU_H)}
+            x={wx(seg.x1)} y={wy(yBot, CMU_BLOCK_H)}
+            width={px(seg.x2 - seg.x1)} height={px(CMU_BLOCK_H)}
           />,
         );
       }
@@ -158,9 +161,11 @@ function LayerBtn({ label, on, toggle }: { label: string; on: boolean; toggle: (
 export function WallElevationView({
   wall,
   interactive = false,
+  forceCMU,
 }: {
   wall: WallElevation;
   interactive?: boolean;
+  forceCMU?: boolean;
 }) {
   // Layer toggle state (only used when interactive)
   const [showCMU,      setShowCMU]      = useState(true);
@@ -171,7 +176,8 @@ export function WallElevationView({
   const [showInterior, setShowInterior] = useState(false);
 
   // For non-interactive walls, all layers on (no stairs/bathroom/interior by default)
-  const cmu   = interactive ? showCMU      : true;
+  // forceCMU lets a parent component override the CMU visibility from outside
+  const cmu   = forceCMU !== undefined ? forceCMU : (interactive ? showCMU : true);
   const frame = interactive ? showFrame    : true;
   const dims  = interactive ? showDims     : true;
   const stairs = interactive ? showStairs  : false;
@@ -196,11 +202,15 @@ export function WallElevationView({
 
   const hideTip = useCallback(() => setTip(null), []);
 
-  // Hover wrapper for layout Rects
-  const hoverRect = (r: Rect, className: string, extra?: React.SVGProps<SVGRectElement>) => (
+  // Actual lumber size for 2×6 (nominal); dressed dimensions in inches
+  const LUMBER_2x6_FACE = "1½";
+  const LUMBER_2x6_DEPTH = "5½";
+
+  // Hover wrapper for layout Rects (optional dimsOverride for e.g. stud material size)
+  const hoverRect = (r: Rect, className: string, extra?: React.SVGProps<SVGRectElement>, dimsOverride?: string) => (
     <g key={r.id}
       onMouseEnter={(e) => showTip(e, r.id, r.label,
-        `${fmtDec(r.width)}" × ${fmtDec(r.height)}"`,
+        dimsOverride ?? `${fmtDec(r.width)}" × ${fmtDec(r.height)}"`,
         `x: ${fmtDec(r.x)}"  y: ${fmtDec(r.y)}"`)}
       onMouseMove={moveTip}
       onMouseLeave={hideTip}
@@ -238,9 +248,7 @@ export function WallElevationView({
   const wx = (xIn: number)              => AL + px(xIn);
   const wy = (yIn: number, hIn = 0)     => AT + H - px(yIn) - px(hIn);
 
-  const JOIST_D_IN   = 11.875;
-  const SUBFLOOR_IN  = 0.75;
-  const FLOOR2_IN    = layout.wallHeightInches + JOIST_D_IN + SUBFLOOR_IN;
+  const FLOOR2_IN    = layout.wallHeightInches + TJI_DEPTH + SUBFLOOR_T;
 
   const floorY = AT + H;
   const topY   = AT;
@@ -321,7 +329,19 @@ export function WallElevationView({
         {frame && <>
           {layout.bottomPlates.map((r) => hoverRect(r, "plate"))}
           {layout.topPlates.map((r) => hoverRect(r, "plate"))}
-          {layout.studs.map((r) => hoverRect(r, "stud"))}
+          {layout.studs.map((r) => hoverRect(r, "stud", undefined,
+            `Lumber: ${LUMBER_2x6_FACE}" × ${LUMBER_2x6_DEPTH}" (2×6)  ·  Length: ${fmtDec(r.height)}"`))}
+          {wall.id === "south" && (() => {
+            const bH = layout.wallHeightInches - PLATE_H - TOP_H;
+            const toEl = (p: number) => wall.totalLengthInches + CMU_EXT_SIDE - p;
+            const bs: Rect[] = [
+              { id: `${wall.id}-backing-1`, label: "2×6 Backing Stud (T-junction)", x: toEl(PARTITION_WALL_R + SW), y: PLATE_H, width: SW, height: bH },
+              { id: `${wall.id}-backing-2`, label: "2×6 Backing Stud (T-junction)", x: toEl(PARTITION_WALL_R + 2 * SW), y: PLATE_H, width: SW, height: bH },
+            ];
+            return <>{bs.map(r => hoverRect(r, "stud", undefined,
+              `Lumber: ${LUMBER_2x6_FACE}" × ${LUMBER_2x6_DEPTH}" (2×6)  ·  Length: ${fmtDec(bH)}"`))}
+            </>;
+          })()}
           {layout.headers.map((r) => {
             const pieceH = r.height / 2;
             return hoverGroup(r.id, r.label, r.width, r.height, r.x, r.y,
@@ -339,19 +359,16 @@ export function WallElevationView({
 
         {/* ── Floor joists above top plate (North & South walls only) ── */}
         {frame && (wall.id === "north" || wall.id === "south") && (() => {
-          const JOIST_D     = JOIST_D_IN;
-          const JOIST_W     = 1.5;
-          const FLANGE_H    = 1.5;
-          const WEB_W       = 0.75;
-          const OC          = 16;
+          const JOIST_W     = SW;
           const wallLen     = layout.totalLengthInches;
 
           const jBase = layout.wallHeightInches;
-          const jTop  = jBase + JOIST_D;
+          const jTop  = jBase + TJI_DEPTH;
 
+          const joistOffset = JOIST_W / 2;
+          const lastJoistX  = wallLen - TJI_RIM_T - JOIST_W;
           const positions: number[] = [];
-          for (let x = 0; x <= wallLen; x += OC) positions.push(x);
-          if (wallLen - positions[positions.length - 1] > JOIST_W * 2) positions.push(wallLen);
+          for (let x = TJI_OC + joistOffset; x <= lastJoistX; x += TJI_OC) positions.push(x);
 
           const jFill   = "#e8e4dc";
           const jStroke = "#444";
@@ -359,26 +376,36 @@ export function WallElevationView({
 
           return (
             <g>
+              {/* Rim board — left end (closes joist bays) */}
+              {hoverGroup(`${wall.id}-rim-left`, "Rim Board (1¼\" × 11⅞\")", TJI_RIM_T, TJI_DEPTH, 0, jBase,
+                <rect x={wx(0)} y={wy(jBase, TJI_DEPTH)} width={px(TJI_RIM_T)} height={px(TJI_DEPTH)}
+                  fill={jFill} stroke={jStroke} strokeWidth={jSW} />
+              )}
+              {/* Rim board — right end */}
+              {hoverGroup(`${wall.id}-rim-right`, "Rim Board (1¼\" × 11⅞\")", TJI_RIM_T, TJI_DEPTH, wallLen - TJI_RIM_T, jBase,
+                <rect x={wx(wallLen - TJI_RIM_T)} y={wy(jBase, TJI_DEPTH)} width={px(TJI_RIM_T)} height={px(TJI_DEPTH)}
+                  fill={jFill} stroke={jStroke} strokeWidth={jSW} />
+              )}
               {positions.map((x, i) => {
-                const cx = Math.max(JOIST_W, Math.min(wallLen - JOIST_W, x));
+                const cx = Math.max(TJI_OC + joistOffset, Math.min(lastJoistX, x));
                 const jId = `${wall.id}-tji-${i}`;
-                return hoverGroup(jId, `TJI Joist #${i}`, JOIST_W * 2, JOIST_D, cx - JOIST_W, jBase,
+                return hoverGroup(jId, `TJI Joist #${i}`, JOIST_W * 2, TJI_DEPTH, cx - JOIST_W, jBase,
                   <g>
-                    <rect x={wx(cx - JOIST_W)} y={wy(jBase, FLANGE_H)}
-                      width={px(JOIST_W * 2)} height={px(FLANGE_H)}
+                    <rect x={wx(cx - JOIST_W)} y={wy(jBase, TJI_FLANGE_H)}
+                      width={px(JOIST_W * 2)} height={px(TJI_FLANGE_H)}
                       fill={jFill} stroke={jStroke} strokeWidth={jSW} />
-                    <rect x={wx(cx - WEB_W / 2)} y={wy(jBase + FLANGE_H, JOIST_D - FLANGE_H * 2)}
-                      width={px(WEB_W)} height={px(JOIST_D - FLANGE_H * 2)}
+                    <rect x={wx(cx - TJI_WEB_W / 2)} y={wy(jBase + TJI_FLANGE_H, TJI_DEPTH - TJI_FLANGE_H * 2)}
+                      width={px(TJI_WEB_W)} height={px(TJI_DEPTH - TJI_FLANGE_H * 2)}
                       fill={jFill} stroke={jStroke} strokeWidth={jSW} />
-                    <rect x={wx(cx - JOIST_W)} y={wy(jTop - FLANGE_H, FLANGE_H)}
-                      width={px(JOIST_W * 2)} height={px(FLANGE_H)}
+                    <rect x={wx(cx - JOIST_W)} y={wy(jTop - TJI_FLANGE_H, TJI_FLANGE_H)}
+                      width={px(JOIST_W * 2)} height={px(TJI_FLANGE_H)}
                       fill={jFill} stroke={jStroke} strokeWidth={jSW} />
                   </g>
                 );
               })}
-              {hoverGroup(`${wall.id}-subfloor`, "Subfloor (3/4\" OSB)", wallLen, SUBFLOOR_IN, 0, jTop,
-                <rect x={wx(0)} y={wy(jTop, SUBFLOOR_IN)}
-                  width={px(wallLen)} height={px(SUBFLOOR_IN)}
+              {hoverGroup(`${wall.id}-subfloor`, "Subfloor (3/4\" OSB)", wallLen, SUBFLOOR_T, 0, jTop,
+                <rect x={wx(0)} y={wy(jTop, SUBFLOOR_T)}
+                  width={px(wallLen)} height={px(SUBFLOOR_T)}
                   fill="#c8c0a8" stroke="#444" strokeWidth="0.8" />
               )}
               <line x1={wx(wallLen) + 12} y1={wy(jBase)} x2={wx(wallLen) + 12} y2={wy(jTop)} stroke="#88a" strokeWidth="0.8" />
@@ -392,23 +419,19 @@ export function WallElevationView({
 
         {/* ── Shared interior constants (south wall) ── */}
         {wall.id === "south" && (() => {
-          const CI_L      = 8;
-          const toElev    = (planX: number) => wall.totalLengthInches + CI_L - planX;
-          const FW_IN     = 14.5;
-          const INT_D     = 3.5;
-          const partWallR = 96;
-          const COUNTER_H = 36;
+          const FW_IN     = CMU_EXT_SIDE + FR_D;
+          const toElev    = (planX: number) => wall.totalLengthInches + CMU_EXT_SIDE - planX;
           const SC        = "#555";
           const WL        = "#fff";
           const BKW       = 3;
           const WHW       = 1.2;
 
-          const vwL   = toElev(partWallR + INT_D);
-          const vwR   = toElev(partWallR);
+          const vwL   = toElev(PARTITION_WALL_R + INT_D);
+          const vwR   = toElev(PARTITION_WALL_R);
           const vwW   = vwR - vwL;
-          const ctrL  = toElev(partWallR + INT_D);
+          const ctrL  = toElev(PARTITION_WALL_R + INT_D);
           const ctrR  = toElev(FW_IN);
-          const bathL = toElev(partWallR);
+          const bathL = toElev(PARTITION_WALL_R);
           const bathR = toElev(FW_IN);
 
           return (
@@ -430,22 +453,15 @@ export function WallElevationView({
 
                   {/* Raised bathroom floor */}
                   {(() => {
-                    const PLAT_H     = 3 * (FLOOR2_IN / 15);
-                    const SUBFLOOR_T = 0.75;
-                    const JOIST_H    = 5.5;
-                    const JOIST_W    = 1.5;
-                    const CLEAT_H    = 3.5;
-                    const JOIST_OC   = 16;
-
-                    const cleatBot = PLAT_H - SUBFLOOR_T - JOIST_H - CLEAT_H;
-                    const jBot     = cleatBot + CLEAT_H;
-                    const jTop     = jBot + JOIST_H;
+                    const PLAT_H     = STAIR_LAND_RISERS * (FLOOR2_IN / STAIR_TOTAL_RISERS);
+                    const cleatBot = PLAT_H - BATH_SUBFLOOR_T - BATH_JOIST_H - BATH_CLEAT_H;
+                    const jBot     = cleatBot + BATH_CLEAT_H;
+                    const jTop     = jBot + BATH_JOIST_H;
                     const sfBot    = jTop;
-                    const STUD_W   = 1.5;
                     const platR    = wall.totalLengthInches;
 
                     const studXs: number[] = [];
-                    for (let sx = 0; sx <= platR; sx += JOIST_OC) {
+                    for (let sx = 0; sx <= platR; sx += BATH_JOIST_OC) {
                       if (sx >= bathL - 0.5 && sx <= platR + 0.5) studXs.push(sx);
                     }
 
@@ -456,24 +472,24 @@ export function WallElevationView({
                           fill="rgba(210,200,180,0.10)" stroke="none" />
 
                         {studXs.map((sx, i) => {
-                          const jx = sx + STUD_W / 2;
+                          const jx = sx + SW / 2;
                           return (
                             <g key={`seat${i}`}>
-                              {hoverGroup(`${wall.id}-bath-cleat-${i}`, `Ledger Cleat #${i}`, STUD_W, jBot, jx, 0,
-                                <rect x={wx(jx)} y={wy(0, jBot)} width={px(STUD_W)} height={px(jBot)}
+                              {hoverGroup(`${wall.id}-bath-cleat-${i}`, `Ledger Cleat #${i}`, SW, jBot, jx, 0,
+                                <rect x={wx(jx)} y={wy(0, jBot)} width={px(SW)} height={px(jBot)}
                                   fill="#fff" stroke={SC} strokeWidth="0.7" />
                               )}
-                              {hoverGroup(`${wall.id}-bath-joist-${i}`, `2×6 Floor Joist #${i}`, STUD_W, JOIST_H, jx, jBot,
-                                <rect x={wx(jx)} y={wy(jBot, JOIST_H)} width={px(STUD_W)} height={px(JOIST_H)}
+                              {hoverGroup(`${wall.id}-bath-joist-${i}`, `2×6 Floor Joist #${i}`, SW, BATH_JOIST_H, jx, jBot,
+                                <rect x={wx(jx)} y={wy(jBot, BATH_JOIST_H)} width={px(SW)} height={px(BATH_JOIST_H)}
                                   fill="#d8d0bc" stroke={SC} strokeWidth="0.7" />
                               )}
                             </g>
                           );
                         })}
 
-                        {hoverGroup(`${wall.id}-bath-subfloor`, "Bath Subfloor (3/4\" OSB)", platR - bathL, SUBFLOOR_T, bathL, sfBot,
-                          <rect x={wx(bathL)} y={wy(sfBot, SUBFLOOR_T)}
-                            width={px(platR - bathL)} height={px(SUBFLOOR_T)}
+                        {hoverGroup(`${wall.id}-bath-subfloor`, "Bath Subfloor (3/4\" OSB)", platR - bathL, BATH_SUBFLOOR_T, bathL, sfBot,
+                          <rect x={wx(bathL)} y={wy(sfBot, BATH_SUBFLOOR_T)}
+                            width={px(platR - bathL)} height={px(BATH_SUBFLOOR_T)}
                             fill="#bbb49e" stroke={SC} strokeWidth="0.8" />
                         )}
 
@@ -510,7 +526,7 @@ export function WallElevationView({
                   <text className="stair-label" textAnchor="middle" fill={SC}
                     x={wx(vwR + 50)} y={wy(layout.wallHeightInches - 6)}>KITCHEN</text>
                   <text className="stair-label" textAnchor="middle" fill={SC} fontSize="8"
-                    x={wx((ctrL + ctrR) / 2)} y={wy(COUNTER_H / 2) + 3}>COUNTER 36&quot;</text>
+                    x={wx((ctrL + ctrR) / 2)} y={wy(COUNTER_H / 2) + 3}>COUNTER {COUNTER_H}&quot;</text>
                 </g>
               )}
             </>
@@ -519,31 +535,27 @@ export function WallElevationView({
 
         {/* ── Staircase section (south wall only) ── */}
         {stairs && (() => {
-          const TOTAL_RISERS = 15;
-          const RISER       = FLOOR2_IN / TOTAL_RISERS;
-          const TREAD       = 10;
-          const LAND_W      = 36;
-          const LAND_RISERS = 3;
-          const LAND_H      = LAND_RISERS * RISER;
+          const RISER       = FLOOR2_IN / STAIR_TOTAL_RISERS;
+          const LAND_H      = STAIR_LAND_RISERS * RISER;
 
-          const MAIN_RISERS = TOTAL_RISERS - LAND_RISERS;
+          const MAIN_RISERS = STAIR_TOTAL_RISERS - STAIR_LAND_RISERS;
           const MAIN_TREADS = MAIN_RISERS - 1;
           const MAIN_RISE   = MAIN_RISERS * RISER;
 
-          const winCenter = 139 + 40 / 2;
-          const landL = winCenter - LAND_W / 2;
-          const landR = wall.totalLengthInches + 8 - (96 + 3.5);
+          const sWin  = wall.openings[0];
+          const landL = sWin.positionFromLeftInches;
+          const landR = sWin.positionFromLeftInches + sWin.widthInches;
 
           const stairStartX = landL;
-          const stairEndX = stairStartX - MAIN_TREADS * TREAD;
+          const stairEndX = stairStartX - MAIN_TREADS * STAIR_TREAD_DEPTH;
 
           const pts: string[] = [];
           pts.push(`${wx(stairStartX)},${wy(LAND_H)}`);
           for (let i = 1; i <= MAIN_RISERS; i++) {
             const y = LAND_H + i * RISER;
-            const treadR = stairStartX - (i - 1) * TREAD;
+            const treadR = stairStartX - (i - 1) * STAIR_TREAD_DEPTH;
             pts.push(`${wx(treadR)},${wy(y)}`);
-            if (i < MAIN_RISERS) pts.push(`${wx(treadR - TREAD)},${wy(y)}`);
+            if (i < MAIN_RISERS) pts.push(`${wx(treadR - STAIR_TREAD_DEPTH)},${wy(y)}`);
           }
 
           const stairTopY = FLOOR2_IN;
@@ -561,13 +573,13 @@ export function WallElevationView({
                 <>
                   <rect x={wx(landL)} y={wy(LAND_H)} width={px(landR - landL)} height={px(LAND_H)}
                     fill="none" stroke={BK} strokeWidth={BK_W} />
-                  {Array.from({ length: LAND_RISERS - 1 }, (_, i) => {
+                  {Array.from({ length: STAIR_LAND_RISERS - 1 }, (_, i) => {
                     const y = (i + 1) * RISER;
                     return <line key={`apb${i}`} x1={wx(landL)} y1={wy(y)} x2={wx(landR)} y2={wy(y)} stroke={BK} strokeWidth={BK_W} />;
                   })}
                   <rect x={wx(landL)} y={wy(LAND_H)} width={px(landR - landL)} height={px(LAND_H)} fill={FILL} stroke="none" />
                   <rect x={wx(landL)} y={wy(LAND_H)} width={px(landR - landL)} height={px(LAND_H)} fill="none" stroke={WH} strokeWidth={WH_W} />
-                  {Array.from({ length: LAND_RISERS - 1 }, (_, i) => {
+                  {Array.from({ length: STAIR_LAND_RISERS - 1 }, (_, i) => {
                     const y = (i + 1) * RISER;
                     return <line key={`apw${i}`} x1={wx(landL)} y1={wy(y)} x2={wx(landR)} y2={wy(y)} stroke={WH} strokeWidth={WH_W} />;
                   })}
@@ -580,15 +592,15 @@ export function WallElevationView({
                   <polyline points={openPts} fill="none" stroke={BK} strokeWidth={BK_W} strokeLinejoin="miter" />
                   {Array.from({ length: MAIN_TREADS }, (_, i) => {
                     const y = LAND_H + (i + 1) * RISER;
-                    const tL = stairStartX - (i + 1) * TREAD;
-                    const tR = stairStartX - i * TREAD;
+                    const tL = stairStartX - (i + 1) * STAIR_TREAD_DEPTH;
+                    const tR = stairStartX - i * STAIR_TREAD_DEPTH;
                     return <line key={`mtb${i}`} x1={wx(tR)} y1={wy(y)} x2={wx(tL)} y2={wy(y)} stroke={BK} strokeWidth={BK_W} />;
                   })}
                   <polyline points={openPts} fill="none" stroke={WH} strokeWidth={WH_W} strokeLinejoin="miter" />
                   {Array.from({ length: MAIN_TREADS }, (_, i) => {
                     const y = LAND_H + (i + 1) * RISER;
-                    const tL = stairStartX - (i + 1) * TREAD;
-                    const tR = stairStartX - i * TREAD;
+                    const tL = stairStartX - (i + 1) * STAIR_TREAD_DEPTH;
+                    const tR = stairStartX - i * STAIR_TREAD_DEPTH;
                     return <line key={`mtw${i}`} x1={wx(tR)} y1={wy(y)} x2={wx(tL)} y2={wy(y)} stroke={WH} strokeWidth={WH_W} />;
                   })}
                 </>
@@ -598,7 +610,7 @@ export function WallElevationView({
               {(() => {
                 const strStartX = stairStartX;
                 const strEndX2  = stairEndX;
-                const strEndY   = (MAIN_RISE / (MAIN_TREADS * TREAD)) * (strStartX - strEndX2);
+                const strEndY   = (MAIN_RISE / (MAIN_TREADS * STAIR_TREAD_DEPTH)) * (strStartX - strEndX2);
 
                 const soffit = [
                   `${wx(strStartX)},${wy(0)}`,
@@ -621,24 +633,24 @@ export function WallElevationView({
                 );
               })()}
 
-              {/* 2nd floor dashed line */}
-              <line x1={wx(stairEndX - 6)} y1={wy(stairTopY)} x2={wx(landR + 6)} y2={wy(stairTopY)}
+              {/* 2nd floor dashed line — clipped to landing right edge */}
+              <line x1={wx(stairEndX - 6)} y1={wy(stairTopY)} x2={wx(landR)} y2={wy(stairTopY)}
                 stroke={BK} strokeWidth="1.2" strokeDasharray="5 3" />
-              <text className="stair-label" x={wx(landR + 10)} y={wy(stairTopY) + 4}
-                textAnchor="start" fontSize="9" fill={BK}>2ND FLOOR</text>
+              <text className="stair-label" x={wx(stairEndX - 10)} y={wy(stairTopY) + 4}
+                textAnchor="end" fontSize="9" fill={BK}>2ND FLOOR</text>
 
               <text className="stair-label" textAnchor="middle" fill={BK}
-                x={wx(winCenter)} y={wy(LAND_H / 2) + 4}>LANDING</text>
+                x={wx((landL + landR) / 2)} y={wy(LAND_H / 2) + 4}>LANDING</text>
               <text className="stair-label" textAnchor="middle" fill={BK} fontSize="8"
-                x={wx(winCenter)} y={wy(LAND_H / 2) + 14}>
-                {`${LAND_RISERS}R @ ${RISER.toFixed(2)}\u2033`}
+                x={wx((landL + landR) / 2)} y={wy(LAND_H / 2) + 14}>
+                {`${STAIR_LAND_RISERS}R @ ${RISER.toFixed(2)}\u2033`}
               </text>
               <text className="stair-label" textAnchor="middle" fill={BK}
-                x={wx(stairStartX - (MAIN_TREADS * TREAD) / 2)} y={wy(LAND_H + MAIN_RISE * 0.35)}>
+                x={wx(stairStartX - (MAIN_TREADS * STAIR_TREAD_DEPTH) / 2)} y={wy(LAND_H + MAIN_RISE * 0.35)}>
                 {MAIN_RISERS}R UP
               </text>
               <text className="stair-label" textAnchor="middle" fill={BK} fontSize="8"
-                x={wx(stairStartX - (MAIN_TREADS * TREAD) / 2)} y={wy(LAND_H + MAIN_RISE * 0.35) + 12}>
+                x={wx(stairStartX - (MAIN_TREADS * STAIR_TREAD_DEPTH) / 2)} y={wy(LAND_H + MAIN_RISE * 0.35) + 12}>
                 {`@ ${RISER.toFixed(2)}\u2033 ea`}
               </text>
             </g>

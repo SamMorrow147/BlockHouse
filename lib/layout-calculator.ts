@@ -1,9 +1,10 @@
 import type { WallElevation } from "./types";
 
-const SW = 1.5;          // stud face width — 2×6 actual = 1.5" (depth = 5.5", not shown in elevation)
-const PLATE_H = 1.5;     // single bottom plate
-const TOP_H = 3.0;       // double top plate (two 1.5" plates)
-const HEADER_D = 5.5;    // doubled 2×6 header — two 2×6s on edge, side by side (actual depth = 5.5")
+export const SW = 1.5;          // stud face width — 2×6 actual = 1.5" (depth = 5.5", not shown in elevation)
+export const PLATE_H = 1.5;     // single bottom plate
+export const TOP_H = 3.0;       // double top plate (two 1.5" plates)
+export const HEADER_D = 5.5;    // doubled 2×6 header — two 2×6s on edge, side by side (actual depth = 5.5")
+const MAX_PLATE_LENGTH_IN = 192; // 16' — max single piece for standard lumber; longer runs get spliced
 
 export interface Rect {
   id: string;
@@ -43,10 +44,7 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
   const layout: WallLayout = {
     bottomPlates: [],
     sills: [],
-    topPlates: [
-      { id: `${wId}-tp-0`, label: "Top Plate (lower)", x: 0, y: H - TOP_H,       width: W, height: TOP_H / 2 },
-      { id: `${wId}-tp-1`, label: "Top Plate (upper)", x: 0, y: H - TOP_H / 2,   width: W, height: TOP_H / 2 },
-    ],
+    topPlates: [],
     headers: [],
     studs:   [],
     openings: [],
@@ -54,6 +52,29 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
     totalLengthInches:  W,
   };
 
+  // Top plates (with splice when W > 16'; upper course staggered)
+  const pushTopPlateRects = (course: 0 | 1) => {
+    const y = course === 0 ? H - TOP_H : H - TOP_H / 2;
+    const h = TOP_H / 2;
+    const prefix = course === 0 ? "Top Plate (lower)" : "Top Plate (upper)";
+    if (W <= MAX_PLATE_LENGTH_IN) {
+      layout.topPlates.push({ id: `${wId}-tp-${course}`, label: prefix, x: 0, y, width: W, height: h });
+      return;
+    }
+    if (course === 0) {
+      layout.topPlates.push({ id: `${wId}-tp-0-1`, label: `${prefix} #1`, x: 0, y, width: MAX_PLATE_LENGTH_IN, height: h });
+      layout.topPlates.push({ id: `${wId}-tp-0-2`, label: `${prefix} #2`, x: MAX_PLATE_LENGTH_IN, y, width: W - MAX_PLATE_LENGTH_IN, height: h });
+    } else {
+      // Stagger: upper splice only at 96", so no splice at 192" (lower's splice). Upper second piece = 96" to W (< 192").
+      const off = OC * 6; // 96"
+      layout.topPlates.push({ id: `${wId}-tp-1-1`, label: `${prefix} #1`, x: 0, y, width: off, height: h });
+      layout.topPlates.push({ id: `${wId}-tp-1-2`, label: `${prefix} #2`, x: off, y, width: W - off, height: h });
+    }
+  };
+  pushTopPlateRects(0);
+  pushTopPlateRects(1);
+
+  const STUD_LABEL = "2×6 Stud";
   const pushFull = (x: number, label: string) => {
     layout.studs.push({ id: `${wId}-stud-${studIdx++}`, label, x, y: STUD_BASE, width: SW, height: STUD_H });
   };
@@ -65,8 +86,28 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
   const fillGap = (gapStart: number, gapEnd: number) => {
     let x = gapStart;
     while (x <= gapEnd - SW - OC / 2) {
-      pushFull(x, "Stud");
+      pushFull(x, STUD_LABEL);
       x += OC;
+    }
+  };
+
+  const pushBottomPlateSegment = (x: number, width: number, labelPrefix: string) => {
+    if (width <= 0) return;
+    if (width <= MAX_PLATE_LENGTH_IN) {
+      layout.bottomPlates.push({ id: `${wId}-bp-${plateIdx++}`, label: labelPrefix, x, y: 0, width, height: PLATE_H });
+      return;
+    }
+    let curX = x;
+    let remain = width;
+    let seg = 1;
+    while (remain > MAX_PLATE_LENGTH_IN) {
+      layout.bottomPlates.push({ id: `${wId}-bp-${plateIdx++}`, label: `${labelPrefix} #${seg}`, x: curX, y: 0, width: MAX_PLATE_LENGTH_IN, height: PLATE_H });
+      curX += MAX_PLATE_LENGTH_IN;
+      remain -= MAX_PLATE_LENGTH_IN;
+      seg++;
+    }
+    if (remain > 0.01) {
+      layout.bottomPlates.push({ id: `${wId}-bp-${plateIdx++}`, label: `${labelPrefix} #${seg}`, x: curX, y: 0, width: remain, height: PLATE_H });
     }
   };
 
@@ -85,10 +126,10 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
     const oRight = oLeft + doorAtFloor.widthInches;
     const dl = oLeft  + SW;
     const dr = oRight - SW;
-    if (dl > 0)  layout.bottomPlates.push({ id: `${wId}-bp-${plateIdx++}`, label: "Bottom Plate (left)", x: 0,  y: 0, width: dl,     height: PLATE_H });
-    if (dr < W)  layout.bottomPlates.push({ id: `${wId}-bp-${plateIdx++}`, label: "Bottom Plate (right)", x: dr, y: 0, width: W - dr, height: PLATE_H });
+    if (dl > 0)  pushBottomPlateSegment(0, dl, "Bottom Plate (left)");
+    if (dr < W)  pushBottomPlateSegment(dr, W - dr, "Bottom Plate (right)");
   } else {
-    layout.bottomPlates.push({ id: `${wId}-bp-${plateIdx++}`, label: "Bottom Plate", x: 0, y: 0, width: W, height: PLATE_H });
+    pushBottomPlateSegment(0, W, "Bottom Plate");
   }
 
   let cursor = 0;
@@ -102,15 +143,15 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
     fillGap(cursor, oLeft);
 
     // left king
-    pushFull(oLeft, "King Stud (left)");
+    pushFull(oLeft, "2×6 King Stud (left)");
 
     if (op.type === "door" && !op.sillHeightInches) {
-      pushPartial(oLeft + SW,       0, oTop, "Jack Stud (left)");
-      pushPartial(oRight - 2 * SW,  0, oTop, "Jack Stud (right)");
+      pushPartial(oLeft + SW,       0, oTop, "2×6 Jack Stud (left)");
+      pushPartial(oRight - 2 * SW,  0, oTop, "2×6 Jack Stud (right)");
     } else {
       const jackH = op.heightInches;
-      pushPartial(oLeft + SW,       oBottom, jackH, "Jack Stud (left)");
-      pushPartial(oRight - 2 * SW,  oBottom, jackH, "Jack Stud (right)");
+      pushPartial(oLeft + SW,       oBottom, jackH, "2×6 Jack Stud (left)");
+      pushPartial(oRight - 2 * SW,  oBottom, jackH, "2×6 Jack Stud (right)");
 
       const belowH = oBottom - STUD_BASE;
       if (belowH > 0.01) {
@@ -131,7 +172,7 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
     }
 
     // right king
-    pushFull(oRight - SW, "King Stud (right)");
+    pushFull(oRight - SW, "2×6 King Stud (right)");
 
     layout.headers.push({
       id: `${wId}-hdr-${headerIdx++}`, label: "Header",
@@ -150,7 +191,7 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
     if (crippleH > 0.01) {
       let cx = Math.ceil(oLeft / OC) * OC;
       while (cx + SW <= oRight + 0.01) {
-        layout.studs.push({ id: `${wId}-stud-${studIdx++}`, label: "Cripple (above header)", x: cx, y: crippleY, width: SW, height: crippleH });
+        layout.studs.push({ id: `${wId}-stud-${studIdx++}`, label: "2×6 Cripple (above header)", x: cx, y: crippleY, width: SW, height: crippleH });
         cx += OC;
       }
     }
@@ -164,7 +205,17 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
     : cursor;
   fillGap(startX, endKingX);
 
-  pushFull(endKingX, "King Stud (end)");
+  pushFull(endKingX, "2×6 King Stud (end)");
+
+  if (wall.studOverrides) {
+    for (const s of layout.studs) {
+      const ov = wall.studOverrides[s.id];
+      if (ov) {
+        if (ov.dx) s.x += ov.dx;
+        if (ov.dy) s.y += ov.dy;
+      }
+    }
+  }
 
   return layout;
 }

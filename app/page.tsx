@@ -1,7 +1,12 @@
-import { initialWalls } from "@/lib/framing-data";
+import {
+  initialWalls, horizPartition,
+  STAIR_WIDTH, STAIR_TREAD_DEPTH, STAIR_LAND_RISERS,
+} from "@/lib/framing-data";
 import type { WallId } from "@/lib/types";
 import { WallElevationView } from "@/components/WallElevation";
 import { FloorPlan } from "@/components/FloorPlan";
+import { InteriorPartitionDetails } from "@/components/InteriorPartitionDetails";
+import { HamburgerMenu } from "@/components/HamburgerMenu";
 
 const WALL_ORDER: WallId[] = ["north", "south", "west", "east"];
 const eastSlidingDoor = initialWalls.east.openings.find((o) => o.type === "door");
@@ -20,6 +25,14 @@ const ELEV_PX  = 4;   // PX_PER_INCH from lib/types
 const elevSvgW = (len: number) => ELEV_AL + len * ELEV_PX + ELEV_AR;
 const maxElevW = Math.max(...WALL_ORDER.map((id) => elevSvgW(initialWalls[id].totalLengthInches)));
 
+// Interior partition SVG widths (these use different margins than standard walls)
+// Stair detail view width: landing + (LAND_RISERS-1) treads + 6" floor clearance
+const STAIR_DETAIL_W    = STAIR_WIDTH + (STAIR_LAND_RISERS - 1) * STAIR_TREAD_DEPTH + 6;
+const IPD_AL = 120;   // InteriorPartitionDetails left margin
+const IPD_AR = 140;   // InteriorPartitionDetails right margin
+const DOOR_WALL_SVG_W   = IPD_AL + STAIR_DETAIL_W * ELEV_PX + IPD_AR;
+const HORIZ_PART_SVG_W  = elevSvgW(horizPartition.totalLengthInches);
+
 function formatInches(n: number): string {
   const ft = Math.floor(n / 12);
   const ins = Math.round((n % 12) * 4) / 4;
@@ -32,6 +45,7 @@ export default function Home() {
   return (
     <div className="app">
       <header className="header">
+        <HamburgerMenu />
         <h1>Block House — First Floor Framing</h1>
       </header>
       <main className="main">
@@ -39,7 +53,6 @@ export default function Home() {
         <div className="wall-card" style={{ marginBottom: "2rem" }}>
           <h3>Main Level — Floor Plan</h3>
           <div className="wall-parametric-wrap">
-            <p className="wall-label">Code-generated from framing-data.ts</p>
             <FloorPlan />
           </div>
         </div>
@@ -58,7 +71,6 @@ export default function Home() {
                     className="wall-parametric-wrap"
                     style={{ width: `${(elevSvgW(wall.totalLengthInches) / maxElevW * 100).toFixed(2)}%` }}
                   >
-                    <p className="wall-label">Code-generated (edit framing-data.ts to update)</p>
                     <WallElevationView wall={wall} interactive={wall.id === "south"} />
                   </div>
                   <div className="wall-data-row">
@@ -215,6 +227,15 @@ export default function Home() {
               </div>
             );
           })}
+        </div>
+
+        {/* ── Interior Partitions ── */}
+        <div className="wall-card" style={{ marginTop: "2rem" }}>
+          <h3>Interior Partitions — Kitchen / Bathroom</h3>
+          <InteriorPartitionDetails
+            stairWidthPct={`${(DOOR_WALL_SVG_W / maxElevW * 100).toFixed(2)}%`}
+            partitionWidthPct={`${(HORIZ_PART_SVG_W / maxElevW * 100).toFixed(2)}%`}
+          />
         </div>
       </main>
 
