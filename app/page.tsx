@@ -90,7 +90,7 @@ export default function Home() {
 
         {/* ── Floor Plan ── */}
         <Card id="section-floor-plan" className="overflow-visible shadow-sm mb-6">
-          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg sticky top-[36px] z-10">
+          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg">
             <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
               Main Level — Floor Plan
             </CardTitle>
@@ -106,7 +106,7 @@ export default function Home() {
 
         {/* ── Second Floor Plan ── */}
         <Card id="section-floor-plan-2" className="overflow-visible shadow-sm mb-6">
-          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg sticky top-[36px] z-10">
+          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg">
             <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
               Second Floor — Floor Plan
             </CardTitle>
@@ -122,7 +122,7 @@ export default function Home() {
 
         {/* ── Third Floor Plan ── */}
         <Card id="section-floor-plan-3" className="overflow-visible shadow-sm mb-6">
-          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg sticky top-[36px] z-10">
+          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg">
             <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
               Third Floor — Floor Plan
             </CardTitle>
@@ -142,7 +142,7 @@ export default function Home() {
             const wall = initialWalls[id];
             return (
               <Card key={id} id={`section-wall-${id}`} className="overflow-visible shadow-sm">
-                <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg flex-row items-center justify-between space-y-0 sticky top-[36px] z-10">
+                <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg flex-row items-center justify-between space-y-0">
                   <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
                     {wall.name}
                   </CardTitle>
@@ -153,14 +153,13 @@ export default function Home() {
                     {formatInches(wall.totalLengthInches)}
                   </Badge>
                 </CardHeader>
-                <CardContent className="p-3 flex flex-col items-center">
+                <CardContent className="p-3">
                   <MeasureTape pxPerInch={4}>
-                    <div
-                      className="wall-parametric-wrap"
-                      style={{ width: `${(elevSvgW(wall.totalLengthInches) / maxElevW * 100).toFixed(2)}%`, margin: "0 auto" }}
-                    >
-                      <WallElevationView wall={wall} interactive={wall.id === "north"} />
-                    </div>
+                    <WallElevationView
+                      wall={wall}
+                      interactive={wall.id === "north"}
+                      svgWidthPct={`${(elevSvgW(wall.totalLengthInches) / maxElevW * 100).toFixed(2)}%`}
+                    />
                   </MeasureTape>
                   <div className="wall-data-row">
                     <div className="wall-data-summary">
@@ -178,7 +177,7 @@ export default function Home() {
 
         {/* ── Interior Partitions ── */}
         <Card id="section-interior-partitions" className="overflow-hidden shadow-sm mt-6">
-          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg sticky top-[36px] z-10">
+          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg">
             <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
               Interior Partitions — Kitchen / Bathroom
             </CardTitle>
@@ -201,7 +200,7 @@ export default function Home() {
             const wall = initialWalls[id];
             return (
               <Card key={id} id={`section-wall-${id}`} className="overflow-visible shadow-sm">
-                <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg flex-row items-center justify-between space-y-0 sticky top-[36px] z-10">
+                <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg flex-row items-center justify-between space-y-0">
                   <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
                     {wall.name}
                   </CardTitle>
@@ -212,14 +211,13 @@ export default function Home() {
                     {formatInches(wall.totalLengthInches)}
                   </Badge>
                 </CardHeader>
-                <CardContent className="p-3 flex flex-col items-center">
+                <CardContent className="p-3">
                   <MeasureTape pxPerInch={4}>
-                    <div
-                      className="wall-parametric-wrap"
-                      style={{ width: `${(elevSvgW(wall.totalLengthInches) / maxElevW * 100).toFixed(2)}%`, margin: "0 auto" }}
-                    >
-                      <WallElevationView wall={wall} interactive={wall.id === "north"} />
-                    </div>
+                    <WallElevationView
+                      wall={wall}
+                      interactive={wall.id === "north"}
+                      svgWidthPct={`${(elevSvgW(wall.totalLengthInches) / maxElevW * 100).toFixed(2)}%`}
+                    />
                   </MeasureTape>
                   <div className="wall-data-row">
                     <div className="wall-data-summary">

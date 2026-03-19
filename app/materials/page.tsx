@@ -11,6 +11,8 @@ interface MaterialItem {
   unit: string;
   notes?: string;
   url?: string;
+  /** True when this item's quantity is tracked & auto-calculated in the cut list */
+  inCutList?: boolean;
 }
 
 interface MaterialSection {
@@ -29,36 +31,42 @@ const SECTIONS: MaterialSection[] = [
         sku: "161-1605",
         description: "5-1/2\" × 50' Sill Sealer Foam — Pregis",
         qty: 2, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/insulation/insulation-accessories/pregis-foam-sill-sealers/4093767/p-1642874337154227-c-5776.htm",
       },
       {
         sku: "111-1066",
         description: "2×6-16' AC2 Green Treated Ground Contact",
         qty: 2, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/ac2-reg-2-x-6-2-prime-ground-contact-green-pressure-treated-lumber/1111066/p-1444422767258-c-13125.htm",
       },
       {
         sku: "111-1040",
         description: "2×6-12' AC2 Green Treated Ground Contact",
         qty: 4, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/ac2-reg-2-x-6-2-prime-ground-contact-green-pressure-treated-lumber/1111040/p-1444422441223-c-13125.htm",
       },
       {
         sku: "102-1790",
         description: "2×6-16' #2 & Better SPF Framing Lumber",
         qty: 10, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/2-x-6-construction-framing-lumber/1021790/p-1444422746041-c-13125.htm",
       },
       {
         sku: "102-1046",
         description: "2×6-92-5/8\" SPF Stud",
         qty: 80, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/2-x-6-pre-cut-stud-construction-framing-lumber/1021046/p-1444422687059-c-13125.htm",
       },
       {
         sku: "102-2016",
         description: "2×10-8' #2 & Better Fir Framing Lumber",
         qty: 6, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/2-x-10-2-better-construction-framing-lumber/1022016/p-1444422197282-c-13125.htm",
       },
       {
@@ -87,12 +95,14 @@ const SECTIONS: MaterialSection[] = [
         sku: "102-1761",
         description: "2×6-10' Stud / #2 & Better SPF",
         qty: 2, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/2-x-6-construction-framing-lumber/1021761/p-1444422472610-c-13125.htm",
       },
       {
         sku: "102-1046",
         description: "2×6-92-5/8\" SPF Stud",
         qty: 9, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/2-x-6-pre-cut-stud-construction-framing-lumber/1021046/p-1444422687059-c-13125.htm",
       },
       {
@@ -136,6 +146,7 @@ const SECTIONS: MaterialSection[] = [
         sku: "228-9267",
         description: "I-Joist Hanger 2-1/2\" × 9-1/2\" IHFL25925 — MiTek G90 Steel",
         qty: 28, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/hardware/fasteners-connectors/construction-hardware/structural-hangers/mitek-reg-g90-steel-face-mount-i-joist-hanger/ihfl25925/p-1563863247631-c-8843.htm",
       },
       {
@@ -171,12 +182,14 @@ const SECTIONS: MaterialSection[] = [
         sku: "102-1790",
         description: "2×6-16' #2 & Better SPF Framing Lumber",
         qty: 15, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/2-x-6-construction-framing-lumber/1021790/p-1444422746041-c-13125.htm",
       },
       {
         sku: "102-1761",
         description: "2×6-10' Stud / #2 & Better SPF",
         qty: 80, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/2-x-6-construction-framing-lumber/1021761/p-1444422472610-c-13125.htm",
       },
       {
@@ -189,6 +202,7 @@ const SECTIONS: MaterialSection[] = [
         sku: "102-2016",
         description: "2×10-6' #2 & Better Fir",
         qty: 2, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/2-x-10-2-better-construction-framing-lumber/1022016/p-1444422197282-c-13125.htm",
       },
       {
@@ -240,6 +254,7 @@ const SECTIONS: MaterialSection[] = [
         sku: "228-9267",
         description: "I-Joist Hanger 2-1/2\" × 9-1/2\" IHFL25925 — MiTek G90 Steel",
         qty: 28, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/hardware/fasteners-connectors/construction-hardware/structural-hangers/mitek-reg-g90-steel-face-mount-i-joist-hanger/ihfl25925/p-1563863247631-c-8843.htm",
       },
       {
@@ -276,12 +291,14 @@ const SECTIONS: MaterialSection[] = [
         sku: "102-1790",
         description: "2×6-16' #2 & Better SPF Framing Lumber",
         qty: 12, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/2-x-6-construction-framing-lumber/1021790/p-1444422746041-c-13125.htm",
       },
       {
         sku: "102-1046",
         description: "2×6-92-5/8\" SPF Stud",
         qty: 6, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/2-x-6-pre-cut-stud-construction-framing-lumber/1021046/p-1444422687059-c-13125.htm",
       },
       {
@@ -294,6 +311,7 @@ const SECTIONS: MaterialSection[] = [
         sku: "102-2016",
         description: "2×10-8' #2 & Better Fir",
         qty: 2, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/2-x-10-2-better-construction-framing-lumber/1022016/p-1444422197282-c-13125.htm",
       },
       {
@@ -312,6 +330,7 @@ const SECTIONS: MaterialSection[] = [
         sku: "228-9267",
         description: "I-Joist Hanger 2-1/2\" × 9-1/2\" IHFL25925 — MiTek G90 Steel",
         qty: 32, unit: "EACH",
+        inCutList: true,
         url: "https://www.menards.com/main/hardware/fasteners-connectors/construction-hardware/structural-hangers/mitek-reg-g90-steel-face-mount-i-joist-hanger/ihfl25925/p-1563863247631-c-8843.htm",
       },
       {
@@ -337,9 +356,10 @@ const SECTIONS: MaterialSection[] = [
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-const totalItems = SECTIONS.reduce((sum, s) => sum + s.items.length, 0);
-const totalQty   = SECTIONS.reduce((sum, s) => sum + s.items.reduce((q, i) => q + i.qty, 0), 0);
+const totalItems    = SECTIONS.reduce((sum, s) => sum + s.items.length, 0);
+const totalQty      = SECTIONS.reduce((sum, s) => sum + s.items.reduce((q, i) => q + i.qty, 0), 0);
 const specialOrders = SECTIONS.flatMap(s => s.items).filter(i => i.notes?.toLowerCase().includes("special order")).length;
+const inCutListCount = SECTIONS.flatMap(s => s.items).filter(i => i.inCutList).length;
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function MaterialsPage() {
@@ -380,6 +400,10 @@ export default function MaterialsPage() {
             <span className="text-2xl font-bold text-amber-700">{specialOrders}</span>
             <span className="text-xs text-amber-600 font-mono uppercase tracking-wide">Special Orders</span>
           </div>
+          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 shadow-sm">
+            <span className="text-2xl font-bold text-emerald-700">{inCutListCount}</span>
+            <span className="text-xs text-emerald-600 font-mono uppercase tracking-wide">In Cut List</span>
+          </div>
           <div className="flex items-center gap-2 ml-auto bg-white border border-zinc-200 rounded-lg px-4 py-2 shadow-sm">
             <span className="text-xs text-zinc-500 font-mono">Source:</span>
             <span className="text-xs font-semibold text-zinc-700">Menards® — Block House Build Data Sheet</span>
@@ -416,6 +440,17 @@ export default function MaterialsPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-zinc-800 leading-snug m-0">
                           {item.description}
+                          {item.inCutList && (
+                            <span
+                              title="Quantity tracked in the cut list"
+                              className="inline-flex items-center gap-0.5 ml-2 text-[10px] font-semibold font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded align-middle"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                              </svg>
+                              Cut List
+                            </span>
+                          )}
                         </p>
                         {item.notes && (
                           <span className="inline-block mt-1 text-[11px] font-mono text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">

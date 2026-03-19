@@ -168,3 +168,12 @@ body {
 .wall-data-summary li {
   margin-bottom: 0.2rem;
 }
+
+/* West wall exterior (flipped) view — counter-scale text so it reads left-to-right
+   despite the parent SVG group being mirror-transformed with scale(-1, 1). */
+svg.west-ext-view text,
+svg.west-ext-view tspan {
+  transform: scaleX(-1);
+  transform-box: fill-box;
+  transform-origin: center center;
+}

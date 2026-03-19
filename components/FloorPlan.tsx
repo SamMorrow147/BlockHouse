@@ -147,12 +147,13 @@ export function FloorPlan() {
   const [showBathroom, setShowBathroom] = useState(true);
   const [showCabinets, setShowCabinets] = useState(true);
   const [showSewer,    setShowSewer]    = useState(true);
+  const [showSubfloor, setShowSubfloor] = useState(false);
 
-  // Opening objects — used for widthInches and label in the template
-  const nOp  = initialWalls.south.openings[0];
-  const sOp  = initialWalls.north.openings[0];
-  const wOp  = initialWalls.east.openings[0];
-  const eOp  = initialWalls.west.openings[0];
+  // Opening objects — matched to their actual wall
+  const sOp  = initialWalls.south.openings[0];   // south door  (48" × 80")
+  const nOp  = initialWalls.north.openings[0];   // north window (40" × 48")
+  const eOp  = initialWalls.east.openings[0];    // east window  (72" × 48")
+  const wOp  = initialWalls.west.openings[0];    // west sliding door (79" × 73")
 
   // ── SVG coordinate helpers ────────────────────────────────────────────
   const px = (x: number) => AL + pf(x);
@@ -161,9 +162,9 @@ export function FloorPlan() {
   const svgH = AT + pf(CMU_D) + AB;
 
   // Door swing parameters
-  const DOOR_W = nOp.widthInches;   // 39" = radius of swing
+  const DOOR_W = sOp.widthInches;   // 48" = south door RO width = swing radius
 
-  const BTH_W  = wOp.positionFromLeftInches;   // 72"  — reuse canopy window position
+  const BTH_W  = eOp.positionFromLeftInches;   // 72"  — reuse east window position
   const BTH_X  = FE_IN - BTH_W;               // 289.5 - 72 = 217.5"  east face of bathroom
   const BTH_Y  = EW_B;                         // 103"  south face of partition
 
@@ -211,11 +212,12 @@ export function FloorPlan() {
 
   return (
     <div>
-      <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-zinc-50 border-b border-zinc-200 sticky top-[40px] z-[9]">
-        <LayerBtn label="Stairs"       on={showStairs}   toggle={() => setShowStairs(v => !v)} />
-        <LayerBtn label="Bathroom"     on={showBathroom} toggle={() => setShowBathroom(v => !v)} />
-        <LayerBtn label="Cabinets"     on={showCabinets} toggle={() => setShowCabinets(v => !v)} />
-        <LayerBtn label="Sewer Outlet" on={showSewer}    toggle={() => setShowSewer(v => !v)} />
+      <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-zinc-50 border-b border-zinc-200 sticky top-[44px] z-[9]">
+        <LayerBtn label="Stairs"       on={showStairs}    toggle={() => setShowStairs(v => !v)} />
+        <LayerBtn label="Bathroom"     on={showBathroom}  toggle={() => setShowBathroom(v => !v)} />
+        <LayerBtn label="Cabinets"     on={showCabinets}  toggle={() => setShowCabinets(v => !v)} />
+        <LayerBtn label="Sewer Outlet" on={showSewer}     toggle={() => setShowSewer(v => !v)} />
+        <LayerBtn label="Subfloor"     on={showSubfloor}  toggle={() => setShowSubfloor(v => !v)} />
       </div>
     <svg
       viewBox={`0 0 ${svgW} ${svgH}`}
@@ -225,6 +227,8 @@ export function FloorPlan() {
     >
       <defs>
         <style>{`
+          .fp-subfloor      { fill: rgba(210,185,145,0.28); stroke: #a07840; stroke-width: 0.8px; stroke-linejoin: miter; }
+          .fp-subfloor-grain{ fill: none; stroke: rgba(160,120,60,0.18); stroke-width: 0.5px; }
           .fp-cmu       { fill: rgba(222,218,212,0.18); stroke: #111; stroke-width: 1.6px; stroke-linejoin: miter; }
           .fp-cmu-block { fill: none; stroke: #c8a800; stroke-width: 0.75px; }
           .fp-stud      { fill: #fff; stroke: #111; stroke-width: 0.8px; stroke-linecap: square; }
@@ -310,13 +314,13 @@ export function FloorPlan() {
       {/* ── White at openings (before blocks) — clears gray so opening is
           visible, but block joints still draw on top in yellow              */}
       <rect fill="#fff" stroke="none"
-        x={px(SD_L)} y={py(0)} width={pf(nOp.widthInches)} height={pf(CMU_T)} />
+        x={px(SD_L)} y={py(0)} width={pf(sOp.widthInches)} height={pf(CMU_T)} />
       <rect fill="#fff" stroke="none"
-        x={px(NW_L)} y={py(CI_S)} width={pf(sOp.widthInches)} height={pf(CMU_T)} />
+        x={px(NW_L)} y={py(CI_S)} width={pf(nOp.widthInches)} height={pf(CMU_T)} />
       <rect fill="#fff" stroke="none"
-        x={px(0)} y={py(EW_T)} width={pf(CMU_T)} height={pf(wOp.widthInches)} />
+        x={px(0)} y={py(EW_T)} width={pf(CMU_T)} height={pf(eOp.widthInches)} />
       <rect fill="#fff" stroke="none"
-        x={px(CI_R)} y={py(WD_T)} width={pf(CMU_T)} height={pf(eOp.widthInches)} />
+        x={px(CI_R)} y={py(WD_T)} width={pf(CMU_T)} height={pf(wOp.widthInches)} />
 
       {/* ── Yellow CMU block pattern — continuous so block count is readable */}
       {hCMUBlocks(0,    0, CMU_W, [], px, py, pf)}
@@ -342,6 +346,66 @@ export function FloorPlan() {
       <rect className="fp-room"
         x={px(FW_IN)} y={py(FN_IN)}
         width={pf(FE_IN - FW_IN)} height={pf(FS_IN - FN_IN)} />
+
+      {/* ══ SUBFLOOR SHEET LAYOUT ════════════════════════════════════════════
+          3/4" (23/32) T&G OSB DryMax GP — 4×8 sheets
+          Best practice: long edge (8' = 96") runs E-W, perpendicular to N-S joists.
+          Rows are 48" (4') deep N-S; every other row is offset 48" E-W to stagger joints. */}
+      {showSubfloor && (() => {
+        const SHEET_L = 96;   // long edge runs E-W
+        const SHEET_W = 48;   // short edge runs N-S
+        const interiorX1 = FW_IN;
+        const interiorX2 = FE_IN;
+        const interiorY1 = FN_IN;
+        const interiorY2 = FS_IN;
+        const sheets: { x: number; y: number; w: number; h: number; label: boolean }[] = [];
+        let rowIndex = 0;
+        for (let rowY = interiorY1; rowY < interiorY2; rowY += SHEET_W, rowIndex++) {
+          const clipY1 = rowY;
+          const clipY2 = Math.min(rowY + SHEET_W, interiorY2);
+          const xOffset = (rowIndex % 2 === 0) ? 0 : SHEET_L / 2;
+          const startX  = interiorX1 - xOffset;
+          for (let sheetX = startX; sheetX < interiorX2; sheetX += SHEET_L) {
+            const clipX1 = Math.max(sheetX, interiorX1);
+            const clipX2 = Math.min(sheetX + SHEET_L, interiorX2);
+            if (clipX2 <= clipX1) continue;
+            sheets.push({
+              x: clipX1, y: clipY1,
+              w: clipX2 - clipX1, h: clipY2 - clipY1,
+              label: clipX2 - clipX1 > 48 && clipY2 - clipY1 > 20,
+            });
+          }
+        }
+        return (
+          <g>
+            {sheets.map((s, i) => (
+              <g key={`sf${i}`}>
+                <rect className="fp-subfloor"
+                  x={px(s.x)} y={py(s.y)} width={pf(s.w)} height={pf(s.h)} />
+                {/* Subtle N-S grain lines every 12" to show sheet orientation */}
+                {Array.from({ length: Math.floor(s.w / 12) - 1 }, (_, gi) => {
+                  const gx = s.x + (gi + 1) * 12;
+                  if (gx >= s.x + s.w) return null;
+                  return (
+                    <line key={`g${gi}`} className="fp-subfloor-grain"
+                      x1={px(gx)} y1={py(s.y)} x2={px(gx)} y2={py(s.y + s.h)} />
+                  );
+                })}
+                {/* Sheet label — only when there's enough room */}
+                {s.label && (
+                  <text
+                    x={px(s.x + s.w / 2)} y={py(s.y + s.h / 2) + 4}
+                    textAnchor="middle" fontSize="7"
+                    fill="#8B6030" fontFamily="ui-monospace,monospace" opacity={0.8}
+                  >
+                    4×8 T&G
+                  </text>
+                )}
+              </g>
+            ))}
+          </g>
+        );
+      })()}
 
       {/* ── Cabinets / Counter layer ── */}
       {showCabinets && <>
@@ -485,13 +549,13 @@ export function FloorPlan() {
 
       {/* ── Opening cuts in wood frame zone ─────────────────────────────── */}
       <rect fill="#fff" stroke="none"
-        x={px(SD_L)} y={py(FN_OUT)} width={pf(nOp.widthInches)} height={pf(FR_D)} />
+        x={px(SD_L)} y={py(FN_OUT)} width={pf(sOp.widthInches)} height={pf(FR_D)} />
       <rect fill="#fff" stroke="none"
-        x={px(NW_L)} y={py(FS_IN)} width={pf(sOp.widthInches)} height={pf(FR_D)} />
+        x={px(NW_L)} y={py(FS_IN)} width={pf(nOp.widthInches)} height={pf(FR_D)} />
       <rect fill="#fff" stroke="none"
-        x={px(FW_OUT)} y={py(EW_T)} width={pf(FR_D)} height={pf(wOp.widthInches)} />
+        x={px(FW_OUT)} y={py(EW_T)} width={pf(FR_D)} height={pf(eOp.widthInches)} />
       <rect fill="#fff" stroke="none"
-        x={px(FE_IN)} y={py(WD_T)} width={pf(FR_D)} height={pf(eOp.widthInches)} />
+        x={px(FE_IN)} y={py(WD_T)} width={pf(FR_D)} height={pf(wOp.widthInches)} />
 
       {/* ── CMU interior face dashed lines (1" gap indicator) ───────────── */}
       {/* South CMU interior face — full span (CMU interior face runs CI_L to CI_R) */}
@@ -963,7 +1027,7 @@ export function FloorPlan() {
 
       {/* ── West sliding door: two overlapping panel rects ────────────────  */}
       {(() => {
-        const pW = eOp.widthInches / 2;   // each panel = half RO width
+        const pW = wOp.widthInches / 2;   // each panel = half RO width
         const lap = 4;                      // overlap in inches
         return (
           <>
@@ -1021,13 +1085,13 @@ export function FloorPlan() {
         );
       })()}
 
-      {/* South door position chain — spans CMU interior (CI_L to CI_R = 288") */}
+      {/* South door position chain — spans frame wall (FW_OUT to FE_OUT = 286") */}
       {(() => {
         const yD = AT - 4;
         const segs = [
-          { x1: CI_L, x2: SD_L, label: `${Math.round(SD_L - CI_L)}"` },
-          { x1: SD_L, x2: SD_R, label: `${nOp.widthInches}" RO` },
-          { x1: SD_R, x2: CI_R, label: `${Math.round(CI_R - SD_R)}"` },
+          { x1: FW_OUT, x2: SD_L, label: `${Math.round(SD_L - FW_OUT)}"` },
+          { x1: SD_L,   x2: SD_R, label: `${sOp.widthInches}" RO` },
+          { x1: SD_R,   x2: FE_OUT, label: `${Math.round(FE_OUT - SD_R)}"` },
         ];
         return (
           <g>
@@ -1054,19 +1118,19 @@ export function FloorPlan() {
       <text className="fp-olbl"
         x={px((NW_L + NW_R) / 2)}
         y={AT + pf(CMU_D) + 14}>
-        {sOp.label} WIN
+        {nOp.label} WIN
       </text>
 
       {/* East window label (rotated) */}
       <text className="fp-olbl"
         transform={`translate(${AL - 12} ${py((EW_T + EW_B) / 2)}) rotate(-90)`}>
-        {wOp.label} WIN
+        {eOp.label} WIN
       </text>
 
       {/* West door label (rotated) — inset from WEST wall label */}
       <text className="fp-olbl"
         transform={`translate(${AL + pf(CMU_W) + 12} ${py((WD_T + WD_B) / 2)}) rotate(90)`}>
-        {eOp.label} SLIDING DOOR
+        {wOp.label} SLIDING DOOR
       </text>
 
       {/* ══ WALL LABELS (positioned to avoid dimension/opening labels) ═══════ */}

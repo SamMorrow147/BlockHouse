@@ -187,15 +187,24 @@ export function WallElevationView({
   wall,
   interactive = false,
   forceCMU,
+  forceSewer,
   noLayerBar = false,
   fillParent = false,
+  svgWidthPct,
+  forceViewBox,
 }: {
   wall: WallElevation;
   interactive?: boolean;
   forceCMU?: boolean;
+  /** When true, shows sewer outlet on partition walls (controlled by parent). */
+  forceSewer?: boolean;
   noLayerBar?: boolean;
   /** When true, SVG fills its parent container (useful inside fixed-size wrappers). */
   fillParent?: boolean;
+  /** Constrain only the SVG to this percentage of the container width, centered. The toggle bar always spans full width. */
+  svgWidthPct?: string;
+  /** Override the SVG viewBox to match another panel's dimensions (e.g. "0 0 600 700"). */
+  forceViewBox?: string;
 }) {
   // Layer toggle state (only used when interactive)
   const [showCMU,      setShowCMU]      = useState(true);
@@ -203,12 +212,15 @@ export function WallElevationView({
   const [showDims,     setShowDims]     = useState(true);
   const [showStairs,   setShowStairs]   = useState(true);
   const [showBathroom, setShowBathroom] = useState(interactive);
-  const [showInterior, setShowInterior] = useState(wall.id === "south" || wall.id === "east");
+  const [showInterior, setShowInterior] = useState(wall.id === "south");
   const [showAnchors,  setShowAnchors]  = useState(interactive || wall.id === "south");
   const [showOutlets,  setShowOutlets]  = useState(interactive || wall.id === "south");
   const [showSewer,    setShowSewer]    = useState(interactive);
   const [showPlumbing, setShowPlumbing] = useState(false);
   const [showCounter, setShowCounter] = useState(false);
+  const [showSheathing, setShowSheathing] = useState(false);
+  const [showWrap, setShowWrap] = useState(false);
+  const [showExterior, setShowExterior] = useState(false);
 
   const hasAnchors = (wall.anchorBolts?.length ?? 0) > 0;
 
@@ -221,7 +233,7 @@ export function WallElevationView({
   const bathroom = interactive ? showBathroom : false;
   const interior = (interactive || wall.id === "south" || wall.id === "east") ? showInterior : false;
   const outlets = wall.id === "south" ? showOutlets : false;
-  const sewer   = wall.id === "north" ? showSewer   : false;
+  const sewer   = wall.id === "north" ? showSewer : (forceSewer ?? false);
   const plumbing = wall.id === "north" ? showPlumbing : false;
   const counter = showCounter;
   const anchors = showAnchors && hasAnchors;
@@ -345,7 +357,7 @@ export function WallElevationView({
   return (
     <div ref={wrapRef} style={{ position: "relative", ...(fillParent ? { height: "100%" } : {}) }}>
       {/* Layer toggles */}
-      {!noLayerBar && <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-zinc-50 border-b border-zinc-200 sticky top-[76px] z-[9] items-center">
+      {!noLayerBar && <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-zinc-50 border-b border-zinc-200 sticky top-[44px] z-[9] items-center">
         <LayerBtn label="CMU Bricks" on={showCMU}   toggle={() => setShowCMU(v => !v)} />
         <LayerBtn label="Frame"      on={showFrame}  toggle={() => setShowFrame(v => !v)} />
         {interactive && <>
@@ -369,13 +381,28 @@ export function WallElevationView({
         {wall.id === "north" && (
           <LayerBtn label="Plumbing" on={showPlumbing} toggle={() => setShowPlumbing(v => !v)} />
         )}
+        {(isNorth || isSouth || isEast || isWest || wall.id.includes("-2") || wall.id.includes("-3")) && (
+          <LayerBtn label="Sheathing" on={showSheathing} toggle={() => setShowSheathing(v => !v)} />
+        )}
+        {(isNorth || isSouth || isEast || isWest || wall.id.includes("-2") || wall.id.includes("-3")) && (
+          <LayerBtn label="House Wrap" on={showWrap} toggle={() => setShowWrap(v => !v)} />
+        )}
+        {isWest && (
+          <div className="ml-auto flex items-center gap-1.5">
+            <span className="text-[10px] font-mono text-zinc-400 tracking-wide uppercase">View:</span>
+            <LayerBtn label="Interior" on={!showExterior} toggle={() => setShowExterior(false)} />
+            <LayerBtn label="Exterior" on={showExterior} toggle={() => setShowExterior(true)} />
+          </div>
+        )}
       </div>}
 
+      <div style={svgWidthPct ? { maxWidth: svgWidthPct, margin: "0 auto" } : undefined}>
       <svg
-        viewBox={`0 0 ${svgW} ${svgH}`}
+        viewBox={forceViewBox ?? `0 0 ${svgW} ${svgH}`}
         width="100%"
         preserveAspectRatio="xMidYMid meet"
         style={fillParent ? { display: "block", height: "100%" } : undefined}
+        className={isWest && showExterior ? "west-ext-view" : undefined}
       >
         <defs>
           <style>{`
@@ -397,8 +424,11 @@ export function WallElevationView({
           `}</style>
         </defs>
 
-        {/* ── CMU block layer ── */}
-        {cmu && <CMULayer wall={wall} px={px} wx={wx} wy={wy} />}
+        {/* Exterior view: flip entire drawing horizontally to show outside face */}
+        <g transform={isWest && showExterior ? `translate(${svgW}, 0) scale(-1, 1)` : undefined}>
+
+        {/* ── CMU block layer (interior mode: draw first, behind frame) ── */}
+        {cmu && !showExterior && <CMULayer wall={wall} px={px} wx={wx} wy={wy} />}
 
         {/* ── Framing elements ── */}
         {frame && <>
@@ -461,6 +491,438 @@ export function WallElevationView({
           {layout.openings.map((r) => hoverRect(r, "opening"))}
         </>}
 
+        {/* ── OSB Wall Sheathing layer (ABOVE CMU ONLY) ──
+            CMU shell is 184" tall from slab. On first-floor walls (slab level),
+            CMU covers the full wall + beyond — no sheathing needed.
+            On second-floor walls, CMU extends 57.75" above the 2nd floor deck.
+            Sheathing covers from T.O. CMU (57.75") to top of wall (116").
+            On third-floor partial walls, CMU is gone entirely — full height sheathing.
+            On first-floor walls, skip entirely (CMU covers everything). ── */}
+        {showSheathing && (() => {
+          const wallH = wall.wallHeightInches;
+          const wallL = wall.totalLengthInches;
+          const sheathFill = "rgba(210,185,145,0.28)";
+          const sheathStroke = "#a07840";
+          const grainStroke = "rgba(160,120,60,0.18)";
+
+          // Determine sheathing zone based on floor level
+          const isSecondFloor = wall.id.includes("-2");
+          const isThirdFloor  = wall.id.includes("-3");
+          const isFirstFloor  = !isSecondFloor && !isThirdFloor;
+
+          // First floor walls: sheathing is rendered in their own second floor
+          // section (e.g. the south wall's 2F block) — skip the generic renderer
+          if (isFirstFloor) return null;
+
+          // Height where CMU stops (above this floor's deck)
+          const CMU_TOTAL = 184; // 23 courses × 8"
+          const FLOOR2_DECK = 116 + TJI_DEPTH + SUBFLOOR_T; // 126.25"
+          const cmuAboveDeck = isSecondFloor ? (CMU_TOTAL - FLOOR2_DECK) : 0;
+          // Sheathing zone
+          const zoneBot = cmuAboveDeck;  // bottom of sheathing
+          const zoneTop = wallH;          // top of wall
+          const zoneH   = zoneTop - zoneBot;
+
+          if (zoneH <= 0) return null;
+
+          // Build openings clipped to the sheathing zone
+          const openings = wall.openings.filter(op => op.type !== "cmu-only");
+
+          // Sheet layout: 4×8 sheets (SHEET_L=96" long edge horizontal, SHEET_W=48" tall)
+          const SHEET_L = 96;
+          const SHEET_W = 48;
+          const sheets: { x: number; y: number; w: number; h: number; label: boolean; isOpening?: boolean }[] = [];
+          let rowIndex = 0;
+          for (let rowY = zoneBot; rowY < zoneTop; rowY += SHEET_W, rowIndex++) {
+            const clipY2 = Math.min(rowY + SHEET_W, zoneTop);
+            const rowH = clipY2 - rowY;
+            // Stagger every other row by half a sheet
+            const xOff = (rowIndex % 2 === 0) ? 0 : SHEET_L / 2;
+            for (let sheetX = -xOff; sheetX < wallL; sheetX += SHEET_L) {
+              const clipX1 = Math.max(sheetX, 0);
+              const clipX2 = Math.min(sheetX + SHEET_L, wallL);
+              if (clipX2 <= clipX1) continue;
+
+              // Check if this sheet overlaps an opening
+              let isInOpening = false;
+              for (const op of openings) {
+                const opL = op.positionFromLeftInches;
+                const opR = opL + op.widthInches;
+                const opBot = op.sillHeightInches ?? 0;
+                const opTop = opBot + op.heightInches;
+                // If the sheet center is inside the opening, mark it
+                const cx = (clipX1 + clipX2) / 2;
+                const cy = rowY + rowH / 2;
+                if (cx > opL && cx < opR && cy > opBot && cy < opTop) {
+                  isInOpening = true;
+                  break;
+                }
+              }
+
+              sheets.push({
+                x: clipX1, y: rowY,
+                w: clipX2 - clipX1, h: rowH,
+                label: (clipX2 - clipX1) > 48 && rowH > 20,
+                isOpening: isInOpening,
+              });
+            }
+          }
+
+          const fullSheets = sheets.filter(s => !s.isOpening);
+          const sheetCount = fullSheets.length;
+
+          return (
+            <g>
+              {/* CMU zone indicator line */}
+              {cmuAboveDeck > 0 && (
+                <line x1={wx(0)} y1={wy(cmuAboveDeck)} x2={wx(wallL)} y2={wy(cmuAboveDeck)}
+                  stroke="#c8a800" strokeWidth="1.5" strokeDasharray="6 3" opacity="0.6" />
+              )}
+              {cmuAboveDeck > 0 && (
+                <text x={wx(wallL / 2)} y={wy(cmuAboveDeck) + 12}
+                  fontSize="7" fill="#c8a800" fontFamily="ui-monospace,monospace"
+                  textAnchor="middle" opacity="0.7">
+                  ▲ T.O. CMU ({cmuAboveDeck.toFixed(1)}&quot; above deck) — NO SHEATHING BELOW
+                </text>
+              )}
+
+              {/* Individual sheet rects with grain lines */}
+              {sheets.map((s, i) => {
+                if (s.isOpening) return null; // skip sheets in openings
+                return (
+                  <g key={`os${i}`}>
+                    <rect
+                      x={wx(s.x)} y={wy(s.y, s.h)}
+                      width={px(s.w)} height={px(s.h)}
+                      fill={sheathFill} stroke={sheathStroke} strokeWidth="0.8" strokeLinejoin="miter" />
+                    {/* Grain lines every 12" (vertical, showing sheet orientation) */}
+                    {Array.from({ length: Math.floor(s.w / 12) - 1 }, (_, gi) => {
+                      const gx = s.x + (gi + 1) * 12;
+                      return gx < s.x + s.w ? (
+                        <line key={`g${gi}`}
+                          x1={wx(gx)} y1={wy(s.y, s.h)} x2={wx(gx)} y2={wy(s.y)}
+                          stroke={grainStroke} strokeWidth="0.5" />
+                      ) : null;
+                    })}
+                    {/* Sheet dimension label */}
+                    {s.label && (
+                      <text x={wx(s.x + s.w / 2)} y={wy(s.y + s.h / 2) + 3}
+                        fontSize="6.5" fill="#8B6030" fontFamily="ui-monospace,monospace"
+                        textAnchor="middle" opacity="0.8">
+                        4×8
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+
+              {/* Summary label */}
+              <text x={wx(wallL / 2)} y={wy(zoneBot + zoneH / 2) + 16}
+                fontSize="9" fill="#8b6914" fontFamily="ui-monospace,monospace"
+                textAnchor="middle" opacity="0.8" fontWeight="700">
+                7/16&quot; OSB · {sheetCount} SHEETS · {zoneH.toFixed(0)}&quot; ZONE
+              </text>
+            </g>
+          );
+        })()}
+
+        {/* ── House Wrap layer (ABOVE CMU ONLY — matches sheathing zone) ── */}
+        {showWrap && (() => {
+          const wallH = wall.wallHeightInches;
+          const wallL = wall.totalLengthInches;
+          const isSecondFloor = wall.id.includes("-2");
+          const isThirdFloor  = wall.id.includes("-3");
+          const isFirstFloor  = !isSecondFloor && !isThirdFloor;
+
+          // First floor walls: wrap is rendered in their own second floor section
+          if (isFirstFloor) return null;
+
+          const CMU_TOTAL = 184;
+          const FLOOR2_DECK = 116 + TJI_DEPTH + SUBFLOOR_T;
+          const cmuAboveDeck = isSecondFloor ? (CMU_TOTAL - FLOOR2_DECK) : 0;
+          const zoneBot = cmuAboveDeck;
+          const zoneTop = wallH;
+          const zoneH = zoneTop - zoneBot;
+
+          if (zoneH <= 0) return null;
+
+          return (
+            <g>
+              <rect
+                x={wx(0)} y={wy(zoneBot, zoneH)}
+                width={px(wallL)} height={px(zoneH)}
+                fill="rgba(180,210,240,0.12)" stroke="#5599cc" strokeWidth="1"
+                strokeDasharray="8 4" />
+              {/* Roll overlap marks every 108" (9' roll width) */}
+              {(() => {
+                const marks: React.ReactNode[] = [];
+                for (let mx = 108; mx < wallL; mx += 108) {
+                  marks.push(<line key={`wm${mx}`}
+                    x1={wx(mx)} y1={wy(zoneBot, zoneH)} x2={wx(mx)} y2={wy(zoneBot)}
+                    stroke="#5599cc" strokeWidth="1.5" strokeDasharray="6 3" opacity="0.4" />);
+                }
+                return marks;
+              })()}
+              <text x={wx(wallL / 2)} y={wy(zoneBot + zoneH * 0.5)}
+                fontSize="8" fill="#3377aa" fontFamily="ui-monospace,monospace"
+                textAnchor="middle" opacity="0.7" fontWeight="600">
+                HOUSE WRAP · {zoneH.toFixed(0)}&quot; ZONE (ABOVE T.O. CMU)
+              </text>
+            </g>
+          );
+        })()}
+
+        {/* ── Bathroom floor joists + ledger cleats on horizontal partition ──
+            Matches north wall rendering exactly: 2×4 ledger cleat from bottom plate
+            to joist bottom, then 2×6 joist, then 3/4" subfloor on top. ── */}
+        {wall.id === "horiz-partition" && frame && (() => {
+          const FLOOR2 = wall.wallHeightInches + TJI_DEPTH + SUBFLOOR_T;
+          const PLAT_H2 = STAIR_LAND_RISERS * (FLOOR2 / STAIR_TOTAL_RISERS);
+          const jBot  = PLAT_H2 - BATH_SUBFLOOR_T - BATH_JOIST_H;
+          const jTop  = jBot + BATH_JOIST_H;
+          const sfBot = jTop;
+          const ledgerH = jBot - PLATE_H; // cleat from top of bottom plate to joist bottom
+          const wallLen = wall.totalLengthInches;
+          const SC = "#555";
+
+          // Joist positions along the partition (elevation X), 16" OC
+          const joistXs: number[] = [];
+          for (let x = 0; x <= wallLen + 0.01; x += BATH_JOIST_OC) {
+            joistXs.push(Math.min(x, wallLen));
+          }
+          if (joistXs[joistXs.length - 1] < wallLen - 0.01) joistXs.push(wallLen);
+
+          return (
+            <g>
+              {/* Raised floor zone tint */}
+              <rect x={wx(0)} y={wy(0, PLAT_H2)}
+                width={px(wallLen)} height={px(PLAT_H2)}
+                fill="rgba(210,200,180,0.08)" stroke="none" />
+
+              {/* Per-joist: ledger cleat + joist cross-section */}
+              {joistXs.map((jx, i) => (
+                <g key={`seat${i}`}>
+                  {/* 2×4 ledger cleat — from bottom plate top to joist bottom */}
+                  <rect
+                    x={wx(jx)} y={wy(PLATE_H, ledgerH)}
+                    width={px(SW)} height={px(ledgerH)}
+                    fill="#fff" stroke={SC} strokeWidth="0.7" />
+                  {/* 2×6 joist cross-section — sits on top of cleat */}
+                  <rect
+                    x={wx(jx)} y={wy(jBot, BATH_JOIST_H)}
+                    width={px(SW)} height={px(BATH_JOIST_H)}
+                    fill="#d8d0bc" stroke={SC} strokeWidth="0.7" />
+                </g>
+              ))}
+
+              {/* Subfloor — 3/4" OSB across full partition length */}
+              <rect
+                x={wx(0)} y={wy(sfBot, BATH_SUBFLOOR_T)}
+                width={px(wallLen)} height={px(BATH_SUBFLOOR_T)}
+                fill="#bbb49e" stroke={SC} strokeWidth="0.8" />
+
+              {/* Platform top line */}
+              <line x1={wx(0)} y1={wy(PLAT_H2)} x2={wx(wallLen)} y2={wy(PLAT_H2)}
+                stroke={SC} strokeWidth="1.4" />
+
+              {/* Labels */}
+              <text x={wx(wallLen / 2)} y={wy(sfBot + BATH_SUBFLOOR_T / 2) + 3}
+                fontSize="6" fill="#555" fontFamily="ui-monospace,monospace"
+                textAnchor="middle">¾&quot; SUBFL.</text>
+              <text x={wx(wallLen / 2)} y={wy(jBot + BATH_JOIST_H / 2) + 3}
+                fontSize="7" fill="#8b7348" fontFamily="ui-monospace,monospace"
+                textAnchor="middle" fontWeight="600">
+                2×6 JOISTS @ {BATH_JOIST_OC}&quot; OC
+              </text>
+              <text x={wx(wallLen / 2)} y={wy(PLATE_H + ledgerH / 2) + 3}
+                fontSize="6" fill="#666" fontFamily="ui-monospace,monospace"
+                textAnchor="middle">
+                2×4 LEDGER CLEATS
+              </text>
+
+              {/* Platform height callout */}
+              <line x1={wx(wallLen) + 6} y1={wy(0)} x2={wx(wallLen) + 6} y2={wy(PLAT_H2)}
+                stroke="#88a" strokeWidth="0.8" />
+              <line x1={wx(wallLen) + 3} y1={wy(0)} x2={wx(wallLen) + 9} y2={wy(0)}
+                stroke="#88a" strokeWidth="0.8" />
+              <line x1={wx(wallLen) + 3} y1={wy(PLAT_H2)} x2={wx(wallLen) + 9} y2={wy(PLAT_H2)}
+                stroke="#88a" strokeWidth="0.8" />
+              <text x={wx(wallLen) + 12} y={wy(PLAT_H2 / 2) + 3}
+                fontSize="7" fill="#88a" fontFamily="ui-monospace,monospace"
+                textAnchor="start">+{PLAT_H2.toFixed(1)}&quot;</text>
+            </g>
+          );
+        })()}
+
+        {/* ── Bathroom floor joists on bathroom east wall ── */}
+        {wall.id === "bathroom-east" && frame && (() => {
+          const FLOOR2 = wall.wallHeightInches + TJI_DEPTH + SUBFLOOR_T;
+          const RH2 = FLOOR2 / STAIR_TOTAL_RISERS;
+          const PLAT_H2 = STAIR_LAND_RISERS * RH2;
+          const sfBot = PLAT_H2 - BATH_SUBFLOOR_T;
+          const jBot  = sfBot - BATH_JOIST_H;
+          const wallLen = wall.totalLengthInches;
+
+          // Joists run N-S (parallel to this wall) so they appear as
+          // horizontal members spanning the full wall length.
+          // Count = number of joists spaced E-W at 16" OC across the
+          // bathroom width (FW_IN to PARTITION_WALL_R = 81.5").
+          const bathWidth = 81.5; // PARTITION_WALL_R - FW_IN
+          const joistCount = Math.floor(bathWidth / BATH_JOIST_OC) + 1;
+
+          // Show individual joist lines (horizontal) at evenly spaced
+          // heights within the band to indicate the 16" OC E-W spacing.
+          const joistLines: number[] = [];
+          for (let i = 0; i < joistCount; i++) {
+            // Map E-W position to a visual offset within the joist depth band
+            const frac = joistCount > 1 ? i / (joistCount - 1) : 0.5;
+            joistLines.push(jBot + frac * BATH_JOIST_H);
+          }
+
+          return (
+            <g>
+              {/* Subfloor — 3/4" OSB across full wall length */}
+              <rect
+                x={wx(0)} y={wy(sfBot, BATH_SUBFLOOR_T)}
+                width={px(wallLen)} height={px(BATH_SUBFLOOR_T)}
+                fill="#c8b898" stroke="#555" strokeWidth="1" />
+
+              {/* Joist band — semi-transparent to show they're parallel */}
+              <rect
+                x={wx(0)} y={wy(jBot, BATH_JOIST_H)}
+                width={px(wallLen)} height={px(BATH_JOIST_H)}
+                fill="rgba(240,232,208,0.4)" stroke="#8b7348" strokeWidth="0.8" />
+
+              {/* Individual joist lines (each joist runs the full wall length) */}
+              {joistLines.map((jy, i) => (
+                <line key={`bej${i}`}
+                  x1={wx(0)} y1={wy(jy)}
+                  x2={wx(wallLen)} y2={wy(jy)}
+                  stroke="#8b7348" strokeWidth="0.7" />
+              ))}
+
+              {/* Labels */}
+              <text x={wx(wallLen / 2)} y={wy(sfBot + BATH_SUBFLOOR_T / 2) + 3}
+                fontSize="7" fill="#555" fontFamily="ui-monospace,monospace"
+                textAnchor="middle">¾&quot; SUBFLOOR</text>
+              <text x={wx(wallLen / 2)} y={wy(jBot + BATH_JOIST_H / 2) + 3}
+                fontSize="8" fill="#8b7348" fontFamily="ui-monospace,monospace"
+                textAnchor="middle" fontWeight="600">
+                {joistCount}× 2×6 JOISTS (N-S @ {BATH_JOIST_OC}&quot; OC)
+              </text>
+
+              {/* Platform height callout */}
+              <text x={wx(wallLen) + 6} y={wy(PLAT_H2 / 2) + 3}
+                fontSize="7" fill="#8b7348" fontFamily="ui-monospace,monospace"
+                textAnchor="start">+{PLAT_H2.toFixed(1)}&quot;</text>
+              <line x1={wx(wallLen) + 3} y1={wy(0)} x2={wx(wallLen) + 3} y2={wy(PLAT_H2)}
+                stroke="#8b7348" strokeWidth="0.5" strokeDasharray="3 2" />
+            </g>
+          );
+        })()}
+
+        {/* ── Sewer stub on horizontal partition ── */}
+        {wall.id === "horiz-partition" && sewer && (() => {
+          // Sewer stub at plan X = FW_IN + 12 = 26.5"
+          // Viewing from kitchen (south, looking north) — east is on your RIGHT
+          // Flip: sewX = wallLen - 12
+          const sewX = wall.totalLengthInches - 12;
+          const PIPE_W = 3;       // 3" pipe width
+          const PIPE_H = 6;       // visible height above slab
+          const SLAB_T = 4;
+          const OPEN_W = 14;
+          const PC = "#2a7a4a";
+
+          return (
+            <g>
+              {/* Slab cut opening — dashed rect below floor line */}
+              <rect
+                x={wx(sewX - OPEN_W / 2)} y={wy(-SLAB_T, SLAB_T)}
+                width={px(OPEN_W)} height={px(SLAB_T)}
+                fill="rgba(80,60,40,0.12)" stroke="#666" strokeWidth="0.8"
+                strokeDasharray="4 2" />
+              {/* Pipe through slab (below floor) */}
+              <rect
+                x={wx(sewX - PIPE_W / 2)} y={wy(-SLAB_T, SLAB_T)}
+                width={px(PIPE_W)} height={px(SLAB_T)}
+                fill="rgba(42,122,74,0.25)" stroke={PC} strokeWidth="1" />
+              {/* Pipe stub above floor */}
+              <rect
+                x={wx(sewX - PIPE_W / 2)} y={wy(0, PIPE_H)}
+                width={px(PIPE_W)} height={px(PIPE_H)}
+                fill="rgba(42,122,74,0.2)" stroke={PC} strokeWidth="1.2" />
+              {/* Cap/collar at top of stub */}
+              <rect
+                x={wx(sewX - PIPE_W / 2 - 0.5)} y={wy(PIPE_H - 1, 1)}
+                width={px(PIPE_W + 1)} height={px(1)}
+                fill={PC} stroke={PC} strokeWidth="0.5" opacity="0.5" />
+              {/* Label */}
+              <text x={wx(sewX)} y={wy(PIPE_H + 1.5)}
+                fontSize="7" fill={PC} fontFamily="ui-monospace,monospace"
+                textAnchor="middle" fontWeight="600">
+                3&quot; SEWER STUB
+              </text>
+              <text x={wx(sewX)} y={wy(PIPE_H + 1.5) + 9}
+                fontSize="6" fill={PC} fontFamily="ui-monospace,monospace"
+                textAnchor="middle">(THRU SLAB)</text>
+              <text x={wx(sewX)} y={wy(-SLAB_T - 1)}
+                fontSize="6" fill="#666" fontFamily="ui-monospace,monospace"
+                textAnchor="middle">{sewX}&quot; from E end</text>
+            </g>
+          );
+        })()}
+
+        {/* ── Sewer stub on bathroom east wall ── */}
+        {wall.id === "bathroom-east" && sewer && (() => {
+          // Sewer stub at plan Y = 129.5"
+          // Original elev X = 40" from north end, but viewing from east (bathroom side)
+          // the north wall is on your LEFT — flip: sewX = wallLen - 40
+          const sewX = wall.totalLengthInches - 40;
+          const PIPE_W = 3;
+          const PIPE_H = 6;
+          const SLAB_T = 4;
+          const OPEN_W = 14;
+          const PC = "#2a7a4a";
+
+          return (
+            <g>
+              {/* Slab cut opening */}
+              <rect
+                x={wx(sewX - OPEN_W / 2)} y={wy(-SLAB_T, SLAB_T)}
+                width={px(OPEN_W)} height={px(SLAB_T)}
+                fill="rgba(80,60,40,0.12)" stroke="#666" strokeWidth="0.8"
+                strokeDasharray="4 2" />
+              {/* Pipe through slab (below floor) */}
+              <rect
+                x={wx(sewX - PIPE_W / 2)} y={wy(-SLAB_T, SLAB_T)}
+                width={px(PIPE_W)} height={px(SLAB_T)}
+                fill="rgba(42,122,74,0.25)" stroke={PC} strokeWidth="1" />
+              {/* Pipe stub above floor */}
+              <rect
+                x={wx(sewX - PIPE_W / 2)} y={wy(0, PIPE_H)}
+                width={px(PIPE_W)} height={px(PIPE_H)}
+                fill="rgba(42,122,74,0.2)" stroke={PC} strokeWidth="1.2" />
+              {/* Cap/collar at top of stub */}
+              <rect
+                x={wx(sewX - PIPE_W / 2 - 0.5)} y={wy(PIPE_H - 1, 1)}
+                width={px(PIPE_W + 1)} height={px(1)}
+                fill={PC} stroke={PC} strokeWidth="0.5" opacity="0.5" />
+              {/* Label */}
+              <text x={wx(sewX)} y={wy(PIPE_H + 1.5)}
+                fontSize="7" fill={PC} fontFamily="ui-monospace,monospace"
+                textAnchor="middle" fontWeight="600">
+                3&quot; SEWER STUB
+              </text>
+              <text x={wx(sewX)} y={wy(PIPE_H + 1.5) + 9}
+                fontSize="6" fill={PC} fontFamily="ui-monospace,monospace"
+                textAnchor="middle">(THRU SLAB)</text>
+              <text x={wx(sewX)} y={wy(-SLAB_T - 1)}
+                fontSize="6" fill="#666" fontFamily="ui-monospace,monospace"
+                textAnchor="middle">{sewX}&quot; from N wall</text>
+            </g>
+          );
+        })()}
+
         {/* ── Anchor bolt markers ── */}
         {anchors && (() => {
           const wallLen = wall.totalLengthInches;
@@ -500,6 +962,65 @@ export function WallElevationView({
               </g>
             );
           });
+        })()}
+
+        {/* ── Sill sealer — green stripe at the concrete / bottom-plate interface ── */}
+        {(isSouth || isNorth || isEast || isWest) && (() => {
+          const wallLen  = layout.totalLengthInches;
+          const gapH     = 3;    // white breathing room above the stripe (px)
+          const sealerH  = 2;    // visible foam stripe height (px)
+          const y0       = floorY; // SVG y of the concrete line (wy(0))
+          const stripeY  = y0 + gapH;
+          const lf       = (wallLen / 12).toFixed(1);
+          const tooltip  = `Sill Sealer Foam 5-1/2" × 50' — Pregis  ·  ${lf} LF this wall`;
+          return hoverGroup(
+            `${wall.id}-sill-sealer`, tooltip,
+            wallLen, 0, 0, 0,
+            <g>
+              {/* White gap separating the stripe from the bottom plate */}
+              <rect x={wx(0)} y={y0} width={px(wallLen)} height={gapH} fill="#fff" />
+              {/* Green foam strip — hover for full description */}
+              <rect x={wx(0)} y={stripeY} width={px(wallLen)} height={sealerH}
+                fill="#16a34a" opacity={0.9} rx={1} />
+            </g>
+          );
+        })()}
+
+        {/* ── Floor 2 joist band — East & West walls (viewer looks parallel to N-S joists) ── */}
+        {frame && (isEast || isWest) && (() => {
+          const jBase   = layout.wallHeightInches;
+          const jTop    = jBase + TJI_DEPTH;
+          const wallLen = layout.totalLengthInches;
+          const jFill   = "#e8e4dc";
+          const jStroke = "#444";
+          const jSW     = 0.7;
+          return (
+            <g>
+              {hoverGroup(`${wall.id}-rim-left-f2`, "South End Blocking / Rim (1⅛\" × 9½\")", TJI_RIM_T, TJI_DEPTH, 0, jBase,
+                <rect x={wx(0)} y={wy(jBase, TJI_DEPTH)} width={px(TJI_RIM_T)} height={px(TJI_DEPTH)}
+                  fill={jFill} stroke={jStroke} strokeWidth={jSW} />
+              )}
+              {hoverGroup(`${wall.id}-rim-right-f2`, "North End Blocking / Rim (1⅛\" × 9½\")", TJI_RIM_T, TJI_DEPTH, wallLen - TJI_RIM_T, jBase,
+                <rect x={wx(wallLen - TJI_RIM_T)} y={wy(jBase, TJI_DEPTH)} width={px(TJI_RIM_T)} height={px(TJI_DEPTH)}
+                  fill={jFill} stroke={jStroke} strokeWidth={jSW} />
+              )}
+              {hoverGroup(`${wall.id}-joist-band-f2`, `TJI Joists @ ${TJI_OC}" OC — run N-S (into view)`, wallLen - TJI_RIM_T * 2, TJI_DEPTH, TJI_RIM_T, jBase,
+                <rect x={wx(TJI_RIM_T)} y={wy(jBase, TJI_DEPTH)}
+                  width={px(wallLen - TJI_RIM_T * 2)} height={px(TJI_DEPTH)}
+                  fill={jFill} stroke={jStroke} strokeWidth={jSW} strokeDasharray="4 3" />
+              )}
+              {hoverGroup(`${wall.id}-subfloor-f2`, "Subfloor (3/4\" OSB)", wallLen, SUBFLOOR_T, 0, jTop,
+                <rect x={wx(0)} y={wy(jTop, SUBFLOOR_T)}
+                  width={px(wallLen)} height={px(SUBFLOOR_T)}
+                  fill="#c8c0a8" stroke="#444" strokeWidth="0.8" />
+              )}
+              <line x1={wx(wallLen) + 12} y1={wy(jBase)} x2={wx(wallLen) + 12} y2={wy(jTop)} stroke="#88a" strokeWidth="0.8" />
+              <line x1={wx(wallLen) + 8}  y1={wy(jBase)} x2={wx(wallLen) + 16} y2={wy(jBase)} stroke="#88a" strokeWidth="0.8" />
+              <line x1={wx(wallLen) + 8}  y1={wy(jTop)}  x2={wx(wallLen) + 16} y2={wy(jTop)}  stroke="#88a" strokeWidth="0.8" />
+              <text x={wx(wallLen) + 20} y={(wy(jBase) + wy(jTop)) / 2 + 3}
+                fontSize="7" fill="#88a" fontFamily="ui-monospace,monospace" textAnchor="start">9½″ TJI</text>
+            </g>
+          );
         })()}
 
         {/* ── Floor joists above top plate (South & North walls only) ── */}
@@ -1707,6 +2228,89 @@ export function WallElevationView({
                 </g>
               )}
 
+              {/* ── OSB Sheathing — T.O. CMU → 2F wall → joist zone → 3F wall ── */}
+              {showSheathing && (() => {
+                const sheathFill = "rgba(210,185,145,0.28)";
+                const sheathStroke = "#a07840";
+                const grainStroke = "rgba(160,120,60,0.18)";
+                const SHEET_L = 96;
+                const SHEET_W_SH = 48;
+
+                const sheathAbsBot = CMU_TOTAL_H;                          // 184
+                const f3Deck       = FLOOR3_IN;                             // 252.5
+                // North wall: 3F partial is on the LEFT (west end, elev x=0→120)
+                const f3WallTop    = FLOOR3_IN + THIRD_FLOOR_H;            // 368.5
+                const f3XRight     = THIRD_FLOOR_W;                         // 120
+
+                interface SheetR { x: number; y: number; w: number; h: number; label: boolean }
+                const sheets: SheetR[] = [];
+
+                // Zone A: full width (0→wallLen2), CMU top → 3F deck
+                let rowIdx = 0;
+                for (let rowY = sheathAbsBot; rowY < f3Deck; rowY += SHEET_W_SH, rowIdx++) {
+                  const clipY2 = Math.min(rowY + SHEET_W_SH, f3Deck);
+                  const rowH = clipY2 - rowY;
+                  if (rowH < 1) continue;
+                  const xOff = (rowIdx % 2 === 0) ? 0 : SHEET_L / 2;
+                  for (let sx = -xOff; sx < wallLen2; sx += SHEET_L) {
+                    const cx1 = Math.max(sx, 0);
+                    const cx2 = Math.min(sx + SHEET_L, wallLen2);
+                    if (cx2 <= cx1) continue;
+                    sheets.push({ x: cx1, y: rowY, w: cx2 - cx1, h: rowH, label: (cx2 - cx1) > 50 && rowH > 18 });
+                  }
+                }
+
+                // Zone B: partial width (0→120), 3F deck → 3F wall top
+                for (let rowY = f3Deck; rowY < f3WallTop; rowY += SHEET_W_SH, rowIdx++) {
+                  const clipY2 = Math.min(rowY + SHEET_W_SH, f3WallTop);
+                  const rowH = clipY2 - rowY;
+                  if (rowH < 1) continue;
+                  const xOff = (rowIdx % 2 === 0) ? 0 : SHEET_L / 2;
+                  for (let sx = -xOff; sx < f3XRight; sx += SHEET_L) {
+                    const cx1 = Math.max(sx, 0);
+                    const cx2 = Math.min(sx + SHEET_L, f3XRight);
+                    if (cx2 <= cx1) continue;
+                    sheets.push({ x: cx1, y: rowY, w: cx2 - cx1, h: rowH, label: (cx2 - cx1) > 50 && rowH > 18 });
+                  }
+                }
+
+                return (
+                  <g>
+                    <line x1={wx(0)} y1={wy(sheathAbsBot)} x2={wx(wallLen2)} y2={wy(sheathAbsBot)}
+                      stroke="#c8a800" strokeWidth="1.5" strokeDasharray="6 3" opacity="0.6" />
+                    <text x={wx(wallLen2 / 2)} y={wy(sheathAbsBot) + 11}
+                      fontSize="7" fill="#c8a800" fontFamily="ui-monospace,monospace"
+                      textAnchor="middle" opacity="0.7">
+                      ▲ T.O. CMU ({CMU_TOTAL_H}&quot;) — SHEATHING ABOVE
+                    </text>
+                    {sheets.map((s, i) => (
+                      <g key={`nsh${i}`}>
+                        <rect x={wx(s.x)} y={wy(s.y, s.h)} width={px(s.w)} height={px(s.h)}
+                          fill={sheathFill} stroke={sheathStroke} strokeWidth="0.8" strokeLinejoin="miter" />
+                        {Array.from({ length: Math.floor(s.w / 12) - 1 }, (_, gi) => {
+                          const gx = s.x + (gi + 1) * 12;
+                          return gx < s.x + s.w ? (
+                            <line key={`g${gi}`}
+                              x1={wx(gx)} y1={wy(s.y, s.h)} x2={wx(gx)} y2={wy(s.y)}
+                              stroke={grainStroke} strokeWidth="0.5" />
+                          ) : null;
+                        })}
+                        {s.label && (
+                          <text x={wx(s.x + s.w / 2)} y={wy(s.y + s.h / 2) + 3}
+                            fontSize="6" fill="#8B6030" fontFamily="ui-monospace,monospace"
+                            textAnchor="middle" opacity="0.8">4×8</text>
+                        )}
+                      </g>
+                    ))}
+                    <text x={wx(wallLen2 / 2)} y={wy(sheathAbsBot + 30)}
+                      fontSize="8" fill="#8b6914" fontFamily="ui-monospace,monospace"
+                      textAnchor="middle" opacity="0.8" fontWeight="700">
+                      7/16&quot; OSB SHEATHING · {sheets.length} SHEETS
+                    </text>
+                  </g>
+                );
+              })()}
+
             </g>
           );
         })()}
@@ -1858,6 +2462,217 @@ export function WallElevationView({
                 </g>
               )}
 
+              {/* ── OSB Sheathing — T.O. CMU → 2F wall → joist zone → 3F wall ──
+                  Covers everything above CMU: the upper 2nd floor wall, the joist/rim/subfloor
+                  band, and the 3rd floor partial wall (west 120" only). Uses actual 4×8 sheet
+                  sizes (48" tall × 96" long horizontal), staggered every other row. ── */}
+              {showSheathing && (() => {
+                const sheathFill = "rgba(210,185,145,0.28)";
+                const sheathStroke = "#a07840";
+                const grainStroke = "rgba(160,120,60,0.18)";
+                const SHEET_L = 96;  // 8' long edge (horizontal)
+                const SHEET_W = 48;  // 4' tall
+
+                // Full sheathing zone = T.O. CMU to top of 3F wall (where it exists)
+                const sheathAbsBot = CMU_TOTAL_H;                          // 184" from slab
+                const f2WallTop    = FLOOR2_IN + secondFloorSouthWall.wallHeightInches; // 242.25
+                const f3Deck       = FLOOR3_IN;                             // 252.5
+                const f3XOffset    = wall.totalLengthInches - THIRD_FLOOR_W; // 166
+                const f3WallTop    = FLOOR3_IN + THIRD_FLOOR_H;            // 368.5
+
+                // Define rectangular sheathing zones (may overlap slightly at joints)
+                // Zone A: Full width, T.O. CMU to top of 2F wall (incl joist/subfloor band)
+                // Zone B: Partial width (west 120"), 3F deck to 3F wall top
+                interface SheetRect { x: number; y: number; w: number; h: number; label: boolean; skip: boolean }
+                const sheets: SheetRect[] = [];
+
+                // Openings to skip (2F window, relative to slab)
+                const f2Ops = secondFloorSouthWall.openings
+                  .filter(op => op.type !== "cmu-only")
+                  .map(op => ({
+                    l: op.positionFromLeftInches,
+                    r: op.positionFromLeftInches + op.widthInches,
+                    b: FLOOR2_IN + (op.sillHeightInches ?? 0),
+                    t: FLOOR2_IN + (op.sillHeightInches ?? 0) + op.heightInches,
+                  }));
+
+                // Build sheets for Zone A: full width (0 → wallLen2), sheathAbsBot → f3Deck
+                let rowIdx = 0;
+                for (let rowY = sheathAbsBot; rowY < f3Deck; rowY += SHEET_W, rowIdx++) {
+                  const clipY2 = Math.min(rowY + SHEET_W, f3Deck);
+                  const rowH = clipY2 - rowY;
+                  if (rowH < 1) continue;
+                  const xOff = (rowIdx % 2 === 0) ? 0 : SHEET_L / 2;
+                  for (let sx = -xOff; sx < wallLen2; sx += SHEET_L) {
+                    const cx1 = Math.max(sx, 0);
+                    const cx2 = Math.min(sx + SHEET_L, wallLen2);
+                    if (cx2 <= cx1) continue;
+                    let skip = false;
+                    const midX = (cx1 + cx2) / 2;
+                    const midY = rowY + rowH / 2;
+                    for (const op of f2Ops) {
+                      if (midX > op.l && midX < op.r && midY > op.b && midY < op.t) { skip = true; break; }
+                    }
+                    sheets.push({ x: cx1, y: rowY, w: cx2 - cx1, h: rowH, label: (cx2 - cx1) > 50 && rowH > 18, skip });
+                  }
+                }
+
+                // Build sheets for Zone B: partial width (f3XOffset → wallLen2), f3Deck → f3WallTop
+                for (let rowY = f3Deck; rowY < f3WallTop; rowY += SHEET_W, rowIdx++) {
+                  const clipY2 = Math.min(rowY + SHEET_W, f3WallTop);
+                  const rowH = clipY2 - rowY;
+                  if (rowH < 1) continue;
+                  const xOff = (rowIdx % 2 === 0) ? 0 : SHEET_L / 2;
+                  for (let sx = f3XOffset - xOff; sx < wallLen2; sx += SHEET_L) {
+                    const cx1 = Math.max(sx, f3XOffset);
+                    const cx2 = Math.min(sx + SHEET_L, wallLen2);
+                    if (cx2 <= cx1) continue;
+                    sheets.push({ x: cx1, y: rowY, w: cx2 - cx1, h: rowH, label: (cx2 - cx1) > 50 && rowH > 18, skip: false });
+                  }
+                }
+
+                const sheetCount = sheets.filter(s => !s.skip).length;
+                const totalH = f3WallTop - sheathAbsBot;
+
+                return (
+                  <g>
+                    {/* T.O. CMU indicator line */}
+                    <line x1={wx(0)} y1={wy(sheathAbsBot)} x2={wx(wallLen2)} y2={wy(sheathAbsBot)}
+                      stroke="#c8a800" strokeWidth="1.5" strokeDasharray="6 3" opacity="0.6" />
+                    <text x={wx(wallLen2 / 2)} y={wy(sheathAbsBot) + 11}
+                      fontSize="7" fill="#c8a800" fontFamily="ui-monospace,monospace"
+                      textAnchor="middle" opacity="0.7">
+                      ▲ T.O. CMU ({CMU_TOTAL_H}&quot;) — SHEATHING ABOVE
+                    </text>
+
+                    {/* 3F deck line */}
+                    <line x1={wx(f3XOffset)} y1={wy(f3Deck)} x2={wx(wallLen2)} y2={wy(f3Deck)}
+                      stroke={sheathStroke} strokeWidth="0.4" strokeDasharray="3 4" opacity="0.4" />
+
+                    {/* Individual sheet rects with grain */}
+                    {sheets.map((s, i) => {
+                      if (s.skip) return null;
+                      return (
+                        <g key={`ssh${i}`}>
+                          <rect x={wx(s.x)} y={wy(s.y, s.h)} width={px(s.w)} height={px(s.h)}
+                            fill={sheathFill} stroke={sheathStroke} strokeWidth="0.8" strokeLinejoin="miter" />
+                          {/* Grain lines every 12" showing sheet orientation */}
+                          {Array.from({ length: Math.floor(s.w / 12) - 1 }, (_, gi) => {
+                            const gx = s.x + (gi + 1) * 12;
+                            return gx < s.x + s.w ? (
+                              <line key={`g${gi}`}
+                                x1={wx(gx)} y1={wy(s.y, s.h)} x2={wx(gx)} y2={wy(s.y)}
+                                stroke={grainStroke} strokeWidth="0.5" />
+                            ) : null;
+                          })}
+                          {s.label && (
+                            <text x={wx(s.x + s.w / 2)} y={wy(s.y + s.h / 2) + 3}
+                              fontSize="6" fill="#8B6030" fontFamily="ui-monospace,monospace"
+                              textAnchor="middle" opacity="0.8">4×8</text>
+                          )}
+                        </g>
+                      );
+                    })}
+
+                    {/* Summary */}
+                    <text x={wx(wallLen2 / 2)} y={wy(sheathAbsBot + 30)}
+                      fontSize="8" fill="#8b6914" fontFamily="ui-monospace,monospace"
+                      textAnchor="middle" opacity="0.8" fontWeight="700">
+                      7/16&quot; OSB SHEATHING · {sheetCount} SHEETS
+                    </text>
+                  </g>
+                );
+              })()}
+
+              {/* ── OSB Sheathing — T.O. CMU → 2F wall → joist zone → 3F wall ── */}
+              {showSheathing && (() => {
+                const sheathFill = "rgba(210,185,145,0.28)";
+                const sheathStroke = "#a07840";
+                const grainStroke = "rgba(160,120,60,0.18)";
+                const SHEET_L = 96;
+                const SHEET_W = 48;
+
+                const sheathAbsBot = CMU_TOTAL_H;                          // 184
+                const f3Deck       = FLOOR3_IN;                             // 252.5
+                // North wall: 3F partial wall is on the LEFT (west end, elev x=0 to THIRD_FLOOR_W)
+                const f3WallTop    = FLOOR3_IN + THIRD_FLOOR_H;            // 368.5
+                const f3XLeft      = 0;                                     // west end = left in N elev
+                const f3XRight     = THIRD_FLOOR_W;                         // 120
+
+                // North wall 2F has NO openings, so no skip logic needed
+                interface SheetRect { x: number; y: number; w: number; h: number; label: boolean }
+                const sheets: SheetRect[] = [];
+
+                // Zone A: full width (0→wallLen2), CMU top → 3F deck
+                let rowIdx = 0;
+                for (let rowY = sheathAbsBot; rowY < f3Deck; rowY += SHEET_W, rowIdx++) {
+                  const clipY2 = Math.min(rowY + SHEET_W, f3Deck);
+                  const rowH = clipY2 - rowY;
+                  if (rowH < 1) continue;
+                  const xOff = (rowIdx % 2 === 0) ? 0 : SHEET_L / 2;
+                  for (let sx = -xOff; sx < wallLen2; sx += SHEET_L) {
+                    const cx1 = Math.max(sx, 0);
+                    const cx2 = Math.min(sx + SHEET_L, wallLen2);
+                    if (cx2 <= cx1) continue;
+                    sheets.push({ x: cx1, y: rowY, w: cx2 - cx1, h: rowH, label: (cx2 - cx1) > 50 && rowH > 18 });
+                  }
+                }
+
+                // Zone B: partial width (0→120), 3F deck → 3F wall top
+                for (let rowY = f3Deck; rowY < f3WallTop; rowY += SHEET_W, rowIdx++) {
+                  const clipY2 = Math.min(rowY + SHEET_W, f3WallTop);
+                  const rowH = clipY2 - rowY;
+                  if (rowH < 1) continue;
+                  const xOff = (rowIdx % 2 === 0) ? 0 : SHEET_L / 2;
+                  for (let sx = f3XLeft - xOff; sx < f3XRight; sx += SHEET_L) {
+                    const cx1 = Math.max(sx, f3XLeft);
+                    const cx2 = Math.min(sx + SHEET_L, f3XRight);
+                    if (cx2 <= cx1) continue;
+                    sheets.push({ x: cx1, y: rowY, w: cx2 - cx1, h: rowH, label: (cx2 - cx1) > 50 && rowH > 18 });
+                  }
+                }
+
+                const sheetCount = sheets.length;
+
+                return (
+                  <g>
+                    <line x1={wx(0)} y1={wy(sheathAbsBot)} x2={wx(wallLen2)} y2={wy(sheathAbsBot)}
+                      stroke="#c8a800" strokeWidth="1.5" strokeDasharray="6 3" opacity="0.6" />
+                    <text x={wx(wallLen2 / 2)} y={wy(sheathAbsBot) + 11}
+                      fontSize="7" fill="#c8a800" fontFamily="ui-monospace,monospace"
+                      textAnchor="middle" opacity="0.7">
+                      ▲ T.O. CMU ({CMU_TOTAL_H}&quot;) — SHEATHING ABOVE
+                    </text>
+                    <line x1={wx(f3XLeft)} y1={wy(f3Deck)} x2={wx(f3XRight)} y2={wy(f3Deck)}
+                      stroke={sheathStroke} strokeWidth="0.4" strokeDasharray="3 4" opacity="0.4" />
+                    {sheets.map((s, i) => (
+                      <g key={`nsh${i}`}>
+                        <rect x={wx(s.x)} y={wy(s.y, s.h)} width={px(s.w)} height={px(s.h)}
+                          fill={sheathFill} stroke={sheathStroke} strokeWidth="0.8" strokeLinejoin="miter" />
+                        {Array.from({ length: Math.floor(s.w / 12) - 1 }, (_, gi) => {
+                          const gx = s.x + (gi + 1) * 12;
+                          return gx < s.x + s.w ? (
+                            <line key={`g${gi}`}
+                              x1={wx(gx)} y1={wy(s.y, s.h)} x2={wx(gx)} y2={wy(s.y)}
+                              stroke={grainStroke} strokeWidth="0.5" />
+                          ) : null;
+                        })}
+                        {s.label && (
+                          <text x={wx(s.x + s.w / 2)} y={wy(s.y + s.h / 2) + 3}
+                            fontSize="6" fill="#8B6030" fontFamily="ui-monospace,monospace"
+                            textAnchor="middle" opacity="0.8">4×8</text>
+                        )}
+                      </g>
+                    ))}
+                    <text x={wx(wallLen2 / 2)} y={wy(sheathAbsBot + 30)}
+                      fontSize="8" fill="#8b6914" fontFamily="ui-monospace,monospace"
+                      textAnchor="middle" opacity="0.8" fontWeight="700">
+                      7/16&quot; OSB SHEATHING · {sheetCount} SHEETS
+                    </text>
+                  </g>
+                );
+              })()}
+
               {/* Second floor deck level line + label */}
               <line x1={wx(0)} y1={wy(f2y)} x2={wx(wallLen2)} y2={wy(f2y)}
                 stroke={S2_BK} strokeWidth="1.2" strokeDasharray="5 3" />
@@ -1955,11 +2770,6 @@ export function WallElevationView({
           const CMU_TOTAL_H = 23 * CMU_BLOCK_H;
           const jBase2   = f2y + f2Wall.wallHeightInches;
           const jTop2    = jBase2 + TJI_DEPTH;
-          const JOIST_W2 = SW;
-          const joistOff2  = JOIST_W2 / 2;
-          const lastJoist2 = wallLen2 - TJI_RIM_T - JOIST_W2;
-          const jPos2: number[] = [];
-          for (let x = TJI_OC + joistOff2; x <= lastJoist2; x += TJI_OC) jPos2.push(x);
           const jFill2   = "#e8e4dc";
           const jStroke2 = "#444";
           const jSW2     = 0.7;
@@ -1967,8 +2777,8 @@ export function WallElevationView({
 
           return (
             <g>
-              {/* CMU continuation */}
-              {cmu && (() => {
+              {/* CMU continuation — skipped in exterior mode; re-rendered on top in ext-cmu-overlay */}
+              {cmu && !showExterior && (() => {
                 const cmuLeft  = -CMU_EXT_SIDE;
                 const cmuRight = wall.totalLengthInches + CMU_EXT_SIDE;
                 const voids    = wall.openings.map(op => ({
@@ -2075,31 +2885,23 @@ export function WallElevationView({
                       </g>
                     );
                   })}
-                  {hoverGroup(`${wallId}-rim-left`, "Rim Board (1⅛\" × 9½\")", TJI_RIM_T, TJI_DEPTH, 0, jBase2,
+                  {/* Joists run N-S (perpendicular to this E-W view direction).
+                      Visible as a continuous band — the face of the rim joist spans the full wall.
+                      Left rim = south-end connection; right rim = north-end connection. */}
+                  {hoverGroup(`${wallId}-rim-left`, "South End Blocking / Rim (1⅛\" × 9½\")", TJI_RIM_T, TJI_DEPTH, 0, jBase2,
                     <rect x={wx(0)} y={wy(jBase2, TJI_DEPTH)} width={px(TJI_RIM_T)} height={px(TJI_DEPTH)}
                       fill={jFill2} stroke={jStroke2} strokeWidth={jSW2} />
                   )}
-                  {hoverGroup(`${wallId}-rim-right`, "Rim Board (1⅛\" × 9½\")", TJI_RIM_T, TJI_DEPTH, wallLen2 - TJI_RIM_T, jBase2,
+                  {hoverGroup(`${wallId}-rim-right`, "North End Blocking / Rim (1⅛\" × 9½\")", TJI_RIM_T, TJI_DEPTH, wallLen2 - TJI_RIM_T, jBase2,
                     <rect x={wx(wallLen2 - TJI_RIM_T)} y={wy(jBase2, TJI_DEPTH)} width={px(TJI_RIM_T)} height={px(TJI_DEPTH)}
                       fill={jFill2} stroke={jStroke2} strokeWidth={jSW2} />
                   )}
-                  {jPos2.map((x, i) => {
-                    const cx  = Math.max(TJI_OC + joistOff2, Math.min(lastJoist2, x));
-                    const jId = `${wallId}-tji-${i}`;
-                    return hoverGroup(jId, `TJI Joist #${i}`, JOIST_W2 * 2, TJI_DEPTH, cx - JOIST_W2, jBase2,
-                      <g key={jId}>
-                        <rect x={wx(cx - JOIST_W2)} y={wy(jBase2, TJI_FLANGE_H)}
-                          width={px(JOIST_W2 * 2)} height={px(TJI_FLANGE_H)}
-                          fill={jFill2} stroke={jStroke2} strokeWidth={jSW2} />
-                        <rect x={wx(cx - TJI_WEB_W / 2)} y={wy(jBase2 + TJI_FLANGE_H, TJI_DEPTH - TJI_FLANGE_H * 2)}
-                          width={px(TJI_WEB_W)} height={px(TJI_DEPTH - TJI_FLANGE_H * 2)}
-                          fill={jFill2} stroke={jStroke2} strokeWidth={jSW2} />
-                        <rect x={wx(cx - JOIST_W2)} y={wy(jTop2 - TJI_FLANGE_H, TJI_FLANGE_H)}
-                          width={px(JOIST_W2 * 2)} height={px(TJI_FLANGE_H)}
-                          fill={jFill2} stroke={jStroke2} strokeWidth={jSW2} />
-                      </g>
-                    );
-                  })}
+                  {/* Floor band — N-S TJI joists run into the page from this wall face */}
+                  {hoverGroup(`${wallId}-joist-band`, `TJI Joists @ ${TJI_OC}" OC — run N-S (into view)`, wallLen2 - TJI_RIM_T * 2, TJI_DEPTH, TJI_RIM_T, jBase2,
+                    <rect x={wx(TJI_RIM_T)} y={wy(jBase2, TJI_DEPTH)}
+                      width={px(wallLen2 - TJI_RIM_T * 2)} height={px(TJI_DEPTH)}
+                      fill={jFill2} stroke={jStroke2} strokeWidth={jSW2} strokeDasharray="4 3" />
+                  )}
                   {hoverGroup(`${wallId}-subfloor`, "Subfloor (3/4\" OSB — 3rd floor)", wallLen2, SUBFLOOR_T, 0, jTop2,
                     <rect x={wx(0)} y={wy(jTop2, SUBFLOOR_T)}
                       width={px(wallLen2)} height={px(SUBFLOOR_T)}
@@ -2113,6 +2915,95 @@ export function WallElevationView({
                 </g>
               )}
 
+              {/* ── OSB Sheathing — T.O. CMU → 2F wall → joist zone ── */}
+              {showSheathing && (() => {
+                const sheathFill = "rgba(210,185,145,0.28)";
+                const sheathStroke = "#a07840";
+                const grainStroke = "rgba(160,120,60,0.18)";
+                const SHEET_L = 96;
+                const SHEET_W_SH = 48;
+
+                const sheathAbsBot = CMU_TOTAL_H;  // 184
+                // E/W walls: no 3rd floor (except west shed, handled separately)
+                // Sheathing zone: T.O. CMU → top of 2F joist zone (subfloor top)
+                const sheathAbsTop = jTop2 + SUBFLOOR_T;
+                const zoneH = sheathAbsTop - sheathAbsBot;
+
+                if (zoneH <= 0) return null;
+
+                // Second floor openings for skip logic
+                const f2Ops = f2Wall.openings
+                  .filter(op => op.type !== "cmu-only")
+                  .map(op => ({
+                    l: op.positionFromLeftInches,
+                    r: op.positionFromLeftInches + op.widthInches,
+                    b: FLOOR2_IN + (op.sillHeightInches ?? 0),
+                    t: FLOOR2_IN + (op.sillHeightInches ?? 0) + op.heightInches,
+                  }));
+
+                interface SheetR { x: number; y: number; w: number; h: number; label: boolean; skip: boolean }
+                const sheets: SheetR[] = [];
+                let rowIdx = 0;
+                for (let rowY = sheathAbsBot; rowY < sheathAbsTop; rowY += SHEET_W_SH, rowIdx++) {
+                  const clipY2 = Math.min(rowY + SHEET_W_SH, sheathAbsTop);
+                  const rowH = clipY2 - rowY;
+                  if (rowH < 1) continue;
+                  const xOff = (rowIdx % 2 === 0) ? 0 : SHEET_L / 2;
+                  for (let sx = -xOff; sx < wallLen2; sx += SHEET_L) {
+                    const cx1 = Math.max(sx, 0);
+                    const cx2 = Math.min(sx + SHEET_L, wallLen2);
+                    if (cx2 <= cx1) continue;
+                    let skip = false;
+                    const midX = (cx1 + cx2) / 2;
+                    const midY = rowY + rowH / 2;
+                    for (const op of f2Ops) {
+                      if (midX > op.l && midX < op.r && midY > op.b && midY < op.t) { skip = true; break; }
+                    }
+                    sheets.push({ x: cx1, y: rowY, w: cx2 - cx1, h: rowH, label: (cx2 - cx1) > 50 && rowH > 18, skip });
+                  }
+                }
+                const sheetCount = sheets.filter(s => !s.skip).length;
+
+                return (
+                  <g>
+                    <line x1={wx(0)} y1={wy(sheathAbsBot)} x2={wx(wallLen2)} y2={wy(sheathAbsBot)}
+                      stroke="#c8a800" strokeWidth="1.5" strokeDasharray="6 3" opacity="0.6" />
+                    <text x={wx(wallLen2 / 2)} y={wy(sheathAbsBot) + 11}
+                      fontSize="7" fill="#c8a800" fontFamily="ui-monospace,monospace"
+                      textAnchor="middle" opacity="0.7">
+                      ▲ T.O. CMU ({CMU_TOTAL_H}&quot;) — SHEATHING ABOVE
+                    </text>
+                    {sheets.map((s, i) => {
+                      if (s.skip) return null;
+                      return (
+                        <g key={`ewsh${i}`}>
+                          <rect x={wx(s.x)} y={wy(s.y, s.h)} width={px(s.w)} height={px(s.h)}
+                            fill={sheathFill} stroke={sheathStroke} strokeWidth="0.8" strokeLinejoin="miter" />
+                          {Array.from({ length: Math.floor(s.w / 12) - 1 }, (_, gi) => {
+                            const gx = s.x + (gi + 1) * 12;
+                            return gx < s.x + s.w ? (
+                              <line key={`g${gi}`}
+                                x1={wx(gx)} y1={wy(s.y, s.h)} x2={wx(gx)} y2={wy(s.y)}
+                                stroke={grainStroke} strokeWidth="0.5" />
+                            ) : null;
+                          })}
+                          {s.label && (
+                            <text x={wx(s.x + s.w / 2)} y={wy(s.y + s.h / 2) + 3}
+                              fontSize="6" fill="#8B6030" fontFamily="ui-monospace,monospace"
+                              textAnchor="middle" opacity="0.8">4×8</text>
+                          )}
+                        </g>
+                      );
+                    })}
+                    <text x={wx(wallLen2 / 2)} y={wy(sheathAbsBot + 30)}
+                      fontSize="8" fill="#8b6914" fontFamily="ui-monospace,monospace"
+                      textAnchor="middle" opacity="0.8" fontWeight="700">
+                      7/16&quot; OSB SHEATHING · {sheetCount} SHEETS
+                    </text>
+                  </g>
+                );
+              })()}
+
               {/* Second floor deck level line + label */}
               <line x1={wx(0)} y1={wy(f2y)} x2={wx(wallLen2)} y2={wy(f2y)}
                 stroke={EW_BK} strokeWidth="1.2" strokeDasharray="5 3" />
@@ -2122,36 +3013,48 @@ export function WallElevationView({
           );
         })()}
 
-        {/* ── Third floor — west wall shed roof ── */}
+        {/* ── Third floor — west wall: plumb wall + knee wall slope ──
+            Standard framing: build plumb to low side (84"), double top plate,
+            then triangular knee wall on top creates the pitch from 84" to 116".
+            This gives a continuous horizontal top plate for the diaphragm chord,
+            uniform stud lengths in the main wall, and the slope framed separately. ── */}
         {isWest && (() => {
           const f3y   = FLOOR3_IN;
           const W3    = wall.totalLengthInches; // 166"
           const BK    = "#222";
+          const KW    = "#8b5e3c"; // knee wall color
           const OC    = wall.studSpacingOC;     // 16"
+          const LOW_H = WEST_F3_LOW_H;          // 84" — plumb wall height
+          const HIGH_H = WEST_F3_HIGH_H;        // 116" — high end total
 
-          // Height at any x position along the shed slope
-          const shedH = (x: number) =>
-            WEST_F3_LOW_H + (WEST_F3_HIGH_H - WEST_F3_LOW_H) * (x / W3);
+          // ── MAIN WALL — uniform height to low side (84") ──
+          const mainWallH = LOW_H;
+          const mainStudH = mainWallH - PLATE_H * 3; // studs between bottom plate and double top plate
+          const topPlateY = f3y + mainWallH;          // top of double top plate
 
-          // Generate studs: full-width bottom plate, each stud trimmed to slope
-          const studs: { x: number; h: number }[] = [];
-          for (let x = SW; x <= W3 - SW - OC / 2; x += OC) studs.push({ x, h: shedH(x) - PLATE_H * 2 });
-          // King studs at each end
-          const leftH  = shedH(0);
-          const rightH = shedH(W3);
+          // ── KNEE WALL — triangular slope zone above the main wall ──
+          // From 0" height on the left (low end) to (HIGH_H - LOW_H) = 32" on the right (high end)
+          const kneeMaxH = HIGH_H - LOW_H; // 32"
+          const kneeH = (x: number) => kneeMaxH * (x / W3); // height of knee wall at position x
+          const kneeBot = topPlateY; // knee wall sits on top of the double top plate
 
-          // Roof slope polygon outline (trapezoid): bottom-left → top-left → top-right → bottom-right
-          const roofPts = [
-            `${wx(0)},${wy(f3y)}`,
-            `${wx(0)},${wy(f3y + leftH)}`,
-            `${wx(W3)},${wy(f3y + rightH)}`,
-            `${wx(W3)},${wy(f3y)}`,
-          ].join(" ");
+          // Knee wall cripple studs — only where there's enough height (>3")
+          const kneeStuds: { x: number; h: number }[] = [];
+          for (let x = SW; x <= W3 - SW - OC / 2; x += OC) {
+            const h = kneeH(x) - PLATE_H; // subtract top plate (sloped)
+            if (h > 3) kneeStuds.push({ x, h });
+          }
+
+          // Overall roof line (top of slope) for the outline
+          const roofLineY = (x: number) => f3y + LOW_H + kneeH(x);
 
           return (
             <g>
-              {/* Shed roof wall outline */}
-              <polygon points={roofPts} fill="none" stroke={BK} strokeWidth="1.5" />
+              {/* ═══ MAIN PLUMB WALL ═══ */}
+
+              {/* Wall outline — main rectangular wall */}
+              <rect x={wx(0)} y={wy(f3y, mainWallH)} width={px(W3)} height={px(mainWallH)}
+                fill="none" stroke={BK} strokeWidth="1.5" />
 
               {frame && (
                 <g>
@@ -2159,37 +3062,154 @@ export function WallElevationView({
                   <rect x={wx(0)} y={wy(f3y, PLATE_H)} width={px(W3)} height={px(PLATE_H)}
                     fill="#fff" stroke="#010101" strokeWidth="1.2" />
 
+                  {/* Field studs — all uniform height */}
+                  {(() => {
+                    const wallStuds: number[] = [];
+                    for (let x = SW; x <= W3 - SW - OC / 2; x += OC) wallStuds.push(x);
+                    return wallStuds.map((sx, i) => (
+                      <rect key={`ws${i}`}
+                        x={wx(sx)} y={wy(f3y + PLATE_H, mainStudH)} width={px(SW)} height={px(mainStudH)}
+                        fill="#fff" stroke="#010101" strokeWidth="1" />
+                    ));
+                  })()}
+
                   {/* Left king stud */}
-                  <rect x={wx(0)} y={wy(f3y + PLATE_H, leftH - PLATE_H * 2)} width={px(SW)} height={px(leftH - PLATE_H * 2)}
+                  <rect x={wx(0)} y={wy(f3y + PLATE_H, mainStudH)} width={px(SW)} height={px(mainStudH)}
                     fill="#fff" stroke="#010101" strokeWidth="1.2" />
-
-                  {/* Field studs — each trimmed to slope */}
-                  {studs.map((s, i) => (
-                    <rect key={i}
-                      x={wx(s.x)} y={wy(f3y + PLATE_H, s.h)} width={px(SW)} height={px(s.h)}
-                      fill="#fff" stroke="#010101" strokeWidth="1" />
-                  ))}
-
                   {/* Right king stud */}
-                  <rect x={wx(W3 - SW)} y={wy(f3y + PLATE_H, rightH - PLATE_H * 2)} width={px(SW)} height={px(rightH - PLATE_H * 2)}
+                  <rect x={wx(W3 - SW)} y={wy(f3y + PLATE_H, mainStudH)} width={px(SW)} height={px(mainStudH)}
                     fill="#fff" stroke="#010101" strokeWidth="1.2" />
 
-                  {/* Top plate — follows slope (rendered as a line) */}
-                  <line
-                    x1={wx(0)}  y1={wy(f3y + leftH  - PLATE_H)}
-                    x2={wx(W3)} y2={wy(f3y + rightH - PLATE_H)}
-                    stroke="#010101" strokeWidth="1.5" />
-                  <line
-                    x1={wx(0)}  y1={wy(f3y + leftH)}
-                    x2={wx(W3)} y2={wy(f3y + rightH)}
-                    stroke="#010101" strokeWidth="1.5" />
+                  {/* Double top plate — horizontal at 84" (the diaphragm chord) */}
+                  <rect x={wx(0)} y={wy(f3y + mainWallH - PLATE_H * 2, PLATE_H)} width={px(W3)} height={px(PLATE_H)}
+                    fill="#fff" stroke="#010101" strokeWidth="1.2" />
+                  <rect x={wx(0)} y={wy(f3y + mainWallH - PLATE_H, PLATE_H)} width={px(W3)} height={px(PLATE_H)}
+                    fill="#fff" stroke="#010101" strokeWidth="1.2" />
                 </g>
               )}
 
+              {/* ═══ KNEE WALL (slope zone above main wall) ═══ */}
+
+              {/* Triangular outline — left at 0", slopes up to 32" on right */}
+              <polygon points={[
+                `${wx(0)},${wy(kneeBot)}`,
+                `${wx(W3)},${wy(kneeBot)}`,
+                `${wx(W3)},${wy(kneeBot + kneeMaxH)}`,
+              ].join(" ")}
+                fill="rgba(180,150,110,0.08)" stroke={KW} strokeWidth="1.2" />
+
+              {frame && (
+                <g>
+                  {/* Knee wall bottom plate — sits on top of main wall double top plate */}
+                  <line x1={wx(0)} y1={wy(kneeBot)} x2={wx(W3)} y2={wy(kneeBot)}
+                    stroke={KW} strokeWidth="1.5" />
+                  <line x1={wx(0)} y1={wy(kneeBot + PLATE_H)} x2={wx(W3)} y2={wy(kneeBot + PLATE_H)}
+                    stroke={KW} strokeWidth="0.8" strokeDasharray="4 3" />
+
+                  {/* Knee wall cripple studs — each trimmed to slope */}
+                  {kneeStuds.map((s, i) => (
+                    <rect key={`kw${i}`}
+                      x={wx(s.x)} y={wy(kneeBot + PLATE_H, s.h)} width={px(SW)} height={px(s.h)}
+                      fill="rgba(255,250,240,0.6)" stroke={KW} strokeWidth="0.8" />
+                  ))}
+
+                  {/* Right end king stud (tallest) */}
+                  <rect x={wx(W3 - SW)} y={wy(kneeBot + PLATE_H, kneeMaxH - PLATE_H * 2)} width={px(SW)} height={px(kneeMaxH - PLATE_H * 2)}
+                    fill="rgba(255,250,240,0.6)" stroke={KW} strokeWidth="1" />
+
+                  {/* Sloped top plate — follows the roof line */}
+                  <line x1={wx(0)} y1={wy(kneeBot)}
+                    x2={wx(W3)} y2={wy(kneeBot + kneeMaxH - PLATE_H)}
+                    stroke={KW} strokeWidth="1" strokeDasharray="6 3" />
+                  <line x1={wx(0)} y1={wy(kneeBot)}
+                    x2={wx(W3)} y2={wy(kneeBot + kneeMaxH)}
+                    stroke={KW} strokeWidth="1.5" />
+                </g>
+              )}
+
+              {/* ═══ OSB SHEATHING — 3F plumb wall only (knee wall is roof structure) ═══ */}
+              {showSheathing && (() => {
+                const sheathFill = "rgba(210,185,145,0.28)";
+                const sheathStroke = "#a07840";
+                const grainStroke = "rgba(160,120,60,0.18)";
+                const SHEET_L = 96;
+                const SHEET_W_SH = 48;
+
+                // Plumb wall only (f3y → f3y + LOW_H, full width)
+                // Knee wall above is roof framing, not wall sheathing
+                interface SheetR { x: number; y: number; w: number; h: number; label: boolean }
+                const sheets: SheetR[] = [];
+
+                let rowIdx = 0;
+                for (let rowY = f3y; rowY < f3y + mainWallH; rowY += SHEET_W_SH, rowIdx++) {
+                  const clipY2 = Math.min(rowY + SHEET_W_SH, f3y + mainWallH);
+                  const rowH = clipY2 - rowY;
+                  if (rowH < 1) continue;
+                  const xOff = (rowIdx % 2 === 0) ? 0 : SHEET_L / 2;
+                  for (let sx = -xOff; sx < W3; sx += SHEET_L) {
+                    const cx1 = Math.max(sx, 0);
+                    const cx2 = Math.min(sx + SHEET_L, W3);
+                    if (cx2 <= cx1) continue;
+                    sheets.push({ x: cx1, y: rowY, w: cx2 - cx1, h: rowH, label: (cx2 - cx1) > 50 && rowH > 18 });
+                  }
+                }
+
+                return (
+                  <g>
+                    {sheets.map((s, i) => (
+                      <g key={`wsh${i}`}>
+                        <rect x={wx(s.x)} y={wy(s.y, s.h)} width={px(s.w)} height={px(s.h)}
+                          fill={sheathFill} stroke={sheathStroke} strokeWidth="0.8" strokeLinejoin="miter" />
+                        {Array.from({ length: Math.floor(s.w / 12) - 1 }, (_, gi) => {
+                          const gx = s.x + (gi + 1) * 12;
+                          return gx < s.x + s.w ? (
+                            <line key={`g${gi}`}
+                              x1={wx(gx)} y1={wy(s.y, s.h)} x2={wx(gx)} y2={wy(s.y)}
+                              stroke={grainStroke} strokeWidth="0.5" />
+                          ) : null;
+                        })}
+                        {s.label && (
+                          <text x={wx(s.x + s.w / 2)} y={wy(s.y + s.h / 2) + 3}
+                            fontSize="6" fill="#8B6030" fontFamily="ui-monospace,monospace"
+                            textAnchor="middle" opacity="0.8">4×8</text>
+                        )}
+                      </g>
+                    ))}
+                    <text x={wx(W3 / 2)} y={wy(f3y + mainWallH / 2) + 16}
+                      fontSize="8" fill="#8b6914" fontFamily="ui-monospace,monospace"
+                      textAnchor="middle" opacity="0.8" fontWeight="700">
+                      7/16&quot; OSB · {sheets.length} SHEETS (3F SHED)
+                    </text>
+                  </g>
+                );
+              })()}
+
+              {/* ═══ LABELS ═══ */}
+
+              {/* Main wall label */}
+              <text x={wx(W3 / 2)} y={wy(f3y + mainWallH / 2) + 4}
+                fill={BK} fontSize="8" fontFamily="ui-monospace,monospace"
+                textAnchor="middle" opacity="0.5">
+                PLUMB WALL — {LOW_H}&quot; ({Math.floor(LOW_H / 12)}&apos;-{LOW_H % 12}&quot;)
+              </text>
+
+              {/* Knee wall label */}
+              <text x={wx(W3 * 0.7)} y={wy(kneeBot + kneeH(W3 * 0.7) / 2) + 3}
+                fill={KW} fontSize="7" fontFamily="ui-monospace,monospace"
+                textAnchor="middle" fontWeight="600">
+                KNEE WALL — SLOPE TO {HIGH_H}&quot;
+              </text>
+
               {/* Roof line label */}
-              <text x={wx(W3 / 2)} y={wy(f3y + shedH(W3 / 2)) - 6}
+              <text x={wx(W3 / 2)} y={wy(roofLineY(W3 / 2)) - 6}
                 fill={BK} fontSize="8" fontFamily="ui-monospace,monospace" textAnchor="middle">
-                SHED ROOF — {WEST_F3_LOW_H}&quot; low · {WEST_F3_HIGH_H}&quot; high
+                SHED ROOF — {LOW_H}&quot; low · {HIGH_H}&quot; high
+              </text>
+
+              {/* Horizontal top plate label */}
+              <text x={wx(W3 / 2)} y={wy(topPlateY) + 12}
+                fill="#446" fontSize="6.5" fontFamily="ui-monospace,monospace" textAnchor="middle">
+                ▲ DBL TOP PLATE @ {LOW_H}&quot; — DIAPHRAGM CHORD
               </text>
 
               {/* 3rd floor deck line */}
@@ -2199,17 +3219,26 @@ export function WallElevationView({
                 fontFamily="ui-monospace,monospace" textAnchor="end">3RD FLOOR</text>
 
               {/* Height dimensions — left and right ends */}
-              <line x1={wx(0) - 10} y1={wy(f3y)} x2={wx(0) - 10} y2={wy(f3y + leftH)} stroke="#88a" strokeWidth="0.8" />
+              {/* Left: plumb wall height */}
+              <line x1={wx(0) - 10} y1={wy(f3y)} x2={wx(0) - 10} y2={wy(f3y + LOW_H)} stroke="#88a" strokeWidth="0.8" />
               <line x1={wx(0) - 14} y1={wy(f3y)} x2={wx(0) - 6}  y2={wy(f3y)} stroke="#88a" strokeWidth="0.8" />
-              <line x1={wx(0) - 14} y1={wy(f3y + leftH)} x2={wx(0) - 6} y2={wy(f3y + leftH)} stroke="#88a" strokeWidth="0.8" />
-              <text x={wx(0) - 18} y={(wy(f3y) + wy(f3y + leftH)) / 2 + 3}
-                fill="#88a" fontSize="7" fontFamily="ui-monospace,monospace" textAnchor="end">{WEST_F3_LOW_H}&quot;</text>
+              <line x1={wx(0) - 14} y1={wy(f3y + LOW_H)} x2={wx(0) - 6} y2={wy(f3y + LOW_H)} stroke="#88a" strokeWidth="0.8" />
+              <text x={wx(0) - 18} y={(wy(f3y) + wy(f3y + LOW_H)) / 2 + 3}
+                fill="#88a" fontSize="7" fontFamily="ui-monospace,monospace" textAnchor="end">{LOW_H}&quot;</text>
 
-              <line x1={wx(W3) + 10} y1={wy(f3y)} x2={wx(W3) + 10} y2={wy(f3y + rightH)} stroke="#88a" strokeWidth="0.8" />
+              {/* Right: full height including knee wall */}
+              <line x1={wx(W3) + 10} y1={wy(f3y)} x2={wx(W3) + 10} y2={wy(f3y + HIGH_H)} stroke="#88a" strokeWidth="0.8" />
               <line x1={wx(W3) + 6}  y1={wy(f3y)} x2={wx(W3) + 14} y2={wy(f3y)} stroke="#88a" strokeWidth="0.8" />
-              <line x1={wx(W3) + 6}  y1={wy(f3y + rightH)} x2={wx(W3) + 14} y2={wy(f3y + rightH)} stroke="#88a" strokeWidth="0.8" />
-              <text x={wx(W3) + 18} y={(wy(f3y) + wy(f3y + rightH)) / 2 + 3}
-                fill="#88a" fontSize="7" fontFamily="ui-monospace,monospace" textAnchor="start">{WEST_F3_HIGH_H}&quot;</text>
+              <line x1={wx(W3) + 6}  y1={wy(f3y + HIGH_H)} x2={wx(W3) + 14} y2={wy(f3y + HIGH_H)} stroke="#88a" strokeWidth="0.8" />
+              <text x={wx(W3) + 18} y={(wy(f3y) + wy(f3y + HIGH_H)) / 2 + 3}
+                fill="#88a" fontSize="7" fontFamily="ui-monospace,monospace" textAnchor="start">{HIGH_H}&quot;</text>
+
+              {/* Right: knee wall height callout */}
+              <line x1={wx(W3) + 26} y1={wy(kneeBot)} x2={wx(W3) + 26} y2={wy(kneeBot + kneeMaxH)} stroke={KW} strokeWidth="0.8" />
+              <line x1={wx(W3) + 22} y1={wy(kneeBot)} x2={wx(W3) + 30} y2={wy(kneeBot)} stroke={KW} strokeWidth="0.8" />
+              <line x1={wx(W3) + 22} y1={wy(kneeBot + kneeMaxH)} x2={wx(W3) + 30} y2={wy(kneeBot + kneeMaxH)} stroke={KW} strokeWidth="0.8" />
+              <text x={wx(W3) + 34} y={(wy(kneeBot) + wy(kneeBot + kneeMaxH)) / 2 + 3}
+                fill={KW} fontSize="7" fontFamily="ui-monospace,monospace" textAnchor="start">{kneeMaxH}&quot; knee</text>
             </g>
           );
         })()}
@@ -2500,7 +3529,90 @@ export function WallElevationView({
           ))}
           <HDim x1={wallL} x2={wallR} y={overallY} witnessY={floorY} label={`${fmt(layout.totalLengthInches)} total`} />
         </>}
+
+        {/* ── CMU block layer (exterior mode: draw LAST, on top of frame) ──
+            CMU covers the frame entirely. Only openings (doors/windows) show through.
+            A solid background behind the CMU hides the frame where CMU exists. */}
+        {/* ── Exterior CMU overlay — opaque FILLED blocks hide the frame.
+            No background rect. The blocks themselves are the mask. ── */}
+        {cmu && showExterior && (
+          <g>
+            {/* Render CMU blocks with OPAQUE FILL so they cover the frame.
+                The normal CMULayer uses className="cmu" which has fill:none.
+                We override with a scoped style that gives them a solid fill. */}
+            <defs>
+              <style>{`
+                .ext-cmu-overlay .cmu { fill: #ffffff; stroke: #c8a800; stroke-width: 0.75px; }
+              `}</style>
+            </defs>
+            <g className="ext-cmu-overlay">
+              <CMULayer wall={wall} px={px} wx={wx} wy={wy} />
+            </g>
+            {/* Stroke-only pass on top for crisp block outlines */}
+            <CMULayer wall={wall} px={px} wx={wx} wy={wy} />
+
+            {/* ── Second-floor CMU overlay (east/west walls only) ──
+                These blocks are suppressed inline to avoid being behind studs.
+                Re-rendered here last so they sit on top of all framing. */}
+            {(isEast || isWest) && (() => {
+              const cmuLeft2   = -CMU_EXT_SIDE;
+              const cmuRight2  = wall.totalLengthInches + CMU_EXT_SIDE;
+              const CMU_TOTAL2 = 23 * CMU_BLOCK_H;
+              const voids2     = wall.openings.map(op => ({
+                left:   op.positionFromLeftInches,
+                right:  op.positionFromLeftInches + op.widthInches,
+                bottom: op.sillHeightInches ?? 0,
+                top:    (op.sillHeightInches ?? 0) + op.heightInches,
+              }));
+              const blocks: React.ReactNode[] = [];
+              const firstCourse = Math.floor(FLOOR2_IN / CMU_BLOCK_H);
+              const lastCourse  = Math.ceil(CMU_TOTAL2 / CMU_BLOCK_H) - 1;
+              for (let course = firstCourse; course <= lastCourse; course++) {
+                const courseBot  = course * CMU_BLOCK_H;
+                const courseTop  = Math.min(courseBot + CMU_BLOCK_H, CMU_TOTAL2);
+                const visBot     = Math.max(courseBot, FLOOR2_IN);
+                const blockH     = courseTop - visBot;
+                if (blockH <= 0) continue;
+                const halfOffset = course % 2 === 1 ? CMU_BLOCK_W / 2 : 0;
+                const startX     = cmuLeft2 - halfOffset;
+                const numBlocks  = Math.ceil((cmuRight2 - startX) / CMU_BLOCK_W) + 1;
+                for (let b = 0; b < numBlocks; b++) {
+                  const bx    = startX + b * CMU_BLOCK_W;
+                  const left  = Math.max(bx, cmuLeft2);
+                  const right = Math.min(bx + CMU_BLOCK_W, cmuRight2);
+                  if (right <= left) continue;
+                  let segs: { x1: number; x2: number }[] = [{ x1: left, x2: right }];
+                  for (const v of voids2) {
+                    if (courseTop <= v.bottom || courseBot >= v.top) continue;
+                    const next: { x1: number; x2: number }[] = [];
+                    for (const s of segs) {
+                      if (s.x2 <= v.left || s.x1 >= v.right) { next.push(s); }
+                      else {
+                        if (s.x1 < v.left)  next.push({ x1: s.x1,  x2: v.left  });
+                        if (s.x2 > v.right) next.push({ x1: v.right, x2: s.x2  });
+                      }
+                    }
+                    segs = next;
+                  }
+                  for (const seg of segs) {
+                    if (seg.x2 - seg.x1 < 0.25) continue;
+                    blocks.push(
+                      <rect key={`f2cmu-ovl-${course}-${b}-${seg.x1.toFixed(1)}`}
+                        x={wx(seg.x1)} y={wy(visBot, blockH)}
+                        width={px(seg.x2 - seg.x1)} height={px(blockH)}
+                        fill="#ffffff" stroke="#c8a800" strokeWidth="0.75" />,
+                    );
+                  }
+                }
+              }
+              return <g>{blocks}</g>;
+            })()}
+          </g>
+        )}
+
+        </g>{/* end exterior flip wrapper */}
       </svg>
+      </div>
 
       {/* ── Floating tooltip ── */}
       {tip && (

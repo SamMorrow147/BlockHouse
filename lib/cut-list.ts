@@ -4,7 +4,8 @@
  */
 
 import type { WallElevation } from "./types";
-import { computeWallLayout } from "./layout-calculator";
+import { computeWallLayout, SW } from "./layout-calculator";
+import { TJI_OC, TJI_RIM_T } from "./framing-data";
 
 /* ═══ Types ═══════════════════════════════════════════════════════════════ */
 
@@ -97,6 +98,13 @@ const SKU: Record<string, SkuInfo> = {
     stockIn: 96,
     url: "https://www.menards.com/main/building-materials/lumber-boards/dimensional-lumber/2-x-10-2-better-construction-framing-lumber/1022016/p-1444422197282-c-13125.htm",
   },
+  // MiTek IHFL25925 I-joist hanger
+  "ihfl25925": {
+    sku: "IHFL25925",
+    desc: "i-Joist Hanger 2-1/2\" × 9-1/2\" IHFL25925 — MiTek G90 Steel",
+    stockIn: 0,
+    url: "https://www.mitek-us.com/products/connectors/joist-hangers/ihfl/",
+  },
 };
 
 /* ═══ Helpers ═════════════════════════════════════════════════════════════ */
@@ -106,13 +114,6 @@ function snap8(n: number): number {
   return Math.round(n * 8) / 8;
 }
 
-function classifyStud(label: string): "king" | "jack" | "cripple" | "stud" {
-  const l = label.toLowerCase();
-  if (l.includes("king"))    return "king";
-  if (l.includes("jack"))    return "jack";
-  if (l.includes("cripple")) return "cripple";
-  return "stud";
-}
 
 function bestSku(category: string, cutLen: number, label: string): SkuInfo | undefined {
   const lo = label.toLowerCase();
@@ -136,6 +137,9 @@ function bestSku(category: string, cutLen: number, label: string): SkuInfo | und
   // Sills
   if (lo.includes("sill")) return cutLen <= 120 ? SKU["2x6-10"] : SKU["2x6-16"];
 
+  // Hardware
+  if (lo.includes("ihfl25925")) return SKU["ihfl25925"];
+
   return undefined;
 }
 
@@ -145,7 +149,8 @@ export function computeCutList(wall: WallElevation): CutListSummary {
   const layout = computeWallLayout(wall);
 
   // Collect every piece into a flat array of {label, length, category, chip}
-  interface RawPiece { label: string; length: number; category: string; chip: string; }
+  // qty > 1 allows hardware/bulk items to be pushed once with their full count.
+  interface RawPiece { label: string; length: number; category: string; chip: string; qty?: number; }
   const pieces: RawPiece[] = [];
 
   // ── Plates ──
@@ -163,13 +168,13 @@ export function computeCutList(wall: WallElevation): CutListSummary {
   const FULL_H = snap8(layout.wallHeightInches - 1.5 - 3.0); // plate-to-plate = H - bp - dtp
   for (const s of layout.studs) {
     const h = snap8(s.height);
-    const type = classifyStud(s.label);
 
     if (Math.abs(h - FULL_H) < 0.5) {
-      // Full-height stud (regular, king, or end)
-      pieces.push({ label: s.label, length: h, category: "Full Studs", chip: "#fff" });
+      // Normalize all full-height variants (king, end, regular) to one label so they combine
+      pieces.push({ label: "2×6 Full Stud", length: h, category: "Full Studs", chip: "#fff" });
     } else {
-      pieces.push({ label: s.label, length: h, category: "Short Studs", chip: "#f0f0f0" });
+      // Normalize all short variants (jack, cripple, etc.) to one label so same-length pieces combine
+      pieces.push({ label: "2×6 Short Stud", length: h, category: "Short Studs", chip: "#f0f0f0" });
     }
   }
 
@@ -178,6 +183,39 @@ export function computeCutList(wall: WallElevation): CutListSummary {
     const spec = h.headerSpec;
     const desc = spec ? spec.label : `Header ${snap8(h.width)}"`;
     pieces.push({ label: desc, length: snap8(h.width), category: "Headers", chip: "#e8e0d0" });
+  }
+
+  // ── Hardware (sill sealer, joist hangers, etc.) ──
+
+  // Sill sealer runs along the bottom of every exterior wall (plate-to-concrete interface).
+  // Reported in lineal feet so the combined total across all walls = total LF to order.
+  if (wall.id === "south" || wall.id === "north" || wall.id === "east" || wall.id === "west") {
+    const lfNeeded = Math.ceil(layout.totalLengthInches / 12);
+    pieces.push({
+      label: 'Sill Sealer Foam 5-1/2" × 50\' — Pregis (161-1605)',
+      length: 0,
+      category: "Hardware",
+      chip: "#16a34a",
+      qty: lfNeeded,
+    });
+  }
+
+  // Joists run N-S bearing on the south and north walls. Count hangers per bearing wall end.
+  if (wall.id === "south" || wall.id === "north") {
+    const wallLen  = layout.totalLengthInches;
+    const joistOff = SW / 2;
+    const lastX    = wallLen - TJI_RIM_T - SW;
+    let hangerCount = 0;
+    for (let x = TJI_OC + joistOff; x <= lastX; x += TJI_OC) hangerCount++;
+    if (hangerCount > 0) {
+      pieces.push({
+        label: 'i-Joist Hanger 2-1/2" × 9-1/2" IHFL25925 — MiTek G90 Steel',
+        length: 0,
+        category: "Hardware",
+        chip: "#8BA0B4",
+        qty: hangerCount,
+      });
+    }
   }
 
   // ── Openings (windows / doors) — not cut pieces, but order items ──
@@ -211,14 +249,14 @@ export function computeCutList(wall: WallElevation): CutListSummary {
     const k = key(p);
     const existing = map.get(k);
     if (existing) {
-      existing.qty++;
+      existing.qty += p.qty ?? 1;
     } else {
-      map.set(k, { piece: p, qty: 1 });
+      map.set(k, { piece: p, qty: p.qty ?? 1 });
     }
   }
 
   // ── Build sorted cut lines ──
-  const catOrder: Record<string, number> = { "Plates": 0, "Full Studs": 1, "Short Studs": 2, "Headers": 3, "Openings": 4 };
+  const catOrder: Record<string, number> = { "Plates": 0, "Full Studs": 1, "Short Studs": 2, "Headers": 3, "Openings": 4, "Hardware": 5 };
   const entries = Array.from(map.values()).sort((a, b) => {
     const ca = catOrder[a.piece.category] ?? 9;
     const cb = catOrder[b.piece.category] ?? 9;

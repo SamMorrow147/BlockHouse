@@ -6,14 +6,15 @@ import {
   CMU_T, CMU_BLOCK_W, CMU_INTERIOR_W, CMU_INTERIOR_D,
   FR_GAP, FR_D,
   THIRD_FLOOR_W,
-  STAIR_TREAD_DEPTH, STAIR_WIDTH,
+  STAIR_TREAD_DEPTH, STAIR_WIDTH, STAIR_TOTAL_RISERS,
   STAIR2_START_X, STAIR2_TOTAL_RISERS, STAIR2_LAND_TOP_W,
-  TJI_DEPTH, SUBFLOOR_T,
+  TJI_DEPTH, SUBFLOOR_T, TJI_OC,
 } from "@/lib/framing-data";
 import {
   CMU_W, CMU_D, CI_L, CI_R, CI_N, CI_S,
   FN_OUT, FN_IN, FS_IN, FS_OUT, FW_OUT, FW_IN, FE_IN, FE_OUT,
 } from "@/lib/plan-geometry";
+// FW_OUT = 9" — used inline in headroom calc to avoid re-import naming conflict
 
 // ── Scale & Margins ────────────────────────────────────────────────────
 const FP_PX = 3;
@@ -99,12 +100,37 @@ function LayerBtn({ label, on, toggle }: { label: string; on: boolean; toggle: (
 }
 
 export function ThirdFloorPlan() {
-  const [showStairwell, setShowStairwell] = useState(true);
+  const [showStairwell,  setShowStairwell]  = useState(true);
+  const [showHeadroom,   setShowHeadroom]   = useState(true);
+  const [showRoofJoists, setShowRoofJoists] = useState(false);
+  const [showSubfloor,   setShowSubfloor]   = useState(false);
 
   const px = (x: number) => AL + pf(x);
   const py = (y: number) => AT + pf(y);
   const svgW = AL + pf(CMU_W) + AR;
   const svgH = AT + pf(CMU_D) + AB;
+
+  // ── Stair headroom triangle (mirrors north-wall elevation geometry) ──────
+  // First-floor wall height + joist stack gives floor-to-floor rise
+  const WALL_H_1   = 116;                                    // 1st floor wall height (in)
+  const FLOOR2_IN  = WALL_H_1 + TJI_DEPTH + SUBFLOOR_T;     // 126.25"
+  // Same joist-snap logic as WallElevation.tsx (SW = 1.5" face of a 2×6)
+  const SW          = 1.5;
+  const joistOff3   = SW / 2;
+  const f3XEndElev  = Math.floor((THIRD_FLOOR_W - joistOff3) / TJI_OC) * TJI_OC + joistOff3; // 112.75"
+  const nTotalLen   = 286;                                   // north wall interior length
+  const FW_OUT_N    = 9;                                     // FW_OUT from plan-geometry
+  // Convert elevation x → plan x for north wall: planX = FW_OUT + totalLen - elevX
+  const f3XEndPlan  = FW_OUT_N + nTotalLen - f3XEndElev;     // 182.25"
+  const slope       = (FLOOR2_IN / STAIR_TOTAL_RISERS) / STAIR_TREAD_DEPTH;
+  const xStairTopElev = STAIR2_START_X - (STAIR_TOTAL_RISERS - 1) * STAIR_TREAD_DEPTH;
+  const hFull       = (f3XEndElev - xStairTopElev) * slope * 0.45;
+  const spanFull    = hFull / slope;
+  const f3XFarPlan  = f3XEndPlan - spanFull;                 // east edge of headroom zone
+
+  // In plan view the headroom is a rectangle — the floor opening projection.
+  // North wall inner face = FS_IN (large Y = bottom of plan).
+  // Rectangle spans f3XFarPlan→f3XEndPlan in X and (FS_IN-STAIR_WIDTH)→FS_IN in Y.
 
   // ── Third floor extent ────────────────────────────────────────────
   // Partial floor: 120" wide at the WEST end of the building.
@@ -126,7 +152,6 @@ export function ThirdFloorPlan() {
   // Second floor stair top: planX = FW_OUT + 286 - 36 = 259
   // Top landing: from 259 to 259+36 = 295 (at west wall)
   // The stairwell opening is the stair footprint in the 3rd floor deck.
-  const nTotalLen = 286;
   const STAIR2_TREADS = STAIR2_TOTAL_RISERS - 1;
   const stair2BotX = FW_OUT + nTotalLen - STAIR2_START_X;  // 115
   const stair2TopX = stair2BotX + STAIR2_TREADS * STAIR_TREAD_DEPTH; // 259
@@ -141,8 +166,11 @@ export function ThirdFloorPlan() {
 
   return (
     <div>
-      <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-zinc-50 border-b border-zinc-200 sticky top-[40px] z-[9]">
-        <LayerBtn label="Stairwell" on={showStairwell} toggle={() => setShowStairwell(v => !v)} />
+      <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-zinc-50 border-b border-zinc-200 sticky top-[44px] z-[9]">
+        <LayerBtn label="Stairwell"      on={showStairwell}  toggle={() => setShowStairwell(v => !v)} />
+        <LayerBtn label="Stair Headroom" on={showHeadroom}   toggle={() => setShowHeadroom(v => !v)} />
+        <LayerBtn label="Roof Joists"    on={showRoofJoists} toggle={() => setShowRoofJoists(v => !v)} />
+        <LayerBtn label="Subfloor"       on={showSubfloor}   toggle={() => setShowSubfloor(v => !v)} />
       </div>
       <svg
         viewBox={`0 0 ${svgW} ${svgH}`}
@@ -168,8 +196,10 @@ export function ThirdFloorPlan() {
             .fp-stairwell   { fill: rgba(255,220,180,0.25); stroke: #c80; stroke-width: 1.2px; stroke-dasharray: 6 3; }
             .fp-void        { fill: rgba(180,210,240,0.13); stroke: #6699bb; stroke-width: 0.8px; stroke-dasharray: 4 3; }
             .fp-f3-edge     { fill: none; stroke: #333; stroke-width: 1.5px; stroke-dasharray: 8 4; }
-            .fp-railing     { fill: none; stroke: #555; stroke-width: 2px; }
-            .fp-railing-post{ fill: #555; }
+            .fp-railing       { fill: none; stroke: #555; stroke-width: 2px; }
+            .fp-railing-post  { fill: #555; }
+            .fp-subfloor      { fill: rgba(210,185,145,0.28); stroke: #a07840; stroke-width: 0.8px; stroke-linejoin: miter; }
+            .fp-subfloor-grain{ fill: none; stroke: rgba(160,120,60,0.18); stroke-width: 0.5px; }
           `}</style>
         </defs>
 
@@ -232,6 +262,41 @@ export function ThirdFloorPlan() {
           x={px(f3FrameL)} y={py(FN_IN)}
           width={pf(f3FrameR - f3FrameL)} height={pf(FS_IN - FN_IN)} />
 
+        {/* ══ SUBFLOOR / ROOF DECK SHEATHING — 3/4" T&G OSB 4×8, full building footprint ══ */}
+        {showSubfloor && (() => {
+          const SHEET_L = 96;
+          const SHEET_W = 48;
+          // Roof deck covers the ENTIRE building, not just the loft
+          const x1 = FW_IN, x2 = FE_IN, y1 = FN_IN, y2 = FS_IN;
+          const sheets: { x: number; y: number; w: number; h: number; label: boolean }[] = [];
+          let row = 0;
+          for (let ry = y1; ry < y2; ry += SHEET_W, row++) {
+            const cy2 = Math.min(ry + SHEET_W, y2);
+            const xOff = (row % 2 === 0) ? 0 : SHEET_L / 2;
+            for (let sx = x1 - xOff; sx < x2; sx += SHEET_L) {
+              const cx1 = Math.max(sx, x1), cx2 = Math.min(sx + SHEET_L, x2);
+              if (cx2 <= cx1) continue;
+              sheets.push({ x: cx1, y: ry, w: cx2 - cx1, h: cy2 - ry, label: cx2 - cx1 > 48 && cy2 - ry > 20 });
+            }
+          }
+          return (
+            <g>
+              {sheets.map((s, i) => (
+                <g key={`sf${i}`}>
+                  <rect className="fp-subfloor" x={px(s.x)} y={py(s.y)} width={pf(s.w)} height={pf(s.h)} />
+                  {Array.from({ length: Math.floor(s.w / 12) - 1 }, (_, gi) => {
+                    const gx = s.x + (gi + 1) * 12;
+                    return gx < s.x + s.w
+                      ? <line key={`g${gi}`} className="fp-subfloor-grain" x1={px(gx)} y1={py(s.y)} x2={px(gx)} y2={py(s.y + s.h)} />
+                      : null;
+                  })}
+                  {s.label && <text x={px(s.x + s.w / 2)} y={py(s.y + s.h / 2) + 4} textAnchor="middle" fontSize="7" fill="#8B6030" fontFamily="ui-monospace,monospace" opacity={0.8}>4×8 T&G</text>}
+                </g>
+              ))}
+            </g>
+          );
+        })()}
+
         {/* CMU interior faces — only the 3 sides that have CMU */}
         {/* South (top) */}
         <line stroke="#555" strokeWidth="0.8"
@@ -281,6 +346,44 @@ export function ThirdFloorPlan() {
         <line className="fp-cmugap" x1={px(f3L)} y1={py(CI_S)} x2={px(CI_R)} y2={py(CI_S)} />
         <line className="fp-cmugap" x1={px(CI_R)} y1={py(CI_N)} x2={px(CI_R)} y2={py(CI_S)} />
 
+        {/* ══ ROOF DECK JOISTS (N-S span, 16" OC, FULL BUILDING) ══ */}
+        {showRoofJoists && (() => {
+          // Roof deck joists span the ENTIRE building — not just the loft zone.
+          // They run N-S (short direction), bearing on south & north walls.
+          // In plan: vertical dashed lines at varying X across full interior.
+          const joistLines: React.ReactNode[] = [];
+          let count = 0;
+          for (let x = CI_L + TJI_OC; x < CI_R; x += TJI_OC) {
+            joistLines.push(
+              <line key={`rj${count++}`}
+                x1={px(x)} y1={py(CI_N)} x2={px(x)} y2={py(CI_S)}
+                stroke="#996633" strokeWidth="0.6" strokeDasharray="3 5" opacity="0.5" />
+            );
+          }
+          // Rim boards at all four perimeter edges
+          return (
+            <g>
+              {/* South rim */}
+              <line key="rim-s" x1={px(CI_L)} y1={py(CI_N)} x2={px(CI_R)} y2={py(CI_N)}
+                stroke="#996633" strokeWidth="2" opacity="0.4" />
+              {/* North rim */}
+              <line key="rim-n" x1={px(CI_L)} y1={py(CI_S)} x2={px(CI_R)} y2={py(CI_S)}
+                stroke="#996633" strokeWidth="2" opacity="0.4" />
+              {/* East rim */}
+              <line key="rim-e" x1={px(CI_L)} y1={py(CI_N)} x2={px(CI_L)} y2={py(CI_S)}
+                stroke="#996633" strokeWidth="2" opacity="0.4" />
+              {/* West rim */}
+              <line key="rim-w" x1={px(CI_R)} y1={py(CI_N)} x2={px(CI_R)} y2={py(CI_S)}
+                stroke="#996633" strokeWidth="2" opacity="0.4" />
+              {joistLines}
+              <text className="fp-fixture-lbl"
+                x={px((CI_L + CI_R) / 2)} y={py(CI_N + 14)}>
+                ROOF DECK: {count} TJI @ {TJI_OC}&quot; OC · FULL BUILDING · {count * 2} HANGERS
+              </text>
+            </g>
+          );
+        })()}
+
         {/* ══ STAIRWELL OPENING ═══════════════════════════════════ */}
         {showStairwell && (
           <g>
@@ -301,6 +404,71 @@ export function ThirdFloorPlan() {
             </text>
           </g>
         )}
+
+        {/* ══ STAIR HEADROOM OPENING (plan view = rectangle) ══════ */}
+        {showHeadroom && (() => {
+          // Rectangle on the NORTH side (bottom of plan).
+          // FS_IN (169.5") = north wall inner frame face (large Y = bottom of SVG).
+          // Spans f3XFarPlan → f3XEndPlan in X, (FS_IN - STAIR_WIDTH) → FS_IN in Y.
+          const rL  = f3XFarPlan;                  // east X (toward balcony)
+          const rR  = f3XEndPlan;                  // west X (floor edge)
+          const rT  = FS_IN - STAIR_WIDTH;         // south edge (smaller Y = toward south/top)
+          const rB  = FS_IN;                       // north wall inner face
+          const midX = (rL + rR) / 2;
+          const midY = (rT + rB) / 2;
+          const spanIn = Math.round(spanFull);
+          return (
+            <g>
+              {/* Rectangle — floor opening footprint */}
+              <rect
+                x={px(rL)} y={py(rT)}
+                width={pf(rR - rL)} height={pf(rB - rT)}
+                fill="rgba(180,210,240,0.22)" stroke="#4477aa" strokeWidth="1.5" strokeDasharray="6 3"
+              />
+              {/* Dimension: span along north wall (below the rect) */}
+              {(() => {
+                const yD = py(rB) + 14;
+                return <>
+                  <line stroke="#4477aa" strokeWidth="0.8"
+                    x1={px(rL)} y1={yD - 4} x2={px(rL)} y2={yD + 4} />
+                  <line stroke="#4477aa" strokeWidth="0.8"
+                    x1={px(rR)} y1={yD - 4} x2={px(rR)} y2={yD + 4} />
+                  <line stroke="#4477aa" strokeWidth="0.8"
+                    x1={px(rL)} y1={yD} x2={px(rR)} y2={yD} />
+                  <text fill="#4477aa" fontSize="8.5" fontFamily="ui-monospace,monospace" textAnchor="middle"
+                    x={px(midX)} y={yD + 10}>
+                    {spanIn}&quot; ({fmt(spanIn)})
+                  </text>
+                </>;
+              })()}
+              {/* Dimension: depth (stair width, to the left of rect) */}
+              {(() => {
+                const xD = px(rL) - 14;
+                return <>
+                  <line stroke="#4477aa" strokeWidth="0.8"
+                    x1={xD - 4} y1={py(rT)} x2={xD + 4} y2={py(rT)} />
+                  <line stroke="#4477aa" strokeWidth="0.8"
+                    x1={xD - 4} y1={py(rB)} x2={xD + 4} y2={py(rB)} />
+                  <line stroke="#4477aa" strokeWidth="0.8"
+                    x1={xD} y1={py(rT)} x2={xD} y2={py(rB)} />
+                  <text fill="#4477aa" fontSize="8.5" fontFamily="ui-monospace,monospace" textAnchor="middle"
+                    transform={`translate(${xD - 10} ${py(midY)}) rotate(-90)`}>
+                    {STAIR_WIDTH}&quot;
+                  </text>
+                </>;
+              })()}
+              {/* Label */}
+              <text fill="#335588" fontSize="7.5" fontFamily="ui-monospace,monospace"
+                fontWeight="700" textAnchor="middle" x={px(midX)} y={py(midY) - 3}>
+                STAIR
+              </text>
+              <text fill="#335588" fontSize="7.5" fontFamily="ui-monospace,monospace"
+                fontWeight="700" textAnchor="middle" x={px(midX)} y={py(midY) + 7}>
+                HEADROOM
+              </text>
+            </g>
+          );
+        })()}
 
         {/* ══ DIMENSIONS ══════════════════════════════════════════ */}
 

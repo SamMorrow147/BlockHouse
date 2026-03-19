@@ -363,7 +363,7 @@ export const initialWalls: Record<string, WallElevation> = {
         heightInches: 48,
         sillHeightInches: 40,
         positionFromLeftInches: 151,
-        label: "3'-4\" × 4'",
+        label: "3'-4\" × 4'-0\"",
         headerSpec: {
           depth: 7.25,
           plies: 1,
@@ -403,14 +403,25 @@ export const initialWalls: Record<string, WallElevation> = {
         },
       },
       {
-        // Large CMU opening above door: 1 course at bottom (8"), 1 course at top (176"–184")
-        // Same right edge as door (x=119"), left edge shifted right ½ CMU block (48")
+        // CMU opening BELOW the solid 10th course: courses 2–9 (8"–80")
+        // One solid course at the bottom (0"–8"), then open for door/framing cavity.
+        // Course 10 (80"–88") is SOLID — runs continuously across the full wall.
         type: "cmu-only",
         widthInches: 71,          // 119" - 48" (door right edge, left inset ½ block)
-        heightInches: 168,        // 21 courses × 8" (sill=8" to top=176")
+        heightInches: 72,         // 9 courses × 8" (sill=8" to 80" = course 10 bottom)
         sillHeightInches: 8,      // 1 CMU course from bottom
-        positionFromLeftInches: 48, // door left (40") + ½ CMU block (8")
-        label: "CMU Opening — W wall",
+        positionFromLeftInches: 48,
+        label: "CMU Opening — W wall (below lintel)",
+      },
+      {
+        // CMU opening ABOVE the solid 10th course: courses 12–22 (88"–176")
+        // Course 10 (80"–88") is the solid lintel course; above it is open.
+        type: "cmu-only",
+        widthInches: 71,          // same width as lower opening
+        heightInches: 88,         // 11 courses × 8" (88" to 176")
+        sillHeightInches: 88,     // starts at top of course 11 (88")
+        positionFromLeftInches: 48,
+        label: "CMU Opening — W wall (above lintel)",
       },
     ],
   },

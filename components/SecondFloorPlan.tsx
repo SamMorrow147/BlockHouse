@@ -106,9 +106,10 @@ function LayerBtn({ label, on, toggle }: { label: string; on: boolean; toggle: (
 }
 
 export function SecondFloorPlan() {
-  const [showStairs, setShowStairs] = useState(true);
+  const [showStairs,    setShowStairs]    = useState(true);
   const [showStairwell, setShowStairwell] = useState(true);
-  const [showJoists, setShowJoists] = useState(false);
+  const [showJoists,    setShowJoists]    = useState(false);
+  const [showSubfloor,  setShowSubfloor]  = useState(false);
 
   // ── SVG coordinate helpers ──────────────────────────────────────────
   const px = (x: number) => AL + pf(x);
@@ -180,19 +181,22 @@ export function SecondFloorPlan() {
   const wStuds = computeWallLayout(secondFloorEastWall).studs;  // east exterior = left
   const eStuds = computeWallLayout(secondFloorWestWall).studs;  // west exterior = right
 
-  // ── TJI joist positions (E-W span, 16" OC) ───────────────────────
+  // ── TJI joist positions (N-S span, 16" OC) ───────────────────────
+  // Joists run north-south (short direction ~168"), bearing on east & west walls.
+  // In plan, they appear as VERTICAL lines at varying X positions.
   const TJI_OC = 16;
   const joistPositions: number[] = [];
-  for (let y = CI_N + TJI_OC; y < CI_S; y += TJI_OC) {
-    joistPositions.push(y);
+  for (let x = CI_L + TJI_OC; x < CI_R; x += TJI_OC) {
+    joistPositions.push(x);
   }
 
   return (
     <div>
-      <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-zinc-50 border-b border-zinc-200 sticky top-[40px] z-[9]">
+      <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-zinc-50 border-b border-zinc-200 sticky top-[44px] z-[9]">
         <LayerBtn label="Stairs"     on={showStairs}    toggle={() => setShowStairs(v => !v)} />
         <LayerBtn label="Stairwell"  on={showStairwell} toggle={() => setShowStairwell(v => !v)} />
         <LayerBtn label="Joists"     on={showJoists}    toggle={() => setShowJoists(v => !v)} />
+        <LayerBtn label="Subfloor"   on={showSubfloor}  toggle={() => setShowSubfloor(v => !v)} />
       </div>
       <svg
         viewBox={`0 0 ${svgW} ${svgH}`}
@@ -224,7 +228,9 @@ export function SecondFloorPlan() {
             .fp-fixture-lbl { fill: #666; font-size: 7.5px; font-family: ui-monospace, monospace; text-anchor: middle; }
             .fp-platform    { fill: #e8e4d8; stroke: #555; stroke-width: 1px; }
             .fp-stairwell   { fill: rgba(255,220,180,0.25); stroke: #c80; stroke-width: 1.2px; stroke-dasharray: 6 3; }
-            .fp-joist-line  { fill: none; stroke: #bbb; stroke-width: 0.5px; stroke-dasharray: 2 4; }
+            .fp-joist-line    { fill: none; stroke: #bbb; stroke-width: 0.5px; stroke-dasharray: 2 4; }
+            .fp-subfloor      { fill: rgba(210,185,145,0.28); stroke: #a07840; stroke-width: 0.8px; stroke-linejoin: miter; }
+            .fp-subfloor-grain{ fill: none; stroke: rgba(160,120,60,0.18); stroke-width: 0.5px; }
           `}</style>
           <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
             <path d="M0,0 L0,6 L6,3 z" fill="#333" />
@@ -267,6 +273,40 @@ export function SecondFloorPlan() {
         <rect className="fp-room"
           x={px(FW_IN)} y={py(FN_IN)}
           width={pf(FE_IN - FW_IN)} height={pf(FS_IN - FN_IN)} />
+
+        {/* ══ SUBFLOOR SHEET LAYOUT — 3/4" T&G OSB 4×8, long edge E-W ══ */}
+        {showSubfloor && (() => {
+          const SHEET_L = 96;
+          const SHEET_W = 48;
+          const x1 = FW_IN, x2 = FE_IN, y1 = FN_IN, y2 = FS_IN;
+          const sheets: { x: number; y: number; w: number; h: number; label: boolean }[] = [];
+          let row = 0;
+          for (let ry = y1; ry < y2; ry += SHEET_W, row++) {
+            const cy2 = Math.min(ry + SHEET_W, y2);
+            const xOff = (row % 2 === 0) ? 0 : SHEET_L / 2;
+            for (let sx = x1 - xOff; sx < x2; sx += SHEET_L) {
+              const cx1 = Math.max(sx, x1), cx2 = Math.min(sx + SHEET_L, x2);
+              if (cx2 <= cx1) continue;
+              sheets.push({ x: cx1, y: ry, w: cx2 - cx1, h: cy2 - ry, label: cx2 - cx1 > 48 && cy2 - ry > 20 });
+            }
+          }
+          return (
+            <g>
+              {sheets.map((s, i) => (
+                <g key={`sf${i}`}>
+                  <rect className="fp-subfloor" x={px(s.x)} y={py(s.y)} width={pf(s.w)} height={pf(s.h)} />
+                  {Array.from({ length: Math.floor(s.w / 12) - 1 }, (_, gi) => {
+                    const gx = s.x + (gi + 1) * 12;
+                    return gx < s.x + s.w
+                      ? <line key={`g${gi}`} className="fp-subfloor-grain" x1={px(gx)} y1={py(s.y)} x2={px(gx)} y2={py(s.y + s.h)} />
+                      : null;
+                  })}
+                  {s.label && <text x={px(s.x + s.w / 2)} y={py(s.y + s.h / 2) + 4} textAnchor="middle" fontSize="7" fill="#8B6030" fontFamily="ui-monospace,monospace" opacity={0.8}>4×8 T&G</text>}
+                </g>
+              ))}
+            </g>
+          );
+        })()}
 
         {/* ── 1" air gap ────────────────────────────────────────────── */}
         <rect fill="#fff" stroke="none" x={px(CI_L)} y={py(CI_N)} width={pf(CMU_INTERIOR_W)} height={pf(FR_GAP)} />
@@ -338,9 +378,9 @@ export function SecondFloorPlan() {
         })}
 
         {/* ── TJI Joists (optional layer) ──────────────────────────── */}
-        {showJoists && joistPositions.map((y, i) => (
+        {showJoists && joistPositions.map((x, i) => (
           <line key={`j${i}`} className="fp-joist-line"
-            x1={px(FW_IN)} y1={py(y)} x2={px(FE_IN)} y2={py(y)} />
+            x1={px(x)} y1={py(FN_IN)} x2={px(x)} y2={py(FS_IN)} />
         ))}
 
         {/* ══ STAIRWELL OPENING (from 1st floor) ═══════════════════ */}

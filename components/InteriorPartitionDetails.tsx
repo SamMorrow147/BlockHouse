@@ -13,6 +13,7 @@ import {
   STAIR_LAND_JOIST_W, STAIR_LAND_JOIST_D, STAIR_LAND_RIM_W,
   STAIR_LAND_DECK_T, STAIR_LAND_POST_W, STAIR_LAND_LEDGER_W,
   TJI_DEPTH, SUBFLOOR_T,
+  BATH_JOIST_H, BATH_JOIST_OC, BATH_SUBFLOOR_T,
 } from "@/lib/framing-data";
 import { computeApproachStringer } from "@/lib/stair-calculator";
 import { Toggle } from "@/components/ui/toggle";
@@ -301,6 +302,51 @@ function DoorWallWithStairs({ showCMU, showStairs }: { showCMU: boolean; showSta
       <rect x={wx(0)} y={wy(WALL_H, 0)} width={WALL_W * PX} height={WALL_H * PX}
         fill="none" stroke="#010101" strokeWidth="1.2" />
 
+      {/* ════ BATHROOM RAISED FLOOR — joists run N-S parallel to this wall ════
+          Looking at this wall from the east (bathroom side), the joists
+          span from the horizontal partition (right/south, x≈WALL_W) to the
+          north wall (left/north, x=0). They appear as a continuous
+          horizontal band at the raised floor height. */}
+      {(() => {
+        const jsfTop = LAND_TOP;                            // raised floor top = landing height
+        const jsfBot = jsfTop - BATH_SUBFLOOR_T;            // subfloor bottom
+        const jjTop  = jsfBot;                               // joist top
+        const jjBot  = jjTop - BATH_JOIST_H;                // joist bottom
+
+        return (
+          <g>
+            {/* Subfloor — runs full wall length */}
+            <rect
+              x={wx(0)} y={wy(jsfBot, BATH_SUBFLOOR_T)}
+              width={WALL_W * PX} height={BATH_SUBFLOOR_T * PX}
+              fill="#c8b898" stroke="#555" strokeWidth="0.8" />
+
+            {/* 2×6 joist profile — shown as a single filled band since
+                we're looking at the side face (joists run parallel to view) */}
+            <rect
+              x={wx(0)} y={wy(jjBot, BATH_JOIST_H)}
+              width={WALL_W * PX} height={BATH_JOIST_H * PX}
+              fill="rgba(240,232,208,0.5)" stroke="#8b7348" strokeWidth="0.8" />
+
+            {/* Dashed lines showing individual joist spacing (16" OC) */}
+            {Array.from({ length: Math.floor(WALL_W / BATH_JOIST_OC) }, (_, i) => {
+              const jy = jjBot + (i + 1) * (BATH_JOIST_H / (Math.floor(WALL_W / BATH_JOIST_OC) + 1));
+              return null; // joists are parallel; no cross-lines needed
+            })}
+
+            {/* Labels */}
+            <text x={wx(WALL_W / 2)} y={wy(jsfBot + BATH_SUBFLOOR_T / 2) + 3}
+              fontSize="6.5" fill="#555" fontFamily="ui-monospace,monospace"
+              textAnchor="middle">¾&quot; SUBFL.</text>
+            <text x={wx(WALL_W / 2)} y={wy(jjBot + BATH_JOIST_H / 2) + 3}
+              fontSize="7" fill="#8b7348" fontFamily="ui-monospace,monospace"
+              textAnchor="middle" fontWeight="600">
+              2×6 JOISTS (N-S, PARALLEL)
+            </text>
+          </g>
+        );
+      })()}
+
       {/* ════ LANDING FRAMING + STAIR RUN (toggled) ════ */}
       {showStairs && <>
 
@@ -471,13 +517,15 @@ export function InteriorPartitionDetails({
 }) {
   const [showCMU, setShowCMU] = useState(true);
   const [showStairs, setShowStairs] = useState(true);
+  const [showSewer, setShowSewer] = useState(false);
 
   return (
     <div>
-      {/* Toggle bar — sits naturally right under the card header, no sticky needed */}
+      {/* Toggle bar */}
       <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-zinc-50 border-b border-t border-zinc-200">
         <LayerBtn label="CMU Bricks" on={showCMU} toggle={() => setShowCMU(v => !v)} />
         <LayerBtn label="Landing & Stairs" on={showStairs} toggle={() => setShowStairs(v => !v)} />
+        <LayerBtn label="Sewer Outlet" on={showSewer} toggle={() => setShowSewer(v => !v)} />
       </div>
 
       {/* Drawings row — 3 columns. minWidth forces horizontal scroll inside the card. */}
@@ -504,7 +552,7 @@ export function InteriorPartitionDetails({
           </p>
           {/* fillParent + height:100% on SVG letterboxes it to match container height */}
           <div style={{ aspectRatio: DOOR_WALL_ASPECT, width: "100%", overflow: "hidden" }}>
-            <WallElevationView wall={horizPartition} forceCMU={showCMU} noLayerBar fillParent />
+            <WallElevationView wall={horizPartition} forceCMU={showCMU} forceSewer={showSewer} noLayerBar fillParent />
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
@@ -512,7 +560,8 @@ export function InteriorPartitionDetails({
             <strong>{bathroomEastWall.name}</strong>
           </p>
           <div style={{ aspectRatio: DOOR_WALL_ASPECT, width: "100%", overflow: "hidden" }}>
-            <WallElevationView wall={bathroomEastWall} forceCMU={showCMU} noLayerBar fillParent />
+            <WallElevationView wall={bathroomEastWall} forceCMU={showCMU} forceSewer={showSewer} noLayerBar fillParent
+              forceViewBox={`0 0 ${svgW} ${svgH}`} />
           </div>
         </div>
       </div>

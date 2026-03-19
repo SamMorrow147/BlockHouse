@@ -70,13 +70,21 @@ function CatIcon({ cat }: { cat: string }) {
       <rect x="2" y="2" width="12" height="12" rx="1" fill="none" stroke="#4a90d9" strokeWidth="1.5" strokeDasharray="3 2" />
     </svg>
   );
+  if (cat === "Hardware") return (
+    <svg width={s} height={s} viewBox="0 0 16 16">
+      <rect x="1" y="5" width="3" height="6" rx="0.5" fill="#8BA0B4" stroke="#556" strokeWidth="0.8" />
+      <rect x="4" y="6" width="8" height="4" rx="0.5" fill="#8BA0B4" stroke="#556" strokeWidth="0.8" />
+      <rect x="12" y="5" width="3" height="6" rx="0.5" fill="#8BA0B4" stroke="#556" strokeWidth="0.8" />
+    </svg>
+  );
   return null;
 }
 
 /* ═══ Row component ══════════════════════════════════════════════════════ */
 
 function CutRow({ line, showCat }: { line: CutLine; showCat: boolean }) {
-  const isOpening = line.category === "Openings";
+  const isOpening  = line.category === "Openings";
+  const isHardware = line.category === "Hardware";
 
   if (isOpening) {
     // Icon chip scaled to opening aspect ratio (max 24px on longer side)
@@ -137,6 +145,76 @@ function CutRow({ line, showCat }: { line: CutLine; showCat: boolean }) {
           whiteSpace: "nowrap",
         }}>
           {line.openingSubtype ?? line.openingType}
+        </div>
+      </div>
+    );
+  }
+
+  if (isHardware) {
+    const isSillSealer = line.label.toLowerCase().includes("sill sealer");
+
+    // Mini elevation icon for sill sealer — mirrors the green stripe on the wall drawings
+    const SillSealerIcon = () => (
+      <svg width={28} height={16} viewBox="0 0 28 16" style={{ display: "block" }}>
+        {/* Wall bottom plate */}
+        <rect x={2} y={1} width={24} height={7} rx={1} fill="#fff" stroke="#222" strokeWidth={1} />
+        {/* White gap */}
+        <rect x={2} y={8} width={24} height={2} fill="#fff" />
+        {/* Green sill sealer stripe */}
+        <rect x={2} y={10} width={24} height={4} rx={0.5} fill="#16a34a" opacity={0.9} />
+      </svg>
+    );
+
+    return (
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "28px 1fr auto",
+        gap: "0 8px",
+        alignItems: "center",
+        padding: "5px 0",
+        borderBottom: "1px solid #eee",
+        fontSize: "0.78rem",
+        lineHeight: 1.35,
+      }}>
+        {/* Icon — sill sealer gets its own mini elevation graphic, others get the category icon */}
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+          {isSillSealer ? <SillSealerIcon /> : showCat ? <CatIcon cat={line.category} /> : <span style={{ width: 16 }} />}
+        </div>
+
+        {/* Label + SKU link */}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 600, color: isSillSealer ? "#15803d" : undefined }}>
+            {line.url ? (
+              <a href={line.url} target="_blank" rel="noopener noreferrer"
+                style={{ color: "#3d6fa0", textDecoration: "none" }}>
+                {line.label}
+              </a>
+            ) : line.label}
+          </div>
+          {line.sku && (
+            <div style={{ fontSize: "0.72rem", color: "#888", fontFamily: "ui-monospace, monospace" }}>
+              SKU: {line.sku}
+            </div>
+          )}
+          {isSillSealer && (
+            <div style={{ fontSize: "0.70rem", color: "#16a34a", fontFamily: "ui-monospace, monospace" }}>
+              {line.qty} LF total · {Math.ceil(line.qty / 50)} roll{Math.ceil(line.qty / 50) !== 1 ? "s" : ""} @ 50&apos; ea
+            </div>
+          )}
+        </div>
+
+        {/* Quantity badge */}
+        <div style={{
+          fontFamily: "ui-monospace, monospace",
+          fontWeight: 700,
+          textAlign: "center",
+          background: isSillSealer ? "#dcfce7" : "#dce8f0",
+          borderRadius: 4,
+          padding: "2px 8px",
+          whiteSpace: "nowrap",
+          color: isSillSealer ? "#15803d" : "#3a5a72",
+        }}>
+          {isSillSealer ? `${line.qty} LF` : `× ${line.qty}`}
         </div>
       </div>
     );
@@ -218,7 +296,7 @@ function CatHeader({ cat, count }: { cat: string; count: number }) {
         {cat}
       </span>
       <span style={{ fontSize: "0.68rem", color: "#999", marginLeft: "auto" }}>
-        {count} {count === 1 ? "piece" : "pieces"}
+        {count} {cat === "Hardware" ? (count === 1 ? "item" : "items") : (count === 1 ? "piece" : "pieces")}
       </span>
     </div>
   );
@@ -288,18 +366,17 @@ export function CutList({
   const totalPieces = allLines.reduce((s, l) => s + l.qty, 0);
   const uniqueCuts  = new Set(allLines.map(l => `${l.label}|${l.cutLength}`)).size;
 
-  // Group lines by category, merging duplicate category runs
+  // Sort all lines by canonical category order before grouping so that
+  // repeated categories across floors (Plates → Openings → Plates …) merge correctly.
+  const CAT_ORDER: Record<string, number> = { "Plates": 0, "Full Studs": 1, "Short Studs": 2, "Headers": 3, "Openings": 4, "Hardware": 5 };
+  allLines.sort((a, b) => (CAT_ORDER[a.category] ?? 9) - (CAT_ORDER[b.category] ?? 9));
+
+  // Group lines by category
   const groups: { cat: string; lines: CutLine[]; total: number }[] = [];
   let currentCat = "";
   for (const line of allLines) {
     if (line.category !== currentCat) {
       currentCat = line.category;
-      const existing = groups.find(g => g.cat === currentCat);
-      if (existing) {
-        existing.lines.push(line);
-        existing.total += line.qty;
-        continue;
-      }
       groups.push({ cat: currentCat, lines: [], total: 0 });
     }
     const g = groups[groups.length - 1];
