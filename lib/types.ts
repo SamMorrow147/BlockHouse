@@ -1,4 +1,4 @@
-export type WallId = "north" | "south" | "east" | "west" | "north-2" | "north-3" | "south-2" | "east-2" | "west-2" | "horiz-partition" | "vert-partition" | "bathroom-east";
+export type WallId = "north" | "south" | "east" | "west" | "north-2" | "north-3" | "south-2" | "south-3" | "east-2" | "west-2" | "horiz-partition" | "vert-partition" | "bathroom-east";
 
 export interface HeaderSpec {
   depth: number;   // actual lumber depth in inches

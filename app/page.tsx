@@ -14,6 +14,7 @@ import { MeasureTape } from "@/components/MeasureTape";
 import { CutList, type FloorDef } from "@/components/CutList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ScrollLabel, type ScrollSection } from "@/components/ScrollLabel";
 
 const WALL_ORDER_TOP: WallId[] = ["south", "north"];
 const WALL_ORDER_BOTTOM: WallId[] = ["east", "west"];
@@ -56,6 +57,15 @@ function formatInches(n: number): string {
   return `${ft}'-${ins}"`;
 }
 
+const SCROLL_SECTIONS: ScrollSection[] = [
+  { id: "section-floor-plan",            label: "Main Level — Floor Plan" },
+  { id: "section-wall-south",            label: "South Wall Elevation" },
+  { id: "section-wall-north",            label: "North Wall Elevation" },
+  { id: "section-interior-partitions",   label: "Interior Partitions — Kitchen / Bathroom" },
+  { id: "section-wall-east",             label: "East Wall Elevation" },
+  { id: "section-wall-west",             label: "West Wall Elevation" },
+];
+
 export default function Home() {
   return (
     <div className="app">
@@ -68,16 +78,14 @@ export default function Home() {
             Block House
           </h1>
           <span className="text-white/40 text-sm hidden sm:inline">—</span>
-          <span className="text-white/65 text-sm font-mono hidden sm:inline">
-            First Floor Framing
-          </span>
+          <ScrollLabel sections={SCROLL_SECTIONS} />
         </div>
       </header>
 
       <main className="main">
 
         {/* ── Floor Plan ── */}
-        <Card className="overflow-visible shadow-sm mb-6">
+        <Card id="section-floor-plan" className="overflow-visible shadow-sm mb-6">
           <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg sticky top-[36px] z-10">
             <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
               Main Level — Floor Plan
@@ -97,7 +105,7 @@ export default function Home() {
           {WALL_ORDER_TOP.map((id) => {
             const wall = initialWalls[id];
             return (
-              <Card key={id} className="overflow-visible shadow-sm">
+              <Card key={id} id={`section-wall-${id}`} className="overflow-visible shadow-sm">
                 <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg flex-row items-center justify-between space-y-0 sticky top-[36px] z-10">
                   <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
                     {wall.name}
@@ -133,7 +141,7 @@ export default function Home() {
         </div>
 
         {/* ── Interior Partitions ── */}
-        <Card className="overflow-hidden shadow-sm mt-6">
+        <Card id="section-interior-partitions" className="overflow-hidden shadow-sm mt-6">
           <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg sticky top-[36px] z-10">
             <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
               Interior Partitions — Kitchen / Bathroom
@@ -156,7 +164,7 @@ export default function Home() {
           {WALL_ORDER_BOTTOM.map((id) => {
             const wall = initialWalls[id];
             return (
-              <Card key={id} className="overflow-visible shadow-sm">
+              <Card key={id} id={`section-wall-${id}`} className="overflow-visible shadow-sm">
                 <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg flex-row items-center justify-between space-y-0 sticky top-[36px] z-10">
                   <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
                     {wall.name}

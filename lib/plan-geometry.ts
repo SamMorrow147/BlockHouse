@@ -41,7 +41,8 @@ export function elevationXToPlanPos(wallId: WallId, elevX: number): number {
     case "north-2":
     case "horiz-partition":
     case "vert-partition":
-      throw new Error(`elevationXToPlanPos not defined for partition: ${wallId}`);
+    default:
+      throw new Error(`elevationXToPlanPos not defined for wall: ${wallId}`);
   }
 }
 
@@ -54,7 +55,8 @@ export function planPosToElevationX(wallId: WallId, planPos: number): number {
     case "north-2":
     case "horiz-partition":
     case "vert-partition":
-      throw new Error(`planPosToElevationX not defined for partition: ${wallId}`);
+    default:
+      throw new Error(`planPosToElevationX not defined for wall: ${wallId}`);
   }
 }
 

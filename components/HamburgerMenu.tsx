@@ -46,6 +46,12 @@ export function HamburgerMenu() {
             First Floor Framing
           </Link>
           <Link
+            href="/upper-floors"
+            className="flex items-center px-3 py-2.5 rounded-md text-sm text-white/85 hover:bg-white/10 hover:text-white transition-colors"
+          >
+            Upper Floor Plans
+          </Link>
+          <Link
             href="/materials"
             className="flex items-center px-3 py-2.5 rounded-md text-sm text-white/85 hover:bg-white/10 hover:text-white transition-colors"
           >
