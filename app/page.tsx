@@ -15,6 +15,8 @@ import { CutList, type FloorDef } from "@/components/CutList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollLabel, type ScrollSection } from "@/components/ScrollLabel";
+import { SecondFloorPlan } from "@/components/SecondFloorPlan";
+import { ThirdFloorPlan } from "@/components/ThirdFloorPlan";
 
 const WALL_ORDER_TOP: WallId[] = ["south", "north"];
 const WALL_ORDER_BOTTOM: WallId[] = ["east", "west"];
@@ -59,6 +61,8 @@ function formatInches(n: number): string {
 
 const SCROLL_SECTIONS: ScrollSection[] = [
   { id: "section-floor-plan",            label: "Main Level — Floor Plan" },
+  { id: "section-floor-plan-2",          label: "Second Floor — Floor Plan" },
+  { id: "section-floor-plan-3",          label: "Third Floor — Floor Plan" },
   { id: "section-wall-south",            label: "South Wall Elevation" },
   { id: "section-wall-north",            label: "North Wall Elevation" },
   { id: "section-interior-partitions",   label: "Interior Partitions — Kitchen / Bathroom" },
@@ -95,6 +99,38 @@ export default function Home() {
             <MeasureTape pxPerInch={3}>
               <div className="wall-parametric-wrap px-3 pt-2 pb-1">
                 <FloorPlan />
+              </div>
+            </MeasureTape>
+          </CardContent>
+        </Card>
+
+        {/* ── Second Floor Plan ── */}
+        <Card id="section-floor-plan-2" className="overflow-visible shadow-sm mb-6">
+          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg sticky top-[36px] z-10">
+            <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
+              Second Floor — Floor Plan
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <MeasureTape pxPerInch={3}>
+              <div className="wall-parametric-wrap px-3 pt-2 pb-1">
+                <SecondFloorPlan />
+              </div>
+            </MeasureTape>
+          </CardContent>
+        </Card>
+
+        {/* ── Third Floor Plan ── */}
+        <Card id="section-floor-plan-3" className="overflow-visible shadow-sm mb-6">
+          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg sticky top-[36px] z-10">
+            <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
+              Third Floor — Floor Plan
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <MeasureTape pxPerInch={3}>
+              <div className="wall-parametric-wrap px-3 pt-2 pb-1">
+                <ThirdFloorPlan />
               </div>
             </MeasureTape>
           </CardContent>
