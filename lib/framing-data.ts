@@ -35,13 +35,12 @@
  *    vertPartition             Bathroom door wall definition (28″ door) line 128
  *
  *  STAIR PARAMETERS                                          line 141
- *    STAIR_TOTAL_RISERS . 15     Total risers floor-to-floor
+ *    STAIR_TOTAL_RISERS . 17     Total risers floor-to-floor
  *    STAIR_TREAD_DEPTH .. 10"    Tread depth (run per step)
  *    STAIR_LAND_RISERS .. 3      Risers in landing zone
  *    STAIR_WIDTH ........ 36"    Stair / landing width (code min.)
- *    STAIR_RISE_TOT ..... 21.75" Total landing rise (3 × 7.25″)
  *    STAIR_APPR_STEPS ... 2      N-S approach steps (floor plan)
- *    STAIR_MAIN_STEPS ... 11     Main run treads E-W (floor plan)
+ *    STAIR_MAIN_STEPS ... 13     Main run treads E-W (floor plan)
  *
  *  STAIR LANDING DETAIL LUMBER                               line 151
  *    STAIR_TREAD_T ...... 1.0"   5/4×12 tread board
@@ -52,6 +51,10 @@
  *    STAIR_LAND_DECK_T .. 0.75"  ¾″ plywood landing deck
  *    STAIR_LAND_POST_W .. 3.5"   4×4 post width
  *    STAIR_LAND_LEDGER_W  1.5"   2×10 ledger face width
+ *
+ *  STAIR STRINGER LUMBER
+ *    STAIR_STRINGER_DEPTH 11.25" 2×12 actual depth
+ *    STAIR_STRINGER_FACE  1.5"   2×12 face width
  *
  *  FIXTURE DIMENSIONS (plan view)                            line 161
  *    FRIDGE_W ........... 30"    Fridge width
@@ -69,10 +72,10 @@
  *    TOILET_BOWL_D ...... 21"    Toilet bowl depth
  *
  *  TJI FLOOR JOIST SYSTEM (main floor)                       line 177
- *    TJI_DEPTH .......... 11.875" TJI joist depth
+ *    TJI_DEPTH .......... 9.5"    TJI joist depth (PRI-40, SKU 106-5882)
  *    TJI_FLANGE_H ....... 1.5"   TJI flange height
  *    TJI_WEB_W .......... 0.75"  TJI web width
- *    TJI_RIM_T .......... 1.5"   Rim board thickness
+ *    TJI_RIM_T .......... 1.125" Rim board thickness (SKU 106-8025)
  *    TJI_OC ............. 16"    TJI joist spacing
  *    SUBFLOOR_T ......... 0.75"  Main floor subfloor thickness
  *
@@ -110,43 +113,60 @@ export const FR_D   = 5.5;
 
 export const INT_D              = 3.5;
 export const INT_SW             = 1.5;
-export const PARTITION_WALL_R   = 96;
+export const PARTITION_WALL_R   = 100.5;
 export const PARTITION_V_OFFSET = 16.5;
 export const COUNTER_H          = 36;
 export const COUNTER_DEPTH      = 24;
 
+export const EAST_WIN_POS       = 72;    // east wall window positionFromLeftInches
+export const BATH_DOOR_RO       = 28;    // bathroom door rough opening width
+
+const HORIZ_PART_LENGTH = PARTITION_WALL_R - (CMU_T + FR_GAP + FR_D);
+const VERT_PART_LENGTH  = EAST_WIN_POS - FR_D - PARTITION_V_OFFSET;
+
 export const horizPartition: WallElevation = {
-  id: "east" as WallId,
+  id: "horiz-partition",
   name: "Kitchen / Bath Partition (horizontal)",
-  totalLengthInches: 81.5,
-  wallHeightInches: 96,
+  totalLengthInches: HORIZ_PART_LENGTH,
+  wallHeightInches: 116,
   studSpacingOC: 16,
-  sections: [{ lengthInches: 81.5 }],
+  sections: [{ lengthInches: HORIZ_PART_LENGTH }],
   openings: [],
 };
 
 export const vertPartition: WallElevation = {
-  id: "west" as WallId,
+  id: "vert-partition",
   name: "Bathroom Door Wall",
-  totalLengthInches: 50,
-  wallHeightInches: 96,
+  totalLengthInches: VERT_PART_LENGTH,
+  wallHeightInches: 116,
   studSpacingOC: 16,
   sections: [
-    { lengthInches: 28, label: "28\" door RO" },
-    { lengthInches: 22, label: "22\"" },
+    { lengthInches: BATH_DOOR_RO, label: `${BATH_DOOR_RO}" door RO` },
+    { lengthInches: VERT_PART_LENGTH - BATH_DOOR_RO, label: `${VERT_PART_LENGTH - BATH_DOOR_RO}"` },
   ],
-  openings: [{ type: "door", widthInches: 28, heightInches: 80, positionFromLeftInches: 0 }],
+  openings: [{ type: "door", widthInches: BATH_DOOR_RO, heightInches: 80, positionFromLeftInches: 0 }],
+};
+
+/** Same size as bathroom door wall but no door — east face of bathroom (kitchen side). */
+export const bathroomEastWall: WallElevation = {
+  id: "bathroom-east",
+  name: "Bathroom (east side)",
+  totalLengthInches: VERT_PART_LENGTH,
+  wallHeightInches: 116,
+  studSpacingOC: 16,
+  sections: [{ lengthInches: VERT_PART_LENGTH }],
+  openings: [],
 };
 
 // ═══ STAIR PARAMETERS ═══════════════════════════════════════════════
 
-export const STAIR_TOTAL_RISERS = 15;
-export const STAIR_TREAD_DEPTH  = 10;
-export const STAIR_LAND_RISERS  = 3;
+export const STAIR_TOTAL_RISERS = 17;
+export const STAIR_TREAD_DEPTH  = 9;
+export const STAIR_NOSING       = 1;    // tread nosing overhang past riser face
+export const STAIR_LAND_RISERS  = 4;
 export const STAIR_WIDTH        = 36;
-export const STAIR_RISE_TOT     = 21.75;
-export const STAIR_APPR_STEPS   = 2;
-export const STAIR_MAIN_STEPS   = 11;
+export const STAIR_APPR_STEPS   = 3;
+export const STAIR_MAIN_STEPS   = 12;
 
 // Stair landing detail lumber
 export const STAIR_TREAD_T      = 1.0;
@@ -157,6 +177,16 @@ export const STAIR_LAND_RIM_W   = 1.5;
 export const STAIR_LAND_DECK_T  = 0.75;
 export const STAIR_LAND_POST_W  = 3.5;
 export const STAIR_LAND_LEDGER_W = 1.5;
+
+// Stair stringer lumber
+export const STAIR_STRINGER_DEPTH = 11.25;   // 2×12 actual depth
+export const STAIR_STRINGER_FACE  = 1.5;     // 2×12 face width
+
+// Second floor stair (north wall, straight run — no landing)
+export const STAIR2_START_X       = 180;   // shifted so stair lands at 36" top landing
+export const STAIR2_TOTAL_RISERS  = 17;
+export const STAIR2_LAND_TOP_W    = 36;
+export const STAIR2_LAND_BOT_W    = 36;
 
 // ═══ FIXTURE DIMENSIONS (plan view) ═════════════════════════════════
 
@@ -174,12 +204,75 @@ export const TOILET_W      = 14;
 export const TOILET_TANK_D = 7;
 export const TOILET_BOWL_D = 21;
 
+// ═══ LAUNDRY — WASHER / DRYER (north wall, far left / west end) ═══
+
+export const WASHER_W        = 27;    // standard front-load washer width
+export const WASHER_H        = 39;    // front-load height
+export const WASHER_D        = 33;    // depth (not shown in elevation)
+export const DRYER_W         = 27;    // standard dryer width
+export const DRYER_H         = 39;    // dryer height (matches washer)
+export const DRYER_D         = 33;    // depth
+export const WD_GAP          = 1;     // gap between washer and dryer
+export const WD_TOTAL_W      = WASHER_W + WD_GAP + DRYER_W; // 55"
+export const WD_X            = 3;     // start past end king stud + gap (west end of north elev)
+export const STANDPIPE_H     = 42;    // standpipe height (max per code)
+export const DRYER_VENT_D    = 4;     // 4" rigid metal duct
+
+// ═══ CABINET LAYOUT ════════════════════════════════════════════════
+
+// Standard heights
+export const CAB_TOE_KICK    = 4;
+export const CAB_BASE_H      = 34.5;
+export const CAB_UPPER_BOT   = 54;
+export const CAB_UPPER_H_STD = 36;
+export const CAB_UPPER_TOP   = 90;
+export const CAB_BASE_D      = 24;
+export const CAB_UPPER_D     = 12;
+export const FRIDGE_H        = 70;
+export const FRIDGE_D        = 30;
+
+// North wall base cabinet runs (elevation x positions)
+export const NCAB_MAIN_L     = 5.5;
+export const NCAB_MAIN_R     = 85;
+export const NCAB_FRIDGE_L   = 85;
+export const NCAB_FRIDGE_R   = 115;
+export const NCAB_SMALL_L    = 115;
+export const NCAB_SMALL_R    = 127;
+export const NCAB_RIGHT_L    = 166;
+export const NCAB_RIGHT_R    = 280.5;
+
+// North wall base cabinet individual widths (main run: 36+33+9 = 78, 1.5" filler)
+export const NCAB_M1_W       = 36;
+export const NCAB_M2_W       = 33;
+export const NCAB_M3_W       = 9;
+
+// North wall upper cabinet individual widths (36+30+12 = 78, 1.5" filler)
+export const NCAB_U1_W       = 36;
+export const NCAB_U2_W       = 30;
+export const NCAB_U3_W       = 12;
+
+// Right of door base cabinets
+export const NCAB_R1_W       = 36;
+export const NCAB_R2_W       = 36;
+
+// West wall cabinet run (west wall elevation x)
+export const WCAB_L          = 79.5;
+export const WCAB_W1         = 27;
+export const WCAB_W2         = 30;
+
+// Partition counter (south wall elevation x)
+export const PCAB_L          = 191;
+export const PCAB_R          = 280.5;
+export const PCAB_C1_W       = 30;
+export const PCAB_C2_W       = 33;
+export const PCAB_C3_W       = 24;
+
 // ═══ TJI FLOOR JOIST SYSTEM (main floor) ════════════════════════════
 
-export const TJI_DEPTH    = 11.875;
+export const TJI_DEPTH    = 9.5;     // PRI-40 I-Joist SKU 106-5882 (was 11.875)
 export const TJI_FLANGE_H = 1.5;
 export const TJI_WEB_W    = 0.75;
-export const TJI_RIM_T    = 1.5;
+export const TJI_RIM_T    = 1.125;  // engineered rim board SKU 106-8025 (was 1.5)
 export const TJI_OC       = 16;
 export const SUBFLOOR_T   = 0.75;
 
@@ -209,72 +302,74 @@ export const BATH_LEDGER_T   = 1.5;
  * North = South length ✓   East = West length ✓
  */
 export const initialWalls: Record<string, WallElevation> = {
-  north: {
-    id: "north",
-    name: "North Wall",
-    totalLengthInches: 286,
-    wallHeightInches: 96,
-    studSpacingOC: 16,
-    sections: [
-      { lengthInches: 127, label: "127\" (west of door)" },
-      { lengthInches: 39,  label: "39\" door RO" },
-      { lengthInches: 120, label: "120\" (east of door)" },
-    ],
-    openings: [
-      {
-        type: "door",
-        widthInches: 39,
-        heightInches: 80,
-        positionFromLeftInches: 127,
-        label: "3'-3\" × 6'-8\"",
-      },
-    ],
-    studOverrides: {
-      "north-stud-12": { dx: 1.5 },
-    },
-  },
-
   south: {
     id: "south",
     name: "South Wall",
     totalLengthInches: 286,
-    wallHeightInches: 96,
+    wallHeightInches: 116,
     studSpacingOC: 16,
+    anchorBolts: [6, 66, 122, 170, 236, 280],
     sections: [
-      { lengthInches: 151, label: "151\" (east of window)" },
+      { lengthInches: 127, label: "127\" (east of door)" },
+      { lengthInches: 48,  label: "48\" door RO (3 CMU blocks)" },
+      { lengthInches: 111, label: "111\" (west of door)" },
+    ],
+    openings: [
+      {
+        type: "door",
+        widthInches: 48,
+        heightInches: 80,
+        positionFromLeftInches: 127,
+        label: "4'-0\" × 6'-8\"",
+        headerSpec: {
+          depth: 7.25,
+          plies: 1,
+          label: "(2) 2×8 solid — engineer to verify",
+          note: "Renders as single solid piece. Final spec TBD by engineer.",
+        },
+      },
+      {
+        // CMU window: 5 blocks from right (5×16=80"), 2.5 blocks wide (40"),
+        // 5 blocks tall (40"), 1 block above (top at 23×8-8=176", sill at 136")
+        type: "cmu-only",
+        widthInches: 40,        // 2.5 CMU blocks × 16"
+        heightInches: 40,       // 5 CMU blocks × 8"
+        sillHeightInches: 136,  // 17 courses up × 8" = 136"
+        positionFromLeftInches: 166, // 286 - 80(5 blocks) - 40(window) = 166"
+        label: "CMU Window — 2½ × 5 block",
+      },
+    ],
+    studOverrides: {
+      "south-stud-12": { dx: 1.5 },
+    },
+  },
+
+  north: {
+    id: "north",
+    name: "North Wall",
+    totalLengthInches: 286,
+    wallHeightInches: 116,
+    studSpacingOC: 16,
+    anchorBolts: [6, 72, 144, 216, 280],
+    sections: [
+      { lengthInches: 151, label: "151\" (west of window)" },
       { lengthInches: 40,  label: "40\" window RO (2.5 blocks)" },
-      { lengthInches: 95,  label: "95\" (west of window)" },
+      { lengthInches: 95,  label: "95\" (east of window)" },
     ],
     openings: [
       {
         type: "window",
         widthInches: 40,
         heightInches: 48,
-        sillHeightInches: 36,
+        sillHeightInches: 40,
         positionFromLeftInches: 151,
         label: "3'-4\" × 4'",
-      },
-    ],
-  },
-
-  east: {
-    id: "east",
-    name: "East Wall",
-    totalLengthInches: 166,
-    wallHeightInches: 96,
-    studSpacingOC: 16,
-    sections: [
-      { lengthInches: 40, label: "40\" / 2.5 bays" },
-      { lengthInches: 79, label: "79\" sliding door RO" },
-      { lengthInches: 47, label: "47\" / right section" },
-    ],
-    openings: [
-      {
-        type: "door",
-        widthInches: 79,
-        heightInches: 80,
-        positionFromLeftInches: 40,
-        label: "6'7\" × 6'-8\"",
+        headerSpec: {
+          depth: 7.25,
+          plies: 1,
+          label: "(2) 2×8 solid — engineer to verify",
+          note: "Renders as single solid piece. Final spec TBD by engineer.",
+        },
       },
     ],
   },
@@ -283,22 +378,223 @@ export const initialWalls: Record<string, WallElevation> = {
     id: "west",
     name: "West Wall",
     totalLengthInches: 166,
-    wallHeightInches: 96,
+    wallHeightInches: 116,
     studSpacingOC: 16,
     sections: [
-      { lengthInches: 72, label: "72\" / 4.5 bays" },
-      { lengthInches: 72, label: "72\" window RO" },
+      { lengthInches: 40, label: "40\" / 2.5 bays" },
+      { lengthInches: 79, label: "79\" sliding door RO" },
+      { lengthInches: 47, label: "47\" / right section" },
+    ],
+    anchorBolts: [6, 38.5, 120.5, 160],
+    openings: [
+      {
+        type: "door",
+        widthInches: 79,
+        heightInches: 73,
+        positionFromLeftInches: 40,
+        label: "6'7\" × 5'11\"",
+        openingSubtype: "Sliding Door",
+        jackCount: 2,
+        headerSpec: {
+          depth: 11.25,
+          plies: 2,
+          label: "3.5\" × 11.25\" LVL beam",
+          note: "Engineer required — 6'7\" span, flat roof, northern MN snow load. LVL fits 2×6 wall without spacer.",
+        },
+      },
+      {
+        // Large CMU opening above door: 1 course at bottom (8"), 1 course at top (176"–184")
+        // Same right edge as door (x=119"), left edge shifted right ½ CMU block (48")
+        type: "cmu-only",
+        widthInches: 71,          // 119" - 48" (door right edge, left inset ½ block)
+        heightInches: 168,        // 21 courses × 8" (sill=8" to top=176")
+        sillHeightInches: 8,      // 1 CMU course from bottom
+        positionFromLeftInches: 48, // door left (40") + ½ CMU block (8")
+        label: "CMU Opening — W wall",
+      },
+    ],
+  },
+
+  east: {
+    id: "east",
+    name: "East Wall",
+    totalLengthInches: 166,
+    wallHeightInches: 116,
+    studSpacingOC: 16,
+    anchorBolts: [6, 72, 138, 160],
+    sections: [
+      { lengthInches: EAST_WIN_POS, label: `${EAST_WIN_POS}" / ${EAST_WIN_POS / 16} bays` },
+      { lengthInches: EAST_WIN_POS, label: `${EAST_WIN_POS}" window RO` },
       { lengthInches: 22, label: "22\" / right section" },
     ],
     openings: [
       {
         type: "window",
-        widthInches: 72,
+        widthInches: EAST_WIN_POS,
         heightInches: 48,
         sillHeightInches: 36,
-        positionFromLeftInches: 72,
+        positionFromLeftInches: EAST_WIN_POS,
         label: "6' × 4'",
+        jackCount: 2,
+        headerSpec: {
+          depth: 9.25,
+          plies: 2,
+          label: "3.5\" × 9.25\" LVL beam",
+          note: "Engineer required — 6' span, flat roof, northern MN snow load. LVL fits 2×6 wall without spacer.",
+        },
+      },
+      {
+        // CMU window: 4.5 blocks from right (4.5×16=72"), 2.5 blocks wide (40"),
+        // 5 blocks tall (40"), 1 block above (top at 22×8=176", sill at 136")
+        type: "cmu-only",
+        widthInches: 40,        // 2.5 CMU blocks × 16"
+        heightInches: 40,       // 5 CMU blocks × 8"
+        sillHeightInches: 136,  // 17 courses up × 8" = 136"
+        positionFromLeftInches: 54, // 166 - 72(4.5 blocks right) - 40(window) = 54"
+        label: "CMU Window — E wall",
       },
     ],
   },
+};
+
+// ═══ THIRD FLOOR (PARTIAL) ══════════════════════════════════════════════════
+// The third floor is a partial floor on the west end above the second-floor
+// staircase. The remainder of the north wall at this level is open balcony.
+export const THIRD_FLOOR_W  = 120;   // partial north wall width at 3rd floor (10' = 120")
+export const THIRD_FLOOR_H  = 116;   // third floor wall height — 9'8", matches other floors
+
+// West wall third floor — full width, shed roof sloping low-left → high-right
+export const WEST_F3_LOW_H  = 84;    // low end (left/west) wall height at 3rd floor — 7'0"
+export const WEST_F3_HIGH_H = 116;   // high end (right/east) wall height — matches north wall 3rd floor
+
+export const thirdFloorNorthWall: WallElevation = {
+  id: "north-3" as WallId,
+  name: "North Wall — Third Floor (Partial)",
+  totalLengthInches: THIRD_FLOOR_W,
+  wallHeightInches:  THIRD_FLOOR_H,
+  studSpacingOC: 16,
+  sections: [{ lengthInches: THIRD_FLOOR_W, label: `${THIRD_FLOOR_W}" partial third floor (W end)` }],
+  openings: [],
+  anchorBolts: [],
+};
+
+export const thirdFloorSouthWall: WallElevation = {
+  id: "south-3" as WallId,
+  name: "South Wall — Third Floor (Partial)",
+  totalLengthInches: THIRD_FLOOR_W,
+  wallHeightInches:  THIRD_FLOOR_H,
+  studSpacingOC: 16,
+  sections: [{ lengthInches: THIRD_FLOOR_W, label: `${THIRD_FLOOR_W}" partial third floor (W end)` }],
+  openings: [],
+  anchorBolts: [],
+};
+
+// ═══ SECOND FLOOR WALLS ════════════════════════════════════════════════
+
+export const secondFloorNorthWall: WallElevation = {
+  id: "north-2" as WallId,
+  name: "North Wall — Second Floor",
+  totalLengthInches: 286,
+  wallHeightInches: 116,
+  studSpacingOC: 16,
+  sections: [
+    { lengthInches: 151, label: "151\" (east of stair)" },
+    { lengthInches: 117, label: "117\" stair run" },
+    { lengthInches: 18,  label: "18\" (west of stair)" },
+  ],
+  openings: [],
+  anchorBolts: [6, 72, 138, 204, 280],
+};
+
+export const secondFloorSouthWall: WallElevation = {
+  id: "south-2" as WallId,
+  name: "South Wall — Second Floor",
+  totalLengthInches: 286,
+  wallHeightInches: 116,
+  studSpacingOC: 16,
+  sections: [
+    { lengthInches: 166, label: "166\" left of window" },
+    { lengthInches: 40,  label: "40\" window RO (2.5 CMU blocks)" },
+    { lengthInches: 80,  label: "80\" right of window" },
+  ],
+  openings: [
+    {
+      // Matches CMU opening: 5 blocks from right, 2.5 blocks wide, 5 blocks tall
+      type: "window",
+      widthInches: 40,
+      heightInches: 40,
+      sillHeightInches: 9.75,  // 136" from slab − FLOOR2_IN (126.25") ≈ 9.75" above deck
+      positionFromLeftInches: 166,
+      label: "3'4\" × 3'4\" CMU window",
+      headerSpec: {
+        depth: 5.5,
+        plies: 2,
+        label: "(2) 2×6 flat header",
+        note: "40\" span — light load, double 2×6 flat header adequate.",
+      },
+    },
+  ],
+  anchorBolts: [6, 72, 138, 204, 280],
+};
+
+export const secondFloorWestWall: WallElevation = {
+  id: "west-2" as WallId,
+  name: "West Wall — Second Floor",
+  totalLengthInches: 166,
+  wallHeightInches: 116,
+  studSpacingOC: 16,
+  sections: [
+    { lengthInches: 48, label: "48\" left of window" },
+    { lengthInches: 71, label: "71\" picture window RO" },
+    { lengthInches: 47, label: "47\" right of window" },
+  ],
+  openings: [
+    {
+      type: "window",
+      widthInches: 71,          // fills full CMU opening (48" to 119")
+      heightInches: 40,         // 3'4" picture window — header top lands at T.O. CMU
+      sillHeightInches: 8.5,
+      positionFromLeftInches: 48,
+      label: "5'11\" × 3'4\"",
+      openingSubtype: "Picture Window",
+      headerSpec: {
+        depth: 9.25,
+        plies: 2,
+        label: "(2) 2×10 built-up header",
+        note: "71\" span — double 2×10 adequate for picture window under flat roof.",
+      },
+    },
+  ],
+  anchorBolts: [6, 72, 138, 160],
+};
+
+export const secondFloorEastWall: WallElevation = {
+  id: "east-2" as WallId,
+  name: "East Wall — Second Floor",
+  totalLengthInches: 166,
+  wallHeightInches: 116,
+  studSpacingOC: 16,
+  sections: [
+    { lengthInches: 54, label: "54\" left of window" },
+    { lengthInches: 40, label: "40\" window RO (2.5 CMU blocks)" },
+    { lengthInches: 72, label: "72\" right of window" },
+  ],
+  openings: [
+    {
+      // Matches CMU opening: 4.5 blocks from right, 2.5 blocks wide, 5 blocks tall
+      type: "window",
+      widthInches: 40,
+      heightInches: 40,
+      sillHeightInches: 9.75,   // 136" from slab − FLOOR2_IN (126.25") ≈ 9.75" above deck
+      positionFromLeftInches: 54,
+      label: "3'4\" × 3'4\" CMU window",
+      headerSpec: {
+        depth: 5.5,
+        plies: 2,
+        label: "(2) 2×6 flat header",
+        note: "40\" span — light load, double 2×6 flat header adequate.",
+      },
+    },
+  ],
+  anchorBolts: [6, 72, 138, 160],
 };

@@ -1,49 +1,66 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 
 export function HamburgerMenu() {
-  const [open, setOpen] = useState(false);
-
   return (
-    <>
-      <button
-        type="button"
-        className="hamburger-trigger"
-        onClick={() => setOpen(true)}
-        aria-label="Open menu"
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-white hover:bg-white/15 hover:text-white"
+          aria-label="Open menu"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+      </SheetTrigger>
+
+      <SheetContent
+        side="left"
+        className="w-[280px] bg-[#2d2d2d] text-white border-r border-white/10 p-0"
       >
-        <span className="hamburger-line" />
-        <span className="hamburger-line" />
-        <span className="hamburger-line" />
-      </button>
+        <SheetHeader className="px-5 pt-5 pb-3">
+          <SheetTitle className="text-white text-base font-semibold tracking-tight">
+            Block House
+          </SheetTitle>
+        </SheetHeader>
 
-      <div
-        className={`nav-overlay ${open ? "nav-overlay--open" : ""}`}
-        onClick={() => setOpen(false)}
-        aria-hidden={!open}
-      />
+        <Separator className="bg-white/15" />
 
-      <aside className={`nav-drawer ${open ? "nav-drawer--open" : ""}`}>
-        <div className="nav-drawer-header">
-          <span className="nav-drawer-title">Menu</span>
-          <button
-            type="button"
-            className="nav-drawer-close"
-            onClick={() => setOpen(false)}
-            aria-label="Close menu"
+        <nav className="flex flex-col gap-0.5 p-2 mt-1">
+          <Link
+            href="/"
+            className="flex items-center px-3 py-2.5 rounded-md text-sm text-white/85 hover:bg-white/10 hover:text-white transition-colors"
           >
-            ×
-          </button>
-        </div>
-        <nav className="nav-drawer-links">
-          <Link href="/" className="nav-drawer-link" onClick={() => setOpen(false)}>
             First Floor Framing
           </Link>
-          {/* Add more links here as you add pages */}
+          <Link
+            href="/materials"
+            className="flex items-center px-3 py-2.5 rounded-md text-sm text-white/85 hover:bg-white/10 hover:text-white transition-colors"
+          >
+            Materials List
+          </Link>
+          <a
+            href="/Referances%20/Frankenstein%20house%20-Alex.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center px-3 py-2.5 rounded-md text-sm text-white/85 hover:bg-white/10 hover:text-white transition-colors"
+          >
+            Original blueprint
+          </a>
         </nav>
-      </aside>
-    </>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -1,3 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ── App shell ──────────────────────────────────────────────────────────────*/
+
 * {
   box-sizing: border-box;
 }
@@ -16,127 +56,21 @@ body {
 }
 
 .header {
-  padding: 1rem 1.5rem;
+  padding: 0.35rem 1rem;
   background: #2d2d2d;
   color: #fff;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
 .header h1 {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-}
-
-/* Hamburger menu */
-.hamburger-trigger {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background 0.2s;
-}
-.hamburger-trigger:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-.hamburger-line {
-  display: block;
-  width: 22px;
-  height: 2px;
-  background: currentColor;
-  border-radius: 1px;
-  margin: 0 auto;
-}
-
-.nav-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 1000;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.25s ease, visibility 0.25s ease;
-}
-.nav-overlay--open {
-  opacity: 1;
-  visibility: visible;
-}
-
-.nav-drawer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 280px;
-  max-width: 85vw;
-  height: 100vh;
-  background: #2d2d2d;
-  color: #fff;
-  z-index: 1001;
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
-  transform: translateX(-100%);
-  transition: transform 0.25s ease;
-  display: flex;
-  flex-direction: column;
-}
-.nav-drawer--open {
-  transform: translateX(0);
-}
-
-.nav-drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-}
-.nav-drawer-title {
-  font-size: 1rem;
-  font-weight: 600;
-}
-.nav-drawer-close {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  line-height: 1;
-  background: transparent;
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background 0.2s;
-}
-.nav-drawer-close:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.nav-drawer-links {
-  padding: 1rem 0;
-  display: flex;
-  flex-direction: column;
-}
-.nav-drawer-link {
-  display: block;
-  padding: 0.65rem 1.25rem;
-  color: #fff;
-  text-decoration: none;
-  font-size: 0.95rem;
-  transition: background 0.2s;
-}
-.nav-drawer-link:hover {
-  background: rgba(255, 255, 255, 0.1);
 }
 
 .main {
@@ -152,31 +86,9 @@ body {
   gap: 1rem;
 }
 
-.wall-card {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  overflow: visible;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-}
+/* ── Elevation area ─────────────────────────────────────────────────────────*/
 
-.wall-card h3 {
-  margin: 0;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.95rem;
-  background: #e8e8e8;
-  border-bottom: 1px solid #ddd;
-}
-
-.wall-card .wall-content {
-  padding: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* Elevation area: ensure hover/tooltips work (stacking + pointer-events) */
-.wall-card .wall-content .wall-parametric-wrap {
+.wall-parametric-wrap {
   width: 100%;
   margin-bottom: 0.75rem;
   isolation: isolate;
@@ -184,7 +96,7 @@ body {
   z-index: 0;
 }
 
-.wall-card .wall-data-row {
+.wall-data-row {
   display: flex;
   flex-direction: row;
   gap: 1rem;
@@ -192,13 +104,13 @@ body {
   align-items: flex-start;
 }
 
-.wall-card .wall-data-row .wall-data-summary {
+.wall-data-row .wall-data-summary {
   flex: 1;
   min-width: 0;
 }
 
-.wall-card .wall-data-row .sliding-door-column,
-.wall-card .wall-data-row .opening-diagram-column {
+.wall-data-row .sliding-door-column,
+.wall-data-row .opening-diagram-column {
   flex: 0 0 auto;
   font-size: 0.8rem;
   background: #f9f9f9;
@@ -208,7 +120,7 @@ body {
 }
 
 @media (max-width: 640px) {
-  .wall-card .wall-data-row {
+  .wall-data-row {
     flex-direction: column;
   }
 }
@@ -223,16 +135,6 @@ body {
 .wall-svg-wrap {
   width: 100%;
   margin-bottom: 0.75rem;
-}
-
-.wall-parametric-wrap {
-  margin-bottom: 0;
-  padding: 0.5rem 0;
-  border-top: 1px dashed #ccc;
-}
-
-.wall-parametric-wrap .wall-label {
-  margin-bottom: 0.25rem;
 }
 
 .wall-data-summary {
@@ -265,12 +167,4 @@ body {
 
 .wall-data-summary li {
   margin-bottom: 0.2rem;
-}
-
-.wall-card svg,
-.wall-card .wall-svg {
-  width: 100%;
-  height: auto;
-  max-height: 720px;
-  display: block;
 }

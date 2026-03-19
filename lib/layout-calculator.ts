@@ -1,4 +1,4 @@
-import type { WallElevation } from "./types";
+import type { WallElevation, HeaderSpec } from "./types";
 
 export const SW = 1.5;          // stud face width — 2×6 actual = 1.5" (depth = 5.5", not shown in elevation)
 export const PLATE_H = 1.5;     // single bottom plate
@@ -15,10 +15,14 @@ export interface Rect {
   height: number;
 }
 
+export interface HeaderRect extends Rect {
+  headerSpec?: HeaderSpec;
+}
+
 export interface WallLayout {
   bottomPlates: Rect[];
   topPlates: Rect[];
-  headers: Rect[];   // doubled headers — rendered as two stacked pieces
+  headers: HeaderRect[];
   sills: Rect[];     // rough sill plates (single piece, windows only)
   studs: Rect[];
   openings: Rect[];
@@ -85,7 +89,7 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
 
   const fillGap = (gapStart: number, gapEnd: number) => {
     let x = gapStart;
-    while (x <= gapEnd - SW - OC / 2) {
+    while (x <= gapEnd - SW - OC / 3) {
       pushFull(x, STUD_LABEL);
       x += OC;
     }
@@ -113,9 +117,10 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
 
   // ── bottom plates ────────────────────────────────────────────────────────
 
-  const sorted = [...wall.openings].sort(
-    (a, b) => a.positionFromLeftInches - b.positionFromLeftInches
-  );
+  // "cmu-only" openings are voids in the CMU layer only — skip in frame layout
+  const sorted = [...wall.openings]
+    .filter(o => o.type !== "cmu-only")
+    .sort((a, b) => a.positionFromLeftInches - b.positionFromLeftInches);
 
   const doorAtFloor = sorted.find(
     (o) => o.type === "door" && !o.sillHeightInches
@@ -139,6 +144,7 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
     const oRight  = oLeft + op.widthInches;
     const oBottom = op.sillHeightInches ?? 0;
     const oTop    = oBottom + op.heightInches;
+    const jc = op.jackCount ?? 1;
 
     fillGap(cursor, oLeft);
 
@@ -146,25 +152,50 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
     pushFull(oLeft, "2×6 King Stud (left)");
 
     if (op.type === "door" && !op.sillHeightInches) {
-      pushPartial(oLeft + SW,       0, oTop, "2×6 Jack Stud (left)");
-      pushPartial(oRight - 2 * SW,  0, oTop, "2×6 Jack Stud (right)");
+      for (let j = 0; j < jc; j++) {
+        const lbl = jc > 1 ? ` #${j + 1}` : "";
+        pushPartial(oLeft + (1 + j) * SW,  0, oTop, `2×6 Jack Stud (left${lbl})`);
+        pushPartial(oRight - (2 + j) * SW, 0, oTop, `2×6 Jack Stud (right${lbl})`);
+      }
     } else {
       const jackH = op.heightInches;
-      pushPartial(oLeft + SW,       oBottom, jackH, "2×6 Jack Stud (left)");
-      pushPartial(oRight - 2 * SW,  oBottom, jackH, "2×6 Jack Stud (right)");
+      for (let j = 0; j < jc; j++) {
+        const lbl = jc > 1 ? ` #${j + 1}` : "";
+        pushPartial(oLeft + (1 + j) * SW,  oBottom, jackH, `2×6 Jack Stud (left${lbl})`);
+        pushPartial(oRight - (2 + j) * SW, oBottom, jackH, `2×6 Jack Stud (right${lbl})`);
+      }
 
       const belowH = oBottom - STUD_BASE;
       if (belowH > 0.01) {
-        const leftJackX  = oLeft  + SW;
-        const rightJackX = oRight - 2 * SW;
-        let cx = leftJackX;
-        while (cx + SW <= rightJackX + 0.01) {
-          pushPartial(cx, STUD_BASE, belowH, "Cripple (below sill)");
-          cx += OC;
+        const crippleXs: number[] = [];
+
+        for (let j = 0; j < jc; j++) {
+          crippleXs.push(oLeft + (1 + j) * SW);
+          crippleXs.push(oRight - (2 + j) * SW);
         }
-        const lastPlaced = cx - OC;
-        if (rightJackX - lastPlaced > SW + 0.5) {
-          pushPartial(rightJackX, STUD_BASE, belowH, "Cripple (below sill)");
+
+        const leftCripX  = oLeft  + SW;
+        const rightCripX = oRight - 2 * SW;
+        let fcx = leftCripX;
+        while (fcx + SW <= rightCripX + 0.01) {
+          crippleXs.push(fcx);
+          fcx += OC;
+        }
+        const lastField = fcx - OC;
+        if (rightCripX - lastField > SW + 0.5) {
+          crippleXs.push(rightCripX);
+        }
+
+        crippleXs.sort((a, b) => a - b);
+        const unique: number[] = [];
+        for (const x of crippleXs) {
+          if (unique.length === 0 || x - unique[unique.length - 1] > 0.1) {
+            unique.push(x);
+          }
+        }
+
+        for (const x of unique) {
+          pushPartial(x, STUD_BASE, belowH, "Cripple (below sill)");
         }
       }
 
@@ -174,10 +205,14 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
     // right king
     pushFull(oRight - SW, "2×6 King Stud (right)");
 
+    const hDepth = op.headerSpec?.depth ?? HEADER_D;
+
     layout.headers.push({
-      id: `${wId}-hdr-${headerIdx++}`, label: "Header",
+      id: `${wId}-hdr-${headerIdx++}`,
+      label: op.headerSpec?.label ?? "Header",
       x: oLeft + SW, y: oTop,
-      width: oRight - oLeft - 2 * SW, height: HEADER_D,
+      width: oRight - oLeft - 2 * SW, height: hDepth,
+      headerSpec: op.headerSpec,
     });
 
     layout.openings.push({
@@ -186,7 +221,7 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
       width: oRight - oLeft - 2 * SW, height: op.heightInches,
     });
 
-    const crippleY = oTop + HEADER_D;
+    const crippleY = oTop + hDepth;
     const crippleH = H - TOP_H - crippleY;
     if (crippleH > 0.01) {
       let cx = Math.ceil(oLeft / OC) * OC;

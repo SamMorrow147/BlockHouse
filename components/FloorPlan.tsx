@@ -1,6 +1,7 @@
+"use client";
 
-
-import React from "react";
+import React, { useState } from "react";
+import { Toggle } from "@/components/ui/toggle";
 import {
   initialWalls, CMU_T, CMU_BLOCK_W, CMU_INTERIOR_W, CMU_INTERIOR_D,
   FR_GAP, FR_D, INT_D, INT_SW, PARTITION_WALL_R, PARTITION_V_OFFSET,
@@ -10,17 +11,23 @@ import {
   TOILET_W, TOILET_TANK_D, TOILET_BOWL_D,
   BATH_JOIST_OC, BATH_LEDGER_T,
   STAIR_TREAD_DEPTH, STAIR_APPR_STEPS, STAIR_WIDTH, STAIR_MAIN_STEPS,
+  STAIR_LAND_RISERS, STAIR_TOTAL_RISERS, TJI_DEPTH, SUBFLOOR_T,
 } from "@/lib/framing-data";
 import { computeWallLayout } from "@/lib/layout-calculator";
+import {
+  CMU_W, CMU_D, CI_L, CI_R, CI_N, CI_S,
+  FN_OUT, FN_IN, FS_IN, FS_OUT, FW_OUT, FW_IN, FE_IN, FE_OUT,
+  SD_L, SD_R, NW_L, NW_R, EW_T, EW_B, WD_T, WD_B,
+} from "@/lib/plan-geometry";
 
 // ── Scale & Wall Constants ──────────────────────────────────────────────────
 const FP_PX   = 3;    // px per inch (floor plan is smaller than wall elevations)
 
 // ── SVG margin around plan drawing (px) ────────────────────────────────────
 const AL = 140;  // left   (vertical dim + exterior counter overhang)
-const AT = 56;   // top    (title + north dimension; raised slightly for label clearance)
-const AR = 62;   // right  (east label + door label clearance)
-const AB = 68;   // bottom (south dim + label)
+const AT = 56;   // top    (title + south dimension; raised slightly for label clearance)
+const AR = 62;   // right  (west label + door label clearance)
+const AB = 68;   // bottom (north dim + label)
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const pf = (n: number) => n * FP_PX;      // inches → plan-scale px
@@ -69,7 +76,7 @@ function clipRects(
   return rects;
 }
 
-// Horizontal wall band (North / South).
+// Horizontal wall band (South / North).
 function hCMUBlocks(
   yBand: number, xFrom: number, xTo: number,
   voids: { l: number; r: number }[],
@@ -94,7 +101,7 @@ function hCMUBlocks(
   return rects;
 }
 
-// Vertical wall band (East / West).
+// Vertical wall band (West / East).
 function vCMUBlocks(
   xBand: number, yFrom: number, yTo: number,
   voids: { t: number; b: number }[],
@@ -118,53 +125,34 @@ function vCMUBlocks(
   return rects;
 }
 
+function LayerBtn({ label, on, toggle }: { label: string; on: boolean; toggle: () => void }) {
+  return (
+    <Toggle
+      pressed={on}
+      onPressedChange={toggle}
+      size="sm"
+      variant="outline"
+      className="h-7 px-3 text-xs font-mono rounded-full border-zinc-300 text-zinc-600
+                 data-[state=on]:bg-zinc-800 data-[state=on]:text-white
+                 data-[state=on]:border-zinc-800 hover:bg-zinc-100
+                 data-[state=on]:hover:bg-zinc-700 transition-all"
+    >
+      {label}
+    </Toggle>
+  );
+}
+
 export function FloorPlan() {
-  // CMU interior dimensions — fixed by block module, independent of frame wall lengths.
-  // E/W frame walls = 166" (168" CMU depth − 2×1" gap).
-  // N/S frame walls = 286" (288" CMU width  − 2×1" gap).
-  const CMU_W = CMU_INTERIOR_W + 2 * CMU_T;   // 304"
-  const CMU_D = CMU_INTERIOR_D + 2 * CMU_T;   // 184"
+  const [showStairs,   setShowStairs]   = useState(true);
+  const [showBathroom, setShowBathroom] = useState(true);
+  const [showCabinets, setShowCabinets] = useState(true);
+  const [showSewer,    setShowSewer]    = useState(true);
 
-  // CMU interior face positions (inches from CMU exterior NW corner)
-  const CI_L = CMU_T;            //   8"  west CMU interior face
-  const CI_R = CMU_W - CMU_T;    // 296"  east CMU interior face
-  const CI_N = CMU_T;            //   8"  north CMU interior face
-  const CI_S = CMU_D - CMU_T;    // 176"  south CMU interior face
-
-  // Wood frame face positions (each wall)
-  // "outer" = face toward CMU   "inner" = face toward room
-  const FN_OUT = CI_N + FR_GAP;           //  9"
-  const FN_IN  = CI_N + FR_GAP + FR_D;    // 14.5"
-  const FS_IN  = CI_S - FR_GAP - FR_D;    // 169.5"
-  const FS_OUT = CI_S - FR_GAP;           // 175"
-  const FW_OUT = CI_L + FR_GAP;           //  9"
-  const FW_IN  = CI_L + FR_GAP + FR_D;    // 14.5"
-  const FE_IN  = CI_R - FR_GAP - FR_D;    // 289.5"
-  const FE_OUT = CI_R - FR_GAP;           // 295"
-
-  // ── Openings in plan-space coordinates ────────────────────────────────
-  // All frames sit 1" off the CMU interior face. N/S frame starts at FW_OUT = 9".
-  // positionFromLeftInches is measured from the frame's left end in the elevation.
-  const nOp  = initialWalls.north.openings[0];
-  const ND_L = FW_OUT + nOp.positionFromLeftInches;  // 9 + 127 = 136" = 8.5 CMU blocks
-  const ND_R = ND_L + nOp.widthInches;               // 136 + 39 = 175"
-
-  const sOp  = initialWalls.south.openings[0];
-  // South elevation is an interior view (left = East). Mirror to plan-space (left = West):
-  // physicalFromWest = totalLength - positionFromLeftInches - widthInches = 286 - 151 - 40 = 95"
-  const sPhysFromWest = initialWalls.south.totalLengthInches - sOp.positionFromLeftInches - sOp.widthInches;
-  const SW_L = FW_OUT + sPhysFromWest;   // 9 + 95 = 104" = 6.5 CMU blocks from west
-  const SW_R = SW_L + sOp.widthInches;   // 104 + 40 = 144" = 9 CMU blocks from west
-
-  // West wall: "left" = South. Wall starts at FS_OUT (1" from CMU S face) and ends at FN_OUT.
-  const wOp  = initialWalls.west.openings[0];
-  const WW_B = FS_OUT - wOp.positionFromLeftInches;  // 175 - 72 = 103" (south edge of window)
-  const WW_T = WW_B - wOp.widthInches;                // 103 - 72 =  31" (north edge of window)
-
-  // East wall: "left" = North. Wall starts at FN_OUT (1" from CMU N face) and ends at FS_OUT.
-  const eOp  = initialWalls.east.openings[0];
-  const ED_T = FN_OUT + eOp.positionFromLeftInches;  //  9 + 40 = 49"
-  const ED_B = ED_T + eOp.widthInches;                //  49 + 79 = 128"
+  // Opening objects — used for widthInches and label in the template
+  const nOp  = initialWalls.south.openings[0];
+  const sOp  = initialWalls.north.openings[0];
+  const wOp  = initialWalls.east.openings[0];
+  const eOp  = initialWalls.west.openings[0];
 
   // ── SVG coordinate helpers ────────────────────────────────────────────
   const px = (x: number) => AL + pf(x);
@@ -176,12 +164,12 @@ export function FloorPlan() {
   const DOOR_W = nOp.widthInches;   // 39" = radius of swing
 
   const BTH_W  = wOp.positionFromLeftInches;   // 72"  — reuse canopy window position
-  const BTH_X  = FE_IN - BTH_W;               // 289.5 - 72 = 217.5"  west face of bathroom
-  const BTH_Y  = WW_B;                         // 103"  north face of partition
+  const BTH_X  = FE_IN - BTH_W;               // 289.5 - 72 = 217.5"  east face of bathroom
+  const BTH_Y  = EW_B;                         // 103"  south face of partition
 
-  // ── Horizontal partition — runs West wall → east end ───────────────────
+  // ── Horizontal partition — runs East wall → west end ───────────────────
   // FW_IN (14.5") → 96" (6 CMU blocks), 81.5" long
-  // Stops 8" (half a block) before south window left jamb (SW_L = 104")
+  // Stops 8" (half a block) before north window left jamb (NW_L = 104")
   const partWallL = FW_IN;
   const partWallR = PARTITION_WALL_R;
   const partStudXs: number[] = [];
@@ -189,39 +177,46 @@ export function FloorPlan() {
   for (let x = partWallL + 16; x < partWallR - INT_SW; x += 16) {
     partStudXs.push(x);
   }
-  partStudXs.push(partWallR - INT_SW);                  // east end stud
+  partStudXs.push(partWallR - INT_SW);                  // west end stud
 
-  // ── Vertical partition — drops south from top of horizontal wall → south wall ──
+  // ── Vertical partition — drops north from top of horizontal wall → north wall ──
   // x = partWallR (96") → partWallR + INT_D (99.5"), 3.5" wide (E-W)
   // y = top of horizontal wall (119.5") → FS_IN (169.5"), 50" tall
   // Overlaps horizontal wall in the corner zone (119.5"→123") forming a solid L-corner.
   const partVWallT = BTH_Y + PARTITION_V_OFFSET;
-  const partVWallB = FS_IN;                   // 169.5" — south wall inner face
+  const partVWallB = FS_IN;                   // 169.5" — north wall inner face
 
   // ── Bathroom door in vertical partition ────────────────────────────────
-  // 28" RO (standard min. bathroom door = 2'-4"), hinge at south jamb.
-  // Swings WEST into bathroom; open leaf rests along the south wall.
+  // 28" RO (standard min. bathroom door = 2'-4"), hinge at north jamb.
+  // Swings EAST into bathroom; open leaf rests along the north wall.
   const BATH_DOOR_W = vertPartition.openings[0].widthInches;
-  const partVDoorT = partVWallB - BATH_DOOR_W;  // 141.5" — north (top) jamb of door
+  const partVDoorT = partVWallB - BATH_DOOR_W;  // 141.5" — south (top) jamb of door
 
   // Studs ABOVE the door opening only (119.5" → 141.5")
   const partVStudYs: number[] = [];
-  partVStudYs.push(partVWallT);               // north end stud (inside corner zone)
+  partVStudYs.push(partVWallT);               // south end stud (inside corner zone)
   for (let y = partVWallT + 16; y < partVDoorT - INT_SW; y += 16) {
     partVStudYs.push(y);                       // 16" OC field studs
   }
-  partVStudYs.push(partVDoorT - INT_SW);      // king stud at door north jamb
+  partVStudYs.push(partVDoorT - INT_SW);      // king stud at door south jamb
 
   // ── Stud layouts (from same data as wall elevations) ─────────────────
-  // North/South stud.x is measured from the West interior face.
-  // West stud.x is measured from the South interior face ("left" = South from outside).
+  // South/North stud.x is measured from the East interior face.
   // East stud.x is measured from the North interior face ("left" = North from outside).
-  const nStuds = computeWallLayout(initialWalls.north).studs;
-  const sStuds = computeWallLayout(initialWalls.south).studs;
-  const wStuds = computeWallLayout(initialWalls.west).studs;
-  const eStuds = computeWallLayout(initialWalls.east).studs;
+  // West stud.x is measured from the South interior face ("left" = South from outside).
+  const nStuds = computeWallLayout(initialWalls.south).studs;
+  const sStuds = computeWallLayout(initialWalls.north).studs;
+  const wStuds = computeWallLayout(initialWalls.east).studs;
+  const eStuds = computeWallLayout(initialWalls.west).studs;
 
   return (
+    <div>
+      <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-zinc-50 border-b border-zinc-200 sticky top-[40px] z-[9]">
+        <LayerBtn label="Stairs"       on={showStairs}   toggle={() => setShowStairs(v => !v)} />
+        <LayerBtn label="Bathroom"     on={showBathroom} toggle={() => setShowBathroom(v => !v)} />
+        <LayerBtn label="Cabinets"     on={showCabinets} toggle={() => setShowCabinets(v => !v)} />
+        <LayerBtn label="Sewer Outlet" on={showSewer}    toggle={() => setShowSewer(v => !v)} />
+      </div>
     <svg
       viewBox={`0 0 ${svgW} ${svgH}`}
       width="100%"
@@ -276,7 +271,7 @@ export function FloorPlan() {
       </marker>
       </defs>
 
-      {/* ── Title block (y spaced to avoid NORTH and dimension chain) ─────── */}
+      {/* ── Title block (y spaced to avoid SOUTH and dimension chain) ─────── */}
       <text className="fp-title" x={AL} y={AT - 28}>01 — MAIN LEVEL FLOOR PLAN (INTERIOR FRAMING)</text>
       <text className="fp-sub" x={AL} y={AT - 12}>
         SCALE: 3px = 1&quot;  |  8&quot; CMU WALLS  |  2×6 WOOD FRAME 1&quot; OFF CMU  |  INTERIOR {CMU_INTERIOR_W}&quot; × {CMU_INTERIOR_D}&quot;
@@ -297,31 +292,31 @@ export function FloorPlan() {
           <line key={k} x1={px(x1)} y1={py(y1)} x2={px(x2)} y2={py(y2)}
             stroke={s} strokeWidth={sw} strokeLinecap="square" />;
         return <>
-          {/* North outer edge — skip door (ND_L→ND_R) */}
-          {lp(0, 0, ND_L, 0, "n1")}
-          {lp(ND_R, 0, CMU_W, 0, "n2")}
-          {/* South outer edge — skip window (SW_L→SW_R) */}
-          {lp(0, CMU_D, SW_L, CMU_D, "s1")}
-          {lp(SW_R, CMU_D, CMU_W, CMU_D, "s2")}
-          {/* West outer edge — skip window (WW_T→WW_B) */}
-          {lp(0, 0, 0, WW_T, "w1")}
-          {lp(0, WW_B, 0, CMU_D, "w2")}
-          {/* East outer edge — skip door (ED_T→ED_B) */}
-          {lp(CMU_W, 0, CMU_W, ED_T, "e1")}
-          {lp(CMU_W, ED_B, CMU_W, CMU_D, "e2")}
+          {/* South outer edge — skip door (SD_L→SD_R) */}
+          {lp(0, 0, SD_L, 0, "n1")}
+          {lp(SD_R, 0, CMU_W, 0, "n2")}
+          {/* North outer edge — skip window (NW_L→NW_R) */}
+          {lp(0, CMU_D, NW_L, CMU_D, "s1")}
+          {lp(NW_R, CMU_D, CMU_W, CMU_D, "s2")}
+          {/* East outer edge — skip window (EW_T→EW_B) */}
+          {lp(0, 0, 0, EW_T, "w1")}
+          {lp(0, EW_B, 0, CMU_D, "w2")}
+          {/* West outer edge — skip door (WD_T→WD_B) */}
+          {lp(CMU_W, 0, CMU_W, WD_T, "e1")}
+          {lp(CMU_W, WD_B, CMU_W, CMU_D, "e2")}
         </>;
       })()}
 
       {/* ── White at openings (before blocks) — clears gray so opening is
           visible, but block joints still draw on top in yellow              */}
       <rect fill="#fff" stroke="none"
-        x={px(ND_L)} y={py(0)} width={pf(nOp.widthInches)} height={pf(CMU_T)} />
+        x={px(SD_L)} y={py(0)} width={pf(nOp.widthInches)} height={pf(CMU_T)} />
       <rect fill="#fff" stroke="none"
-        x={px(SW_L)} y={py(CI_S)} width={pf(sOp.widthInches)} height={pf(CMU_T)} />
+        x={px(NW_L)} y={py(CI_S)} width={pf(sOp.widthInches)} height={pf(CMU_T)} />
       <rect fill="#fff" stroke="none"
-        x={px(0)} y={py(WW_T)} width={pf(CMU_T)} height={pf(wOp.widthInches)} />
+        x={px(0)} y={py(EW_T)} width={pf(CMU_T)} height={pf(wOp.widthInches)} />
       <rect fill="#fff" stroke="none"
-        x={px(CI_R)} y={py(ED_T)} width={pf(CMU_T)} height={pf(eOp.widthInches)} />
+        x={px(CI_R)} y={py(WD_T)} width={pf(CMU_T)} height={pf(eOp.widthInches)} />
 
       {/* ── Yellow CMU block pattern — continuous so block count is readable */}
       {hCMUBlocks(0,    0, CMU_W, [], px, py, pf)}
@@ -348,22 +343,25 @@ export function FloorPlan() {
         x={px(FW_IN)} y={py(FN_IN)}
         width={pf(FE_IN - FW_IN)} height={pf(FS_IN - FN_IN)} />
 
-      {/* ── Counter — L-shape: north wall → west wall → partition top ───── */}
+      {/* ── Cabinets / Counter layer ── */}
+      {showCabinets && <>
+
+      {/* ── Counter — L-shape: south wall → east wall → partition top ───── */}
       {(() => {
         const CD = COUNTER_DEPTH;
         const partTopY = BTH_Y + PARTITION_V_OFFSET;
 
         return <>
-          {/* Piece A — along north wall: main counter → fridge → small counter */}
+          {/* Piece A — along south wall: main counter → fridge → small counter */}
           {(() => {
-            const mainCtrW  = ND_L - FW_IN - FRIDGE_W - SMALL_CTR_W;
+            const mainCtrW  = SD_L - FW_IN - FRIDGE_W - SMALL_CTR_W;
 
             const fridgeL = FW_IN + mainCtrW;
             const fridgeR = fridgeL + FRIDGE_W;
             const hPad    = 3;  // handle inset from front/back edges
 
             return <>
-              {/* Main counter (west wall → fridge) */}
+              {/* Main counter (east wall → fridge) */}
               <rect className="fp-counter"
                 x={px(FW_IN)} y={py(FN_IN)}
                 width={pf(mainCtrW)} height={pf(CD)} />
@@ -390,30 +388,30 @@ export function FloorPlan() {
                 x={px(fridgeR)} y={py(FN_IN)}
                 width={pf(SMALL_CTR_W)} height={pf(CD)} />
 
-              {/* Unified front edge across full north run */}
+              {/* Unified front edge across full south run */}
               <line className="fp-counter-edge"
                 x1={px(FW_IN + CD)} y1={py(FN_IN + CD)}
-                x2={px(ND_L)}       y2={py(FN_IN + CD)} />
+                x2={px(SD_L)}       y2={py(FN_IN + CD)} />
             </>;
           })()}
 
-          {/* Piece B — along west wall (north counter → partition top) */}
+          {/* Piece B — along east wall (south counter → partition top) */}
           <rect className="fp-counter"
             x={px(FW_IN)} y={py(FN_IN + CD)}
             width={pf(CD)} height={pf(partTopY - CD - (FN_IN + CD))} />
 
 
-          {/* Piece C — along partition north face (west wall → east face of vertical 2×4) */}
+          {/* Piece C — along partition south face (east wall → west face of vertical 2×4) */}
           <rect className="fp-counter"
             x={px(FW_IN)} y={py(partTopY - CD)}
             width={pf(partWallR + INT_D - FW_IN)} height={pf(CD)} />
 
-          {/* Front edges — west and partition legs of the L */}
-          {/* West counter front edge */}
+          {/* Front edges — east and partition legs of the L */}
+          {/* East counter front edge */}
           <line className="fp-counter-edge"
             x1={px(FW_IN + CD)} y1={py(FN_IN + CD)}
             x2={px(FW_IN + CD)} y2={py(partTopY - CD)} />
-          {/* Partition counter front edge (runs to east face of vertical 2×4 wall) */}
+          {/* Partition counter front edge (runs to west face of vertical 2×4 wall) */}
           <line className="fp-counter-edge"
             x1={px(FW_IN + CD)}        y1={py(partTopY - CD)}
             x2={px(partWallR + INT_D)} y2={py(partTopY - CD)} />
@@ -469,120 +467,124 @@ export function FloorPlan() {
         </>;
       })()}
 
+      </> /* end showCabinets */}
+
       {/* ── 1" air gap fill (white strip between CMU and frame) ─────────── */}
-      {/* N gap */}
-      <rect fill="#fff" stroke="none"
-        x={px(CI_L)} y={py(CI_N)} width={pf(CMU_INTERIOR_W)} height={pf(FR_GAP)} />
       {/* S gap */}
       <rect fill="#fff" stroke="none"
+        x={px(CI_L)} y={py(CI_N)} width={pf(CMU_INTERIOR_W)} height={pf(FR_GAP)} />
+      {/* N gap */}
+      <rect fill="#fff" stroke="none"
         x={px(CI_L)} y={py(FS_OUT)} width={pf(CMU_INTERIOR_W)} height={pf(FR_GAP)} />
-      {/* W gap */}
+      {/* E gap */}
       <rect fill="#fff" stroke="none"
         x={px(CI_L)} y={py(CI_N)} width={pf(FR_GAP)} height={pf(CMU_INTERIOR_D)} />
-      {/* E gap */}
+      {/* W gap */}
       <rect fill="#fff" stroke="none"
         x={px(FE_OUT)} y={py(CI_N)} width={pf(FR_GAP)} height={pf(CMU_INTERIOR_D)} />
 
       {/* ── Opening cuts in wood frame zone ─────────────────────────────── */}
       <rect fill="#fff" stroke="none"
-        x={px(ND_L)} y={py(FN_OUT)} width={pf(nOp.widthInches)} height={pf(FR_D)} />
+        x={px(SD_L)} y={py(FN_OUT)} width={pf(nOp.widthInches)} height={pf(FR_D)} />
       <rect fill="#fff" stroke="none"
-        x={px(SW_L)} y={py(FS_IN)} width={pf(sOp.widthInches)} height={pf(FR_D)} />
+        x={px(NW_L)} y={py(FS_IN)} width={pf(sOp.widthInches)} height={pf(FR_D)} />
       <rect fill="#fff" stroke="none"
-        x={px(FW_OUT)} y={py(WW_T)} width={pf(FR_D)} height={pf(wOp.widthInches)} />
+        x={px(FW_OUT)} y={py(EW_T)} width={pf(FR_D)} height={pf(wOp.widthInches)} />
       <rect fill="#fff" stroke="none"
-        x={px(FE_IN)} y={py(ED_T)} width={pf(FR_D)} height={pf(eOp.widthInches)} />
+        x={px(FE_IN)} y={py(WD_T)} width={pf(FR_D)} height={pf(eOp.widthInches)} />
 
       {/* ── CMU interior face dashed lines (1" gap indicator) ───────────── */}
-      {/* North CMU interior face — full span (CMU interior face runs CI_L to CI_R) */}
-      <line className="fp-cmugap" x1={px(CI_L)} y1={py(CI_N)} x2={px(ND_L)} y2={py(CI_N)} />
-      <line className="fp-cmugap" x1={px(ND_R)} y1={py(CI_N)} x2={px(CI_R)} y2={py(CI_N)} />
-      <line className="fp-cmugap" x1={px(CI_L)} y1={py(CI_S)} x2={px(SW_L)} y2={py(CI_S)} />
-      <line className="fp-cmugap" x1={px(SW_R)} y1={py(CI_S)} x2={px(CI_R)} y2={py(CI_S)} />
-      <line className="fp-cmugap" x1={px(CI_L)} y1={py(CI_N)} x2={px(CI_L)} y2={py(WW_T)} />
-      <line className="fp-cmugap" x1={px(CI_L)} y1={py(WW_B)} x2={px(CI_L)} y2={py(CI_S)} />
-      <line className="fp-cmugap" x1={px(CI_R)} y1={py(CI_N)} x2={px(CI_R)} y2={py(ED_T)} />
-      <line className="fp-cmugap" x1={px(CI_R)} y1={py(ED_B)} x2={px(CI_R)} y2={py(CI_S)} />
+      {/* South CMU interior face — full span (CMU interior face runs CI_L to CI_R) */}
+      <line className="fp-cmugap" x1={px(CI_L)} y1={py(CI_N)} x2={px(SD_L)} y2={py(CI_N)} />
+      <line className="fp-cmugap" x1={px(SD_R)} y1={py(CI_N)} x2={px(CI_R)} y2={py(CI_N)} />
+      <line className="fp-cmugap" x1={px(CI_L)} y1={py(CI_S)} x2={px(NW_L)} y2={py(CI_S)} />
+      <line className="fp-cmugap" x1={px(NW_R)} y1={py(CI_S)} x2={px(CI_R)} y2={py(CI_S)} />
+      <line className="fp-cmugap" x1={px(CI_L)} y1={py(CI_N)} x2={px(CI_L)} y2={py(EW_T)} />
+      <line className="fp-cmugap" x1={px(CI_L)} y1={py(EW_B)} x2={px(CI_L)} y2={py(CI_S)} />
+      <line className="fp-cmugap" x1={px(CI_R)} y1={py(CI_N)} x2={px(CI_R)} y2={py(WD_T)} />
+      <line className="fp-cmugap" x1={px(CI_R)} y1={py(WD_B)} x2={px(CI_R)} y2={py(CI_S)} />
 
       {/* ══ WOOD FRAME LINES ════════════════════════════════════════════════
-          All frames sit 1" off CMU interior face. N/S walls run 286"
-          (FW_OUT→FE_OUT). E/W walls run 166" (FN_OUT→FS_OUT).
-          At corners the two frames overlap; E/W end studs tie into N/S plates. */}
+          E/W walls are the dominant (full-height) walls that own the corner zones.
+          N/S walls butt into the E/W inner faces: they span FW_IN→FE_IN only.
+          E/W walls span FN_OUT→FS_OUT (full depth including corner zones). */}
 
-      {/* North — outer face (wall spans FW_OUT to FE_OUT = 286") */}
-      <line className="fp-frame" x1={px(FW_OUT)} y1={py(FN_OUT)} x2={px(ND_L)} y2={py(FN_OUT)} />
-      <line className="fp-frame" x1={px(ND_R)} y1={py(FN_OUT)} x2={px(FE_OUT)} y2={py(FN_OUT)} />
-      {/* North — inner face */}
-      <line className="fp-frame" x1={px(FW_OUT)} y1={py(FN_IN)} x2={px(ND_L)} y2={py(FN_IN)} />
-      <line className="fp-frame" x1={px(ND_R)} y1={py(FN_IN)} x2={px(FE_OUT)} y2={py(FN_IN)} />
-      {/* North — butt ends (at 1" from CMU each side) */}
-      <line className="fp-frame" x1={px(FW_OUT)} y1={py(FN_OUT)} x2={px(FW_OUT)} y2={py(FN_IN)} />
-      <line className="fp-frame" x1={px(FE_OUT)} y1={py(FN_OUT)} x2={px(FE_OUT)} y2={py(FN_IN)} />
-      {/* North — door jambs */}
-      <line className="fp-frame" x1={px(ND_L)} y1={py(FN_OUT)} x2={px(ND_L)} y2={py(FN_IN)} />
-      <line className="fp-frame" x1={px(ND_R)} y1={py(FN_OUT)} x2={px(ND_R)} y2={py(FN_IN)} />
-
-      {/* South — outer face (wall spans FW_OUT to FE_OUT = 286") */}
-      <line className="fp-frame" x1={px(FW_OUT)} y1={py(FS_OUT)} x2={px(SW_L)} y2={py(FS_OUT)} />
-      <line className="fp-frame" x1={px(SW_R)} y1={py(FS_OUT)} x2={px(FE_OUT)} y2={py(FS_OUT)} />
+      {/* South — outer face (spans FW_IN to FE_IN, butting into E/W inner faces) */}
+      <line className="fp-frame" x1={px(FW_IN)} y1={py(FN_OUT)} x2={px(SD_L)} y2={py(FN_OUT)} />
+      <line className="fp-frame" x1={px(SD_R)} y1={py(FN_OUT)} x2={px(FE_IN)} y2={py(FN_OUT)} />
       {/* South — inner face */}
-      <line className="fp-frame" x1={px(FW_OUT)} y1={py(FS_IN)} x2={px(SW_L)} y2={py(FS_IN)} />
-      <line className="fp-frame" x1={px(SW_R)} y1={py(FS_IN)} x2={px(FE_OUT)} y2={py(FS_IN)} />
-      {/* South — butt ends */}
-      <line className="fp-frame" x1={px(FW_OUT)} y1={py(FS_IN)} x2={px(FW_OUT)} y2={py(FS_OUT)} />
-      <line className="fp-frame" x1={px(FE_OUT)} y1={py(FS_IN)} x2={px(FE_OUT)} y2={py(FS_OUT)} />
-      <line className="fp-frame" x1={px(SW_L)} y1={py(FS_IN)} x2={px(SW_L)} y2={py(FS_OUT)} />
-      <line className="fp-frame" x1={px(SW_R)} y1={py(FS_IN)} x2={px(SW_R)} y2={py(FS_OUT)} />
+      <line className="fp-frame" x1={px(FW_IN)} y1={py(FN_IN)} x2={px(SD_L)} y2={py(FN_IN)} />
+      <line className="fp-frame" x1={px(SD_R)} y1={py(FN_IN)} x2={px(FE_IN)} y2={py(FN_IN)} />
+      {/* South — butt ends (flush with E/W inner faces) */}
+      <line className="fp-frame" x1={px(FW_IN)} y1={py(FN_OUT)} x2={px(FW_IN)} y2={py(FN_IN)} />
+      <line className="fp-frame" x1={px(FE_IN)} y1={py(FN_OUT)} x2={px(FE_IN)} y2={py(FN_IN)} />
+      {/* South — door jambs */}
+      <line className="fp-frame" x1={px(SD_L)} y1={py(FN_OUT)} x2={px(SD_L)} y2={py(FN_IN)} />
+      <line className="fp-frame" x1={px(SD_R)} y1={py(FN_OUT)} x2={px(SD_R)} y2={py(FN_IN)} />
 
-      {/* West — outer face (FN_OUT → FS_OUT: 1" standoff from both N and S CMU faces) */}
-      <line className="fp-frame" x1={px(FW_OUT)} y1={py(FN_OUT)} x2={px(FW_OUT)} y2={py(WW_T)} />
-      <line className="fp-frame" x1={px(FW_OUT)} y1={py(WW_B)} x2={px(FW_OUT)} y2={py(FS_OUT)} />
-      {/* West — inner face */}
-      <line className="fp-frame" x1={px(FW_IN)} y1={py(FN_OUT)} x2={px(FW_IN)} y2={py(WW_T)} />
-      <line className="fp-frame" x1={px(FW_IN)} y1={py(WW_B)} x2={px(FW_IN)} y2={py(FS_OUT)} />
-      {/* West — plate ends (flush with N/S outer faces — clean T corner) */}
+      {/* North — outer face (spans FW_IN to FE_IN, butting into E/W inner faces) */}
+      <line className="fp-frame" x1={px(FW_IN)} y1={py(FS_OUT)} x2={px(NW_L)} y2={py(FS_OUT)} />
+      <line className="fp-frame" x1={px(NW_R)} y1={py(FS_OUT)} x2={px(FE_IN)} y2={py(FS_OUT)} />
+      {/* North — inner face */}
+      <line className="fp-frame" x1={px(FW_IN)} y1={py(FS_IN)} x2={px(NW_L)} y2={py(FS_IN)} />
+      <line className="fp-frame" x1={px(NW_R)} y1={py(FS_IN)} x2={px(FE_IN)} y2={py(FS_IN)} />
+      {/* North — butt ends */}
+      <line className="fp-frame" x1={px(FW_IN)} y1={py(FS_IN)} x2={px(FW_IN)} y2={py(FS_OUT)} />
+      <line className="fp-frame" x1={px(FE_IN)} y1={py(FS_IN)} x2={px(FE_IN)} y2={py(FS_OUT)} />
+      <line className="fp-frame" x1={px(NW_L)} y1={py(FS_IN)} x2={px(NW_L)} y2={py(FS_OUT)} />
+      <line className="fp-frame" x1={px(NW_R)} y1={py(FS_IN)} x2={px(NW_R)} y2={py(FS_OUT)} />
+
+      {/* East — outer face (full height FN_OUT → FS_OUT, owns corner zones) */}
+      <line className="fp-frame" x1={px(FW_OUT)} y1={py(FN_OUT)} x2={px(FW_OUT)} y2={py(EW_T)} />
+      <line className="fp-frame" x1={px(FW_OUT)} y1={py(EW_B)} x2={px(FW_OUT)} y2={py(FS_OUT)} />
+      {/* East — inner face (stops at N/S inner faces: FN_IN → FS_IN) */}
+      <line className="fp-frame" x1={px(FW_IN)} y1={py(FN_IN)} x2={px(FW_IN)} y2={py(EW_T)} />
+      <line className="fp-frame" x1={px(FW_IN)} y1={py(EW_B)} x2={px(FW_IN)} y2={py(FS_IN)} />
+      {/* East — cap ends (close corner zone at top and bottom) */}
       <line className="fp-frame" x1={px(FW_OUT)} y1={py(FN_OUT)} x2={px(FW_IN)} y2={py(FN_OUT)} />
       <line className="fp-frame" x1={px(FW_OUT)} y1={py(FS_OUT)} x2={px(FW_IN)} y2={py(FS_OUT)} />
-      {/* West — window jambs */}
-      <line className="fp-frame" x1={px(FW_OUT)} y1={py(WW_T)} x2={px(FW_IN)} y2={py(WW_T)} />
-      <line className="fp-frame" x1={px(FW_OUT)} y1={py(WW_B)} x2={px(FW_IN)} y2={py(WW_B)} />
+      {/* East — window jambs */}
+      <line className="fp-frame" x1={px(FW_OUT)} y1={py(EW_T)} x2={px(FW_IN)} y2={py(EW_T)} />
+      <line className="fp-frame" x1={px(FW_OUT)} y1={py(EW_B)} x2={px(FW_IN)} y2={py(EW_B)} />
 
-      {/* East — outer face (FN_OUT → FS_OUT: 1" standoff from both N and S CMU faces) */}
-      <line className="fp-frame" x1={px(FE_OUT)} y1={py(FN_OUT)} x2={px(FE_OUT)} y2={py(ED_T)} />
-      <line className="fp-frame" x1={px(FE_OUT)} y1={py(ED_B)} x2={px(FE_OUT)} y2={py(FS_OUT)} />
-      {/* East — inner face */}
-      <line className="fp-frame" x1={px(FE_IN)} y1={py(FN_OUT)} x2={px(FE_IN)} y2={py(ED_T)} />
-      <line className="fp-frame" x1={px(FE_IN)} y1={py(ED_B)} x2={px(FE_IN)} y2={py(FS_OUT)} />
-      {/* East — plate ends (flush with N/S outer faces — clean T corner) */}
+      {/* West — outer face (full height FN_OUT → FS_OUT, owns corner zones) */}
+      <line className="fp-frame" x1={px(FE_OUT)} y1={py(FN_OUT)} x2={px(FE_OUT)} y2={py(WD_T)} />
+      <line className="fp-frame" x1={px(FE_OUT)} y1={py(WD_B)} x2={px(FE_OUT)} y2={py(FS_OUT)} />
+      {/* West — inner face (stops at N/S inner faces: FN_IN → FS_IN) */}
+      <line className="fp-frame" x1={px(FE_IN)} y1={py(FN_IN)} x2={px(FE_IN)} y2={py(WD_T)} />
+      <line className="fp-frame" x1={px(FE_IN)} y1={py(WD_B)} x2={px(FE_IN)} y2={py(FS_IN)} />
+      {/* West — cap ends (close corner zone at top and bottom) */}
       <line className="fp-frame" x1={px(FE_IN)} y1={py(FN_OUT)} x2={px(FE_OUT)} y2={py(FN_OUT)} />
       <line className="fp-frame" x1={px(FE_IN)} y1={py(FS_OUT)} x2={px(FE_OUT)} y2={py(FS_OUT)} />
-      {/* East — door jambs */}
-      <line className="fp-frame" x1={px(FE_IN)} y1={py(ED_T)} x2={px(FE_OUT)} y2={py(ED_T)} />
-      <line className="fp-frame" x1={px(FE_IN)} y1={py(ED_B)} x2={px(FE_OUT)} y2={py(ED_B)} />
+      {/* West — door jambs */}
+      <line className="fp-frame" x1={px(FE_IN)} y1={py(WD_T)} x2={px(FE_OUT)} y2={py(WD_T)} />
+      <line className="fp-frame" x1={px(FE_IN)} y1={py(WD_B)} x2={px(FE_OUT)} y2={py(WD_B)} />
 
       {/* ══ 2×6 STUD CROSS-SECTIONS (plan view) ════════════════════════════
           Each stud appears as a 1.5" × 5.5" rectangle within the frame band.
-          North/South: stud.x measured from West interior face.
-          West:        stud.x measured from South interior face (left=South from outside).
-          East:        stud.x measured from North interior face (left=North from outside). */}
+          South/North: stud.x measured from East interior face.
+          East:        stud.x measured from North interior face (left=North from outside).
+          West:        stud.x measured from South interior face (left=South from outside). */}
 
-      {nStuds.map((s, i) => (
-        <rect key={`ns${i}`} className="fp-stud"
-          x={px(FW_OUT + s.x)} y={py(FN_OUT)}
-          width={pf(s.width)} height={pf(FR_D)} />
-      ))}
-      {sStuds.map((s, i) => (
-        <rect key={`ss${i}`} className="fp-stud"
-          x={px(FE_OUT - s.x - s.width)} y={py(FS_IN)}
-          width={pf(s.width)} height={pf(FR_D)} />
-      ))}
-      {/* West: stud.x from South (wall starts at FS_OUT, ends at FN_OUT) */}
+      {nStuds.map((s, i) => {
+        const sx = Math.max(FW_IN, Math.min(FE_IN - s.width, FW_OUT + s.x));
+        return <rect key={`ns${i}`} className="fp-stud"
+          x={px(sx)} y={py(FN_OUT)}
+          width={pf(s.width)} height={pf(FR_D)} />;
+      })}
+      {sStuds.map((s, i) => {
+        const sx = Math.max(FW_IN, Math.min(FE_IN - s.width, FE_OUT - s.x - s.width));
+        return <rect key={`ss${i}`} className="fp-stud"
+          x={px(sx)} y={py(FS_IN)}
+          width={pf(s.width)} height={pf(FR_D)} />;
+      })}
+      {/* East: stud.x from North (wall starts at FS_OUT, ends at FN_OUT) */}
       {wStuds.map((s, i) => (
         <rect key={`ws${i}`} className="fp-stud"
           x={px(FW_OUT)} y={py(FS_OUT - s.x - s.width)}
           width={pf(FR_D)} height={pf(s.width)} />
       ))}
-      {/* East: stud.x from North (wall starts at FN_OUT, ends at FS_OUT) */}
+      {/* West: stud.x from South (wall starts at FN_OUT, ends at FS_OUT) */}
       {eStuds.map((s, i) => (
         <rect key={`es${i}`} className="fp-stud"
           x={px(FE_IN)} y={py(FN_OUT + s.x)}
@@ -590,11 +592,11 @@ export function FloorPlan() {
       ))}
 
       {/* ══ INTERIOR PARTITION WALLS (2×4) ═══════════════════════════════════
-          Horizontal wall: north face of bottom zone, SW_L → FE_IN at y=BTH_Y
-          Vertical wall:   west face of bathroom, BTH_X, y=BTH_Y → FS_IN       */}
+          Horizontal wall: south face of bottom zone, NW_L → FE_IN at y=BTH_Y
+          Vertical wall:   east face of bathroom, BTH_X, y=BTH_Y → FS_IN       */}
 
-      {/* Horizontal — bathroom partition wall (SW corner)
-          16.5" south of canopy window south jamb (mirrors 16.5" stub above window) */}
+      {/* Horizontal — bathroom partition wall (NE corner)
+          16.5" north of canopy window north jamb (mirrors 16.5" stub above window) */}
       <rect className="fp-int-wall"
         x={px(partWallL)} y={py(partVWallT)}
         width={pf(partWallR - partWallL)} height={pf(INT_D)} />
@@ -604,7 +606,7 @@ export function FloorPlan() {
           width={pf(INT_SW)} height={pf(INT_D)} />
       ))}
 
-      {/* T-intersection backing studs — West exterior wall */}
+      {/* T-intersection backing studs — East exterior wall */}
       <rect className="fp-stud"
         x={px(FW_OUT)} y={py(partVWallT)}
         width={pf(FR_D)} height={pf(INT_SW)} />
@@ -623,11 +625,14 @@ export function FloorPlan() {
           width={pf(INT_D)} height={pf(INT_SW)} />
       ))}
 
+      {/* ── Bathroom layer ── */}
+      {showBathroom && <>
+
       {/* ── Bathroom door ───────────────────────────────────────────────────
-          28" RO, hinge at south jamb (96", 169.5") — door tucks against south wall when open.
-          Closed: leaf runs north along wall face to north jamb (96", 141.5").
-          Open:   leaf swings 90° west to (68", 169.5") — ~1" from south wall.
-          Arc:    free end sweeps from north jamb → west end, sweep=0 (CCW = short 90° arc). */}
+          28" RO, hinge at north jamb (96", 169.5") — door tucks against north wall when open.
+          Closed: leaf runs south along wall face to south jamb (96", 141.5").
+          Open:   leaf swings 90° east to (68", 169.5") — ~1" from north wall.
+          Arc:    free end sweeps from south jamb → east end, sweep=0 (CCW = short 90° arc). */}
       <line className="fp-door-leaf"
         x1={px(partWallR)} y1={py(partVWallB)}
         x2={px(partWallR)} y2={py(partVDoorT)} />
@@ -637,9 +642,9 @@ export function FloorPlan() {
       <path className="fp-door-arc"
         d={`M ${px(partWallR)} ${py(partVDoorT)} A ${pf(BATH_DOOR_W)} ${pf(BATH_DOOR_W)} 0 0 0 ${px(partWallR - BATH_DOOR_W)} ${py(partVWallB)}`} />
 
-      {/* T-intersection backing studs — South exterior wall ──────────────────
+      {/* T-intersection backing studs — North exterior wall ──────────────────
           Two 2×6 studs side-by-side at the vertical partition x-location,
-          giving 3" nailing surface for the vertical partition south end stud. */}
+          giving 3" nailing surface for the vertical partition north end stud. */}
       <rect className="fp-stud"
         x={px(partWallR)} y={py(FS_IN)}
         width={pf(INT_SW)} height={pf(FR_D)} />
@@ -647,10 +652,10 @@ export function FloorPlan() {
         x={px(partWallR + INT_SW)} y={py(FS_IN)}
         width={pf(INT_SW)} height={pf(FR_D)} />
 
-      {/* ── Bathroom vanity sink — NE corner (north wall × east/partition wall) ── */}
+      {/* ── Bathroom vanity sink — SW corner (south wall × west/partition wall) ── */}
       {(() => {
         const VAN_W  = BATH_VAN_W;
-        const bathNorthY = partVWallT + INT_D;      // 123" — south face of horiz. partition
+        const bathNorthY = partVWallT + INT_D;      // 123" — north face of horiz. partition
         const vanL   = partWallR - BATH_VAN_W;     // 72"
         const vanR   = partWallR;                   // 96"
         const vanTop = bathNorthY;                  // 123"
@@ -683,32 +688,32 @@ export function FloorPlan() {
         </>;
       })()}
 
-      {/* ── Bathroom shower — SW corner ─────────────────────────────────── */}
+      {/* ── Bathroom shower — NE corner ─────────────────────────────────── */}
       {(() => {
         const SH_W = SHOWER_W;
-        const bathNorthY = partVWallT + INT_D;    // 123" — north wall of bathroom
+        const bathNorthY = partVWallT + INT_D;    // 123" — south wall of bathroom
         const shL = FW_IN;                        // 14.5"
         const shR = FW_IN + SH_W;                // 50.5"
-        const shT = bathNorthY;                   // 123" — full height to north wall
-        const shB = FS_IN;                        // 169.5" — full height to south wall
+        const shT = bathNorthY;                   // 123" — full height to south wall
+        const shB = FS_IN;                        // 169.5" — full height to north wall
         const SH_D = shB - shT;                  // 46.5" — full bathroom depth
         const CURB = SHOWER_CURB;
-        const doorY = shT + SH_D * 0.35;         // door gap starts 35% down east face
+        const doorY = shT + SH_D * 0.35;         // door gap starts 35% down west face
         const doorH = SH_D * 0.45;               // door gap ~21"
         return <>
           {/* Shower pan */}
           <rect className="fp-shower"
             x={px(shL)} y={py(shT)}
             width={pf(SH_W)} height={pf(SH_D)} />
-          {/* Curb — inner inset lines (3 sides; east side has door opening) */}
+          {/* Curb — inner inset lines (3 sides; west side has door opening) */}
           <line className="fp-shower-curb" x1={px(shL+CURB)} y1={py(shT+CURB)} x2={px(shR-CURB)} y2={py(shT+CURB)} />
           <line className="fp-shower-curb" x1={px(shL+CURB)} y1={py(shT+CURB)} x2={px(shL+CURB)} y2={py(shB-CURB)} />
           <line className="fp-shower-curb" x1={px(shL+CURB)} y1={py(shB-CURB)} x2={px(shR-CURB)} y2={py(shB-CURB)} />
-          {/* East curb above door */}
+          {/* West curb above door */}
           <line className="fp-shower-curb" x1={px(shR-CURB)} y1={py(shT+CURB)} x2={px(shR-CURB)} y2={py(doorY)} />
-          {/* East curb below door */}
+          {/* West curb below door */}
           <line className="fp-shower-curb" x1={px(shR-CURB)} y1={py(doorY+doorH)} x2={px(shR-CURB)} y2={py(shB-CURB)} />
-          {/* Sliding door panel (dashed line on east face across opening) */}
+          {/* Sliding door panel (dashed line on west face across opening) */}
           <line className="fp-shower-door"
             x1={px(shR)} y1={py(doorY)}
             x2={px(shR)} y2={py(doorY + doorH)} />
@@ -723,24 +728,24 @@ export function FloorPlan() {
         </>;
       })()}
 
-      {/* ── Bathroom toilet — north wall, west of vanity sink ───────────── */}
+      {/* ── Bathroom toilet — south wall, east of vanity sink ───────────── */}
       {(() => {
         const TL_W   = TOILET_W;
         const TANK_D = TOILET_TANK_D;
         const BOWL_D = TOILET_BOWL_D;
-        const bathNorthY = partVWallT + INT_D;        // 123" — south face of horiz. partition
-        const tlR    = partWallR - BATH_VAN_W - 3;    // 69" — 3" gap west of vanity
+        const bathNorthY = partVWallT + INT_D;        // 123" — north face of horiz. partition
+        const tlR    = partWallR - BATH_VAN_W - 3;    // 69" — 3" gap east of vanity
         const tlL    = tlR - TL_W;                   // 55"
-        const tlTop  = bathNorthY;                    // 123" — tank against north wall
+        const tlTop  = bathNorthY;                    // 123" — tank against south wall
         const tankB  = tlTop + TANK_D;               // 130"
         const bowlCX = tlL + TL_W / 2;              // 62"
         const bowlCY = tankB + BOWL_D / 2;           // 140.5"
         return <>
-          {/* Tank — against north wall */}
+          {/* Tank — against south wall */}
           <rect className="fp-toilet-tank"
             x={px(tlL)} y={py(tlTop)}
             width={pf(TL_W)} height={pf(TANK_D)} rx="1" />
-          {/* Bowl (oval) — pointing south into bathroom */}
+          {/* Bowl (oval) — pointing north into bathroom */}
           <ellipse className="fp-toilet-bowl"
             cx={px(bowlCX)} cy={py(bowlCY)}
             rx={pf(TL_W / 2 - 1)} ry={pf(BOWL_D / 2 - 1)} />
@@ -752,20 +757,25 @@ export function FloorPlan() {
       })()}
 
       {/* ══ RAISED BATHROOM FLOOR — ledger + 2×6 joists ════════════════════
-          Platform rises ~21¾" above main floor to match landing height.
-          Primary ledger on south wall inner face (FS_IN).
-          North end bears on horizontal 2×4 partition south face (bathN).
-          2×6 joists span N-S at 16" OC between south ledger and north partition.
+          Platform height = STAIR_LAND_RISERS × (floor-to-floor / total risers).
+          Primary ledger on north wall inner face (FS_IN).
+          South end bears on horizontal 2×4 partition north face (bathN).
+          2×6 joists span N-S at 16" OC between north ledger and south partition.
       ═══════════════════════════════════════════════════════════════════ */}
       {(() => {
-        const bathW  = FW_IN;                    // west: 14.5"
-        const bathE  = partWallR;                // east: 96"
-        const bathN  = partVWallT + INT_D;       // north: 123"  (bearing on horiz. partition)
-        const bathS  = FS_IN;                    // south: 169.5" (ledger on south wall)
+        const bathW  = FW_IN;                    // east: 14.5"
+        const bathE  = partWallR;                // west: 96"
+        const bathN  = partVWallT + INT_D;       // south: 123"  (bearing on horiz. partition)
+        const bathS  = FS_IN;                    // north: 169.5" (ledger on north wall)
         const JOIST_OC = BATH_JOIST_OC;
         const LEDGER_TH = BATH_LEDGER_T;
+        const northWall = initialWalls.north;
+        const FLOOR2_IN = northWall.wallHeightInches + TJI_DEPTH + SUBFLOOR_T;
+        const riserH    = FLOOR2_IN / STAIR_TOTAL_RISERS;
+        const platH     = STAIR_LAND_RISERS * riserH;
+        const platHFmt  = `+${Math.round(platH * 4) / 4}"`.replace(/\.0"$/, '"');
 
-        // Joist positions E-W, first flush with west wall, last at/near east wall
+        // Joist positions E-W, first flush with east wall, last at/near west wall
         const joistXs: number[] = [];
         for (let x = bathW; x <= bathE + 0.01; x += JOIST_OC) {
           joistXs.push(Math.min(x, bathE));
@@ -794,18 +804,22 @@ export function FloorPlan() {
             </text>
             <text className="fp-fixture-lbl"
               x={px((bathW + bathE) / 2)} y={py(bathN + (bathS - bathN) / 2 + 2)}>
-              +21¾&quot; (S LEDGER + 2×6 N–S)
+              {platHFmt} (N LEDGER + 2×6 N–S)
             </text>
           </>
         );
       })()}
 
+      </> /* end showBathroom */}
+
+      {showStairs && <>
+
       {/* ══ STAIR SYSTEM ════════════════════════════════════════════════════
-          Flow (heading south):
-            ① N-S approach  — 2 steps descending south, east of bathroom partition
-            ② Landing        — turn right (west) → bathroom door
-                               turn left  (east) → main stair run going UP
-            ③ Main stair run — E-W along south wall, continuing up to next floor
+          Flow (heading north):
+            ① N-S approach  — 2 steps descending north, west of bathroom partition
+            ② Landing        — turn right (east) → bathroom door
+                               turn left  (west) → main stair run going UP
+            ③ Main stair run — E-W along north wall, continuing up to next floor
       ═══════════════════════════════════════════════════════════════════ */}
       {(() => {
         const TREAD      = STAIR_TREAD_DEPTH;
@@ -814,23 +828,23 @@ export function FloorPlan() {
         const MAIN_STEPS = STAIR_MAIN_STEPS;
         const MAIN_W     = STAIR_WIDTH;
 
-        // ── Landing — east edge aligns with south window east jamb ──────
+        // ── Landing — west edge aligns with north window west jamb ──────
         const platL  = partWallR + INT_D;              // 99.5"
-        const platR  = SW_R;                           // 144" — flush with south window east edge
-        const platB  = FS_IN;                          // 169.5" — south wall
+        const platR  = NW_R;                           // 144" — flush with north window west edge
+        const platB  = FS_IN;                          // 169.5" — north wall
         const platT  = platB - APPR_W;                // 133.5" — N-S depth = stair width
 
         // ── N-S approach (2 treads + landing face riser) — same width as landing ──
         const apprL  = platL;                          // 99.5"
-        const apprR  = platR;                          // 144" — matches landing east edge
+        const apprR  = platR;                          // 144" — matches landing west edge
         const apprB  = platT;                          // 133.5" — connects to landing top
         const apprT  = apprB - APPR_STEPS * TREAD;    // 113.5"
 
-        // ── Main stair run (turn left = east, going UP) ─────────────────
-        const stairL = platR;                          // 144" — starts at landing east edge
-        const stairR = stairL + MAIN_STEPS * TREAD;   // 254"
+        // ── Main stair run (turn left = west, going UP) ─────────────────
+        const stairL = platR;                          // 144" — starts at landing west edge
+        const stairR = stairL + MAIN_STEPS * TREAD;   // 252" (12 treads × 9")
         const stairT = FS_IN - MAIN_W;                // 127.5" — fits within room
-        const stairB = FS_IN;                          // 169.5" — stops at south wall inner face
+        const stairB = FS_IN;                          // 169.5" — stops at north wall inner face
         const cutX   = stairL + Math.round(MAIN_STEPS / 2) * TREAD;
 
         const apprTreads: number[] = [];
@@ -840,7 +854,7 @@ export function FloorPlan() {
         for (let i = 1; i <= MAIN_STEPS; i++) mainTreads.push(stairL + i * TREAD);
 
         return <>
-          {/* ① N-S approach — 2 steps + landing face riser heading south */}
+          {/* ① N-S approach — 2 steps + landing face riser heading north */}
           <rect className="fp-platform"
             x={px(apprL)} y={py(apprT)}
             width={pf(apprR - apprL)} height={pf(apprB - apprT)} />
@@ -852,13 +866,13 @@ export function FloorPlan() {
               x1={px(apprL)} y1={py(ty)}
               x2={px(apprR)} y2={py(ty)} />
           ))}
-          {/* Arrow — direction of travel = south (heading down to landing) */}
+          {/* Arrow — direction of travel = north (heading down to landing) */}
           <line className="fp-up-arrow"
             x1={px((apprL + apprR) / 2)} y1={py(apprT + 4)}
             x2={px((apprL + apprR) / 2)} y2={py(apprB - 4)} />
           <text className="fp-fixture-lbl"
             x={px((apprL + apprR) / 2 + 10)} y={py(apprT + (apprB - apprT) / 2)}>
-            2R DN
+            {APPR_STEPS}R DN
           </text>
 
           {/* ② Landing */}
@@ -883,7 +897,7 @@ export function FloorPlan() {
             ← UP
           </text>
 
-          {/* ③ Main stair run — turn left (east), heading up */}
+          {/* ③ Main stair run — turn left (west), heading up */}
           <rect className="fp-stair-run"
             x={px(stairL)} y={py(stairT)}
             width={pf(stairR - stairL)} height={pf(MAIN_W)} />
@@ -898,7 +912,7 @@ export function FloorPlan() {
           {/* Mid-flight cut */}
           <polyline className="fp-stair-cut"
             points={`${px(cutX)},${py(stairT)} ${px(cutX-4)},${py(stairT + MAIN_W*0.3)} ${px(cutX+4)},${py(stairT + MAIN_W*0.7)} ${px(cutX)},${py(stairB)}`} />
-          {/* UP arrow east */}
+          {/* UP arrow west */}
           <line className="fp-up-arrow"
             x1={px(stairL + 5)} y1={py(stairT + MAIN_W / 2)}
             x2={px(cutX - 8)}  y2={py(stairT + MAIN_W / 2)} />
@@ -913,56 +927,58 @@ export function FloorPlan() {
         </>;
       })()}
 
+      </> /* end showStairs */}
+
       {/* ══ OPENING SYMBOLS ═════════════════════════════════════════════════ */}
 
-      {/* ── North door: hinge right (east jamb = ND_R), swings into room (south) ── */}
+      {/* ── South door: hinge right (west jamb = SD_R), swings into room (north) ── */}
       {/* Open leaf perpendicular from hinge; closed leaf along wall */}
       <line className="fp-door-leaf"
-        x1={px(ND_R)} y1={py(FN_IN)}
-        x2={px(ND_R)} y2={py(FN_IN + DOOR_W)} />
+        x1={px(SD_R)} y1={py(FN_IN)}
+        x2={px(SD_R)} y2={py(FN_IN + DOOR_W)} />
       <line className="fp-door-leaf"
-        x1={px(ND_R)} y1={py(FN_IN)}
-        x2={px(ND_L)} y2={py(FN_IN)} />
-      {/* Swing arc: free end travels from ND_L (closed) → ND_R,FN_IN+DOOR_W (open) */}
+        x1={px(SD_R)} y1={py(FN_IN)}
+        x2={px(SD_L)} y2={py(FN_IN)} />
+      {/* Swing arc: free end travels from SD_L (closed) → SD_R,FN_IN+DOOR_W (open) */}
       <path className="fp-door-arc"
-        d={`M ${px(ND_L)} ${py(FN_IN)} A ${pf(DOOR_W)} ${pf(DOOR_W)} 0 0 0 ${px(ND_R)} ${py(FN_IN + DOOR_W)}`} />
+        d={`M ${px(SD_L)} ${py(FN_IN)} A ${pf(DOOR_W)} ${pf(DOOR_W)} 0 0 0 ${px(SD_R)} ${py(FN_IN + DOOR_W)}`} />
 
-      {/* ── South window: three parallel lines across opening ─────────────  */}
+      {/* ── North window: three parallel lines across opening ─────────────  */}
       {[0.2, 0.5, 0.8].map((t, i) => {
         const yy = py(FS_IN + t * FR_D);
         return (
           <line key={i} className="fp-win"
-            x1={px(SW_L)} y1={yy} x2={px(SW_R)} y2={yy} />
+            x1={px(NW_L)} y1={yy} x2={px(NW_R)} y2={yy} />
         );
       })}
 
-      {/* ── West window: three parallel lines down opening ────────────────  */}
+      {/* ── East window: three parallel lines down opening ────────────────  */}
       {[0.2, 0.5, 0.8].map((t, i) => {
         const xx = px(FW_OUT + t * FR_D);
         return (
           <line key={i} className="fp-win"
-            x1={xx} y1={py(WW_T)} x2={xx} y2={py(WW_B)} />
+            x1={xx} y1={py(EW_T)} x2={xx} y2={py(EW_B)} />
         );
       })}
 
-      {/* ── East sliding door: two overlapping panel rects ────────────────  */}
+      {/* ── West sliding door: two overlapping panel rects ────────────────  */}
       {(() => {
         const pW = eOp.widthInches / 2;   // each panel = half RO width
         const lap = 4;                      // overlap in inches
         return (
           <>
-            {/* Panel 1 (north panel) */}
+            {/* Panel 1 (south panel) */}
             <rect className="fp-win"
-              x={px(FE_IN)} y={py(ED_T)}
+              x={px(FE_IN)} y={py(WD_T)}
               width={pf(FR_D)} height={pf(pW + lap)} />
-            {/* Panel 2 (south panel) */}
+            {/* Panel 2 (north panel) */}
             <rect className="fp-win"
-              x={px(FE_IN)} y={py(ED_T + pW - lap)}
+              x={px(FE_IN)} y={py(WD_T + pW - lap)}
               width={pf(FR_D)} height={pf(pW + lap)} />
             {/* Center track line */}
             <line className="fp-win"
-              x1={px(FE_IN + FR_D / 2)} y1={py(ED_T)}
-              x2={px(FE_IN + FR_D / 2)} y2={py(ED_B)} />
+              x1={px(FE_IN + FR_D / 2)} y1={py(WD_T)}
+              x2={px(FE_IN + FR_D / 2)} y2={py(WD_B)} />
           </>
         );
       })()}
@@ -1005,13 +1021,13 @@ export function FloorPlan() {
         );
       })()}
 
-      {/* North door position chain — spans CMU interior (CI_L to CI_R = 288") */}
+      {/* South door position chain — spans CMU interior (CI_L to CI_R = 288") */}
       {(() => {
         const yD = AT - 4;
         const segs = [
-          { x1: CI_L, x2: ND_L, label: `${Math.round(ND_L - CI_L)}"` },
-          { x1: ND_L, x2: ND_R, label: `${nOp.widthInches}" RO` },
-          { x1: ND_R, x2: CI_R, label: `${Math.round(CI_R - ND_R)}"` },
+          { x1: CI_L, x2: SD_L, label: `${Math.round(SD_L - CI_L)}"` },
+          { x1: SD_L, x2: SD_R, label: `${nOp.widthInches}" RO` },
+          { x1: SD_R, x2: CI_R, label: `${Math.round(CI_R - SD_R)}"` },
         ];
         return (
           <g>
@@ -1034,34 +1050,73 @@ export function FloorPlan() {
         );
       })()}
 
-      {/* South window label */}
+      {/* North window label */}
       <text className="fp-olbl"
-        x={px((SW_L + SW_R) / 2)}
+        x={px((NW_L + NW_R) / 2)}
         y={AT + pf(CMU_D) + 14}>
         {sOp.label} WIN
       </text>
 
-      {/* West window label (rotated) */}
+      {/* East window label (rotated) */}
       <text className="fp-olbl"
-        transform={`translate(${AL - 12} ${py((WW_T + WW_B) / 2)}) rotate(-90)`}>
+        transform={`translate(${AL - 12} ${py((EW_T + EW_B) / 2)}) rotate(-90)`}>
         {wOp.label} WIN
       </text>
 
-      {/* East door label (rotated) — inset from EAST wall label */}
+      {/* West door label (rotated) — inset from WEST wall label */}
       <text className="fp-olbl"
-        transform={`translate(${AL + pf(CMU_W) + 12} ${py((ED_T + ED_B) / 2)}) rotate(90)`}>
+        transform={`translate(${AL + pf(CMU_W) + 12} ${py((WD_T + WD_B) / 2)}) rotate(90)`}>
         {eOp.label} SLIDING DOOR
       </text>
 
       {/* ══ WALL LABELS (positioned to avoid dimension/opening labels) ═══════ */}
-      <text className="fp-wlbl" x={px(CMU_W / 2)} y={AT - 40}>NORTH</text>
-      <text className="fp-wlbl" x={px(CMU_W / 2)} y={AT + pf(CMU_D) + 58}>SOUTH</text>
+      <text className="fp-wlbl" x={px(CMU_W / 2)} y={AT - 40}>SOUTH</text>
+      <text className="fp-wlbl" x={px(CMU_W / 2)} y={AT + pf(CMU_D) + 58}>NORTH</text>
       <text className="fp-wlbl"
-        transform={`translate(${AL - 14} ${AT + pf(CMU_D / 2)}) rotate(-90)`}>WEST</text>
+        transform={`translate(${AL - 14} ${AT + pf(CMU_D / 2)}) rotate(-90)`}>EAST</text>
       <text className="fp-wlbl"
-        transform={`translate(${AL + pf(CMU_W) + 26} ${AT + pf(CMU_D / 2)}) rotate(90)`}>EAST</text>
+        transform={`translate(${AL + pf(CMU_W) + 26} ${AT + pf(CMU_D / 2)}) rotate(90)`}>WEST</text>
 
-      {/* ══ NORTH ARROW (right side, clear of EAST label) ═══════════════════ */}
+      {showSewer && <>
+
+      {/* ══ SEWER STUB-OUT — NE corner, ~3.5 CMU blocks from interior corner ══
+          Estimated position: 28" south of north wall inner face (FS_IN),
+          28" west of east wall inner face (FW_IN). Opening ≈ 14"×14".
+      ═════════════════════════════════════════════════════════════════════ */}
+      {(() => {
+        const OPEN_W = 14;
+        const OPEN_H = 14;
+        const SEW_CX = FW_IN + 12;
+        const SEW_CY = FS_IN - 40;
+        const PIPE_R = 3;
+        return (
+          <g>
+            {/* Cut opening in slab (dashed rect) */}
+            <rect
+              x={px(SEW_CX - OPEN_W / 2)} y={py(SEW_CY - OPEN_H / 2)}
+              width={pf(OPEN_W)} height={pf(OPEN_H)}
+              fill="rgba(80,60,40,0.15)" stroke="#666" strokeWidth="1"
+              strokeDasharray="4 2" />
+            {/* PVC pipe stub (circle) */}
+            <circle
+              cx={px(SEW_CX)} cy={py(SEW_CY)}
+              r={pf(PIPE_R)}
+              fill="rgba(220,220,210,0.8)" stroke="#555" strokeWidth="1" />
+            {/* Label */}
+            <text style={{
+              fill: "#555", fontSize: "7px",
+              fontFamily: "ui-monospace, monospace",
+              textAnchor: "middle"
+            }} x={px(SEW_CX)} y={py(SEW_CY - OPEN_H / 2) - 4}>
+              SEWER STUB
+            </text>
+          </g>
+        );
+      })()}
+
+      </> /* end showSewer */}
+
+      {/* ══ SOUTH ARROW (right side, clear of WEST label) ═══════════════════ */}
       {(() => {
         const nx = AL + pf(CMU_W) + AR - 12;
         const ny = AT + 28;
@@ -1074,10 +1129,11 @@ export function FloorPlan() {
               fill: "#111", fontSize: "9px",
               fontFamily: "ui-monospace, monospace",
               textAnchor: "middle"
-            }} x={nx} y={ny + 26}>N</text>
+            }} x={nx} y={ny + 26}>S</text>
           </g>
         );
       })()}
     </svg>
+    </div>
   );
 }

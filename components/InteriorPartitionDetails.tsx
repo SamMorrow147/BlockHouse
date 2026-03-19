@@ -7,26 +7,39 @@ import { computeWallLayout, PLATE_H } from "@/lib/layout-calculator";
 import { PX_PER_INCH } from "@/lib/types";
 import {
   CMU_BLOCK_W, CMU_BLOCK_H, FR_D,
-  horizPartition, vertPartition,
-  STAIR_RISE_TOT, STAIR_LAND_RISERS, STAIR_TREAD_DEPTH, STAIR_WIDTH,
+  horizPartition, vertPartition, bathroomEastWall,
+  STAIR_TOTAL_RISERS, STAIR_LAND_RISERS, STAIR_TREAD_DEPTH, STAIR_WIDTH,
   STAIR_TREAD_T, STAIR_RISER_T,
   STAIR_LAND_JOIST_W, STAIR_LAND_JOIST_D, STAIR_LAND_RIM_W,
   STAIR_LAND_DECK_T, STAIR_LAND_POST_W, STAIR_LAND_LEDGER_W,
+  TJI_DEPTH, SUBFLOOR_T,
 } from "@/lib/framing-data";
+import { computeApproachStringer } from "@/lib/stair-calculator";
+import { Toggle } from "@/components/ui/toggle";
+import { CutList } from "@/components/CutList";
+
+function fmt(inches: number): string {
+  const ft = Math.floor(inches / 12);
+  const rem = Math.round((inches % 12) * 8) / 8;
+  if (ft === 0) return `${rem}"`;
+  if (rem === 0) return `${ft}'`;
+  return `${ft}'-${rem}"`;
+}
 
 function LayerBtn({ label, on, toggle }: { label: string; on: boolean; toggle: () => void }) {
   return (
-    <button
-      onClick={toggle}
-      style={{
-        padding: "4px 14px", borderRadius: 20, border: "1px solid #bbb",
-        background: on ? "#222" : "#fff", color: on ? "#fff" : "#555",
-        fontSize: 12, cursor: "pointer", fontFamily: "ui-monospace,monospace",
-        transition: "background 0.15s, color 0.15s",
-      }}
+    <Toggle
+      pressed={on}
+      onPressedChange={toggle}
+      size="sm"
+      variant="outline"
+      className="h-7 px-3 text-xs font-mono rounded-full border-zinc-300 text-zinc-600
+                 data-[state=on]:bg-zinc-800 data-[state=on]:text-white
+                 data-[state=on]:border-zinc-800 hover:bg-zinc-100
+                 data-[state=on]:hover:bg-zinc-700 transition-all"
     >
       {label}
-    </button>
+    </Toggle>
   );
 }
 
@@ -35,11 +48,12 @@ const AL = 120; const AR = 140; const AT = 120; const AB = 84;
 
 const WALL_W   = vertPartition.totalLengthInches;
 const WALL_H   = vertPartition.wallHeightInches;
-const RH       = STAIR_RISE_TOT / STAIR_LAND_RISERS;
+const FLOOR2_IN = WALL_H + TJI_DEPTH + SUBFLOOR_T;
+const RH       = FLOOR2_IN / STAIR_TOTAL_RISERS;
 const PLATE_T  = PLATE_H;
 const STUD_HT  = WALL_H - 3 * PLATE_T;
 
-const LAND_TOP   = STAIR_RISE_TOT;
+const LAND_TOP   = STAIR_LAND_RISERS * RH;
 const LAND_DECK  = LAND_TOP - STAIR_LAND_DECK_T;
 const LAND_JOIST = LAND_DECK - STAIR_LAND_JOIST_D;
 
@@ -53,6 +67,8 @@ const TOTAL_W   = STAIR_END;
 
 const svgW = AL + TOTAL_W * PX + AR;
 const svgH = AT + WALL_H * PX + AB;
+/** Aspect ratio of the door/stair SVG so the bathroom east column can match and align. */
+const DOOR_WALL_ASPECT = svgW / svgH;
 
 const wx = (xIn: number) => AL + xIn * PX;
 const wy = (yIn: number, hIn = 0) => AT + (WALL_H - yIn - hIn) * PX;
@@ -156,8 +172,7 @@ function fmtDec(n: number) {
   return Math.abs(n - Math.round(n)) < 0.01 ? `${Math.round(n)}` : n.toFixed(2);
 }
 
-function DoorWallWithStairs({ showCMU }: { showCMU: boolean }) {
-  const [showStairs, setShowStairs] = useState(true);
+function DoorWallWithStairs({ showCMU, showStairs }: { showCMU: boolean; showStairs: boolean }) {
   const [tip, setTip] = useState<Tip | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -176,31 +191,23 @@ function DoorWallWithStairs({ showCMU }: { showCMU: boolean }) {
   const layout = computeWallLayout(vertPartition);
   const floorY = AT + WALL_H * PX;
 
-  // ── Stringer profile: clean notched 2×12 ──
-  // Stringer profile: sawtooth top, flat horizontal bottom at floor (y=0).
-  // Left face is vertical; right foot terminates at the last riser/floor junction.
-  //   (36, 14.5) → (46, 14.5) → (46, 7.25) → (56, 7.25) → (56, 0) → (36, 0)
-  const stringerPts: [number, number][] = [
-    [STAIR_WIDTH,           LAND_TOP - RH],       // top-left: stringer starts at first tread level
-    [STAIR_WIDTH + STAIR_TREAD_DEPTH,      LAND_TOP - RH],       // end of tread 1
-    [STAIR_WIDTH + STAIR_TREAD_DEPTH,      LAND_TOP - 2 * RH],  // bottom of riser 1 / start of tread 2
-    [STAIR_WIDTH + 2 * STAIR_TREAD_DEPTH,  LAND_TOP - 2 * RH],  // end of tread 2
-    [STAIR_WIDTH + 2 * STAIR_TREAD_DEPTH,  0],                   // bottom of riser 2 — floor level
-    [STAIR_WIDTH,           0],                   // flat bottom-left — floor level
-  ];
+  // ── Stringer profile — computed from structured notch data ──
+  // Uses computeApproachStringer() so each notch is individually addressable.
+  // approach.notches[0] → first step down from landing
+  // approach.allPoints  → ready for SVG <polygon>
+  const approach = computeApproachStringer({
+    landingWidth: STAIR_WIDTH,
+    treadDepth: STAIR_TREAD_DEPTH,
+    riserHeight: RH,
+    landRisers: STAIR_LAND_RISERS,
+  });
+  const stringerPts = approach.allPoints;
 
   // Label positions (callout lines extending to the right margin)
   const callX = wx(STAIR_END) + 8;
 
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
-      <div style={{
-        display: "flex", gap: 8, padding: "8px 12px",
-        background: "#f5f4f0", borderBottom: "1px solid #ddd",
-        borderTop: "1px solid #ddd", flexWrap: "wrap",
-      }}>
-        <LayerBtn label="Landing & Stairs" on={showStairs} toggle={() => setShowStairs(v => !v)} />
-      </div>
     <svg
       viewBox={`0 0 ${svgW} ${svgH}`}
       width="100%"
@@ -228,19 +235,19 @@ function DoorWallWithStairs({ showCMU }: { showCMU: boolean }) {
         `}</style>
       </defs>
 
-      {/* ════ SOUTH EXTERIOR WALL — 2×6 cross-section at left edge ════ */}
+      {/* ════ NORTH EXTERIOR WALL — 2×6 cross-section at left edge ════ */}
       <rect x={wx(-FR_D)} y={wy(WALL_H, 0)} width={FR_D * PX} height={WALL_H * PX}
         fill="#ede8dc" stroke="none" />
-      <g onMouseEnter={e => showTip(e, "Bottom Plate", `${fmtDec(FR_D)}" × ${PLATE_T}"`, `2×6 S. wall — y: 0"`)} onMouseMove={moveTip} onMouseLeave={hideTip} style={{ cursor: "crosshair" }}>
+      <g onMouseEnter={e => showTip(e, "Bottom Plate", `${fmtDec(FR_D)}" × ${PLATE_T}"`, `2×6 N. wall — y: 0"`)} onMouseMove={moveTip} onMouseLeave={hideTip} style={{ cursor: "crosshair" }}>
         <rect className="plate" x={wx(-FR_D)} y={wy(0, PLATE_T)} width={FR_D * PX} height={PLATE_T * PX} />
       </g>
-      <g onMouseEnter={e => showTip(e, "Lower Top Plate", `${fmtDec(FR_D)}" × ${PLATE_T}"`, `2×6 S. wall — y: ${WALL_H - 2 * PLATE_T}"`)} onMouseMove={moveTip} onMouseLeave={hideTip} style={{ cursor: "crosshair" }}>
+      <g onMouseEnter={e => showTip(e, "Lower Top Plate", `${fmtDec(FR_D)}" × ${PLATE_T}"`, `2×6 N. wall — y: ${WALL_H - 2 * PLATE_T}"`)} onMouseMove={moveTip} onMouseLeave={hideTip} style={{ cursor: "crosshair" }}>
         <rect className="plate" x={wx(-FR_D)} y={wy(WALL_H - 2 * PLATE_T, PLATE_T)} width={FR_D * PX} height={PLATE_T * PX} />
       </g>
-      <g onMouseEnter={e => showTip(e, "Upper Top Plate", `${fmtDec(FR_D)}" × ${PLATE_T}"`, `2×6 S. wall — y: ${WALL_H - PLATE_T}"`)} onMouseMove={moveTip} onMouseLeave={hideTip} style={{ cursor: "crosshair" }}>
+      <g onMouseEnter={e => showTip(e, "Upper Top Plate", `${fmtDec(FR_D)}" × ${PLATE_T}"`, `2×6 N. wall — y: ${WALL_H - PLATE_T}"`)} onMouseMove={moveTip} onMouseLeave={hideTip} style={{ cursor: "crosshair" }}>
         <rect className="plate" x={wx(-FR_D)} y={wy(WALL_H - PLATE_T, PLATE_T)} width={FR_D * PX} height={PLATE_T * PX} />
       </g>
-      <g onMouseEnter={e => showTip(e, "2×6 Stud", `${fmtDec(FR_D)}" × ${fmtDec(STUD_HT)}"`, `S. wall backing stud`)} onMouseMove={moveTip} onMouseLeave={hideTip} style={{ cursor: "crosshair" }}>
+      <g onMouseEnter={e => showTip(e, "2×6 Stud", `${fmtDec(FR_D)}" × ${fmtDec(STUD_HT)}"`, `N. wall backing stud`)} onMouseMove={moveTip} onMouseLeave={hideTip} style={{ cursor: "crosshair" }}>
         <rect className="stud" x={wx(-FR_D)} y={wy(PLATE_T, STUD_HT)} width={FR_D * PX} height={STUD_HT * PX} />
       </g>
       <rect x={wx(-FR_D)} y={wy(WALL_H, 0)} width={FR_D * PX} height={WALL_H * PX}
@@ -249,7 +256,7 @@ function DoorWallWithStairs({ showCMU }: { showCMU: boolean }) {
         x={wx(-FR_D / 2)} y={wy(WALL_H / 2)}
         textAnchor="middle"
         transform={`rotate(-90,${wx(-FR_D / 2)},${wy(WALL_H / 2)})`}>
-        2×6 SOUTH WALL
+        2×6 NORTH WALL
       </text>
 
       {/* ════ WALL (background) ════ */}
@@ -317,7 +324,7 @@ function DoorWallWithStairs({ showCMU }: { showCMU: boolean }) {
       </g>
 
       {/* 2×10 Joist — N-S profile */}
-      <g onMouseEnter={e => showTip(e, "2×10 Joist (N-S, @ 16\" OC)", `${fmtDec(FR_D - 0.5 + STAIR_WIDTH - STAIR_LAND_RIM_W)}" span × ${STAIR_LAND_JOIST_D}"`, `bears on S. wall cleat → rim header`)} onMouseMove={moveTip} onMouseLeave={hideTip} style={{ cursor: "crosshair" }}>
+      <g onMouseEnter={e => showTip(e, "2×10 Joist (N-S, @ 16\" OC)", `${fmtDec(FR_D - 0.5 + STAIR_WIDTH - STAIR_LAND_RIM_W)}" span × ${STAIR_LAND_JOIST_D}"`, `bears on N. wall cleat → rim header`)} onMouseMove={moveTip} onMouseLeave={hideTip} style={{ cursor: "crosshair" }}>
         <rect className="s-joist" x={wx(-FR_D + 0.5)} y={wy(LAND_JOIST, STAIR_LAND_JOIST_D)} width={(FR_D - 0.5 + STAIR_WIDTH - STAIR_LAND_RIM_W) * PX} height={STAIR_LAND_JOIST_D * PX} fillOpacity="0.5" />
       </g>
       <line stroke="#8b7348" strokeWidth="0.6" strokeDasharray="4 3" x1={wx(-FR_D + 0.5)} y1={wy(LAND_JOIST + STAIR_LAND_JOIST_D)} x2={wx(STAIR_WIDTH - STAIR_LAND_RIM_W)} y2={wy(LAND_JOIST + STAIR_LAND_JOIST_D)} />
@@ -362,7 +369,7 @@ function DoorWallWithStairs({ showCMU }: { showCMU: boolean }) {
       {/* LANDING label */}
       <text fill="#8b7348" fontSize="13" fontFamily="ui-monospace,monospace" fontWeight="bold"
         x={wx(STAIR_WIDTH / 2)} y={wy(LAND_TOP) - 8} textAnchor="middle">
-        LANDING (+21¾&quot;)
+        LANDING (+{+LAND_TOP.toFixed(1)}&quot;)
       </text>
 
       {/* MAIN FLOOR label */}
@@ -375,11 +382,11 @@ function DoorWallWithStairs({ showCMU }: { showCMU: boolean }) {
         { y: LAND_JOIST + STAIR_LAND_JOIST_D / 2,      fromX: STAIR_WIDTH / 2,         label: "2×10 JOISTS N-S @ 16\" OC" },
         { y: LAND_JOIST + STAIR_LAND_JOIST_D / 2,      fromX: STAIR_WIDTH - STAIR_LAND_RIM_W / 2, label: "2×10 RIM HEADER" },
         { y: (PLATE_T + LAND_JOIST) / 2,     fromX: -FR_D / 2,      label: "2×6 BEARING BLOCK (full height)" },
-        { y: LAND_JOIST / 2,                fromX: STAIR_WIDTH - STAIR_LAND_POST_W / 2,     label: "4×4 POST (north)" },
+        { y: LAND_JOIST / 2,                fromX: STAIR_WIDTH - STAIR_LAND_POST_W / 2,     label: "4×4 POST (south)" },
         { y: (steps[0].topY + steps[0].botY) / 2, fromX: STAIR_WIDTH + STAIR_TREAD_DEPTH / 2, label: "2×12 NOTCHED STRINGER (×2)" },
         { y: LAND_TOP - RH + STAIR_TREAD_T / 2,   fromX: STAIR_WIDTH + STAIR_TREAD_DEPTH / 2,    label: "5/4×12 TREAD BOARDS (×2)" },
         { y: (steps[0].topY + steps[0].botY) / 2, fromX: steps[0].rx,  label: "1×8 RISER BOARDS (×2)" },
-        { y: WALL_H / 2,                        fromX: -FR_D / 2, label: "2×6 S. WALL BACKING" },
+        { y: WALL_H / 2,                        fromX: -FR_D / 2, label: "2×6 N. WALL BACKING" },
       ].map(({ y, fromX, label }, i) => {
         const py = wy(y);
         const lx = callX;
@@ -419,11 +426,11 @@ function DoorWallWithStairs({ showCMU }: { showCMU: boolean }) {
           label={`${RH}"`} anchor="right" />
       ))}
 
-      {/* South wall depth */}
+      {/* North wall depth */}
       <HDim x1={wx(-FR_D)} x2={wx(0)} y={floorY + 54} label={`5½"`} />
 
       {/* Total rise */}
-      <VDim x={wx(-FR_D) - 8} y1={wy(LAND_TOP)} y2={wy(0)} label={`${STAIR_RISE_TOT}" rise`} anchor="left" />
+      <VDim x={wx(-FR_D) - 8} y1={wy(LAND_TOP)} y2={wy(0)} label={`${+LAND_TOP.toFixed(2)}" rise`} anchor="left" />
 
       {/* Post height */}
       <VDim x={wx(STAIR_WIDTH - STAIR_LAND_POST_W) - 8}
@@ -433,7 +440,7 @@ function DoorWallWithStairs({ showCMU }: { showCMU: boolean }) {
       </>}
 
       {/* Wall height — always visible */}
-      <VDim x={wx(-FR_D) - 32} y1={wy(0)} y2={wy(WALL_H)} label={`${WALL_H}" wall`} anchor="left" />
+      <VDim x={wx(-FR_D) - 32} y1={wy(0)} y2={wy(WALL_H)} label={`${fmt(WALL_H)} wall`} anchor="left" />
     </svg>
 
     {tip && (
@@ -463,34 +470,70 @@ export function InteriorPartitionDetails({
   partitionWidthPct?: string;
 }) {
   const [showCMU, setShowCMU] = useState(true);
+  const [showStairs, setShowStairs] = useState(true);
 
   return (
     <div>
-      {/* Shared toggle bar — controls both panels */}
-      <div style={{
-        display: "flex", gap: 8, padding: "8px 12px",
-        background: "#f5f4f0", borderBottom: "1px solid #ddd",
-        borderTop: "1px solid #ddd", flexWrap: "wrap",
-      }}>
+      {/* Toggle bar — sits naturally right under the card header, no sticky needed */}
+      <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-zinc-50 border-b border-t border-zinc-200">
         <LayerBtn label="CMU Bricks" on={showCMU} toggle={() => setShowCMU(v => !v)} />
+        <LayerBtn label="Landing & Stairs" on={showStairs} toggle={() => setShowStairs(v => !v)} />
       </div>
 
+      {/* Drawings row — 3 columns. minWidth forces horizontal scroll inside the card. */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: `${stairWidthPct ?? "1fr"} ${partitionWidthPct ?? "1fr"}`,
+        gridTemplateColumns: `${stairWidthPct ?? "1fr"} ${partitionWidthPct ?? "1fr"} ${stairWidthPct ?? "1fr"}`,
         gap: "1.5rem",
-        alignItems: "end",
-        padding: "0.75rem",
+        alignItems: "start",
+        padding: "0.75rem 0.75rem 0",
+        minWidth: 960,
       }}>
-        <div>
-          <DoorWallWithStairs showCMU={showCMU} />
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <p className="wall-label" style={{ marginBottom: "0.35rem" }}>
+            <strong>{vertPartition.name}</strong>
+          </p>
+          {/* Container height fixed by aspect ratio; DoorWallWithStairs SVG matches exactly */}
+          <div style={{ aspectRatio: DOOR_WALL_ASPECT, width: "100%", overflow: "hidden" }}>
+            <DoorWallWithStairs showCMU={showCMU} showStairs={showStairs} />
+          </div>
         </div>
-
-        <div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
           <p className="wall-label" style={{ marginBottom: "0.35rem" }}>
             <strong>{horizPartition.name}</strong>
           </p>
-          <WallElevationView wall={horizPartition} forceCMU={showCMU} />
+          {/* fillParent + height:100% on SVG letterboxes it to match container height */}
+          <div style={{ aspectRatio: DOOR_WALL_ASPECT, width: "100%", overflow: "hidden" }}>
+            <WallElevationView wall={horizPartition} forceCMU={showCMU} noLayerBar fillParent />
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <p className="wall-label" style={{ marginBottom: "0.35rem" }}>
+            <strong>{bathroomEastWall.name}</strong>
+          </p>
+          <div style={{ aspectRatio: DOOR_WALL_ASPECT, width: "100%", overflow: "hidden" }}>
+            <WallElevationView wall={bathroomEastWall} forceCMU={showCMU} noLayerBar fillParent />
+          </div>
+        </div>
+      </div>
+
+      {/* Cut lists row — top-aligned, three columns */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: `${stairWidthPct ?? "1fr"} ${partitionWidthPct ?? "1fr"} ${stairWidthPct ?? "1fr"}`,
+        gap: "1.5rem",
+        alignItems: "start",
+        padding: "0.5rem 0.75rem 0.75rem",
+        minWidth: 960,
+      }}>
+        <div className="wall-data-summary">
+          <CutList wall={vertPartition} />
+        </div>
+        <div className="wall-data-summary">
+          <CutList wall={horizPartition} />
+        </div>
+        <div className="wall-data-summary">
+          <CutList wall={bathroomEastWall} />
         </div>
       </div>
     </div>
