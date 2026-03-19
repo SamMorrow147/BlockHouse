@@ -166,33 +166,47 @@ export function ThirdFloorPlan() {
             .fp-sub       { fill: #666; font-size: 8.5px; font-family: ui-monospace, monospace; }
             .fp-fixture-lbl { fill: #666; font-size: 7.5px; font-family: ui-monospace, monospace; text-anchor: middle; }
             .fp-stairwell   { fill: rgba(255,220,180,0.25); stroke: #c80; stroke-width: 1.2px; stroke-dasharray: 6 3; }
-            .fp-void        { fill: rgba(0,0,0,0.04); stroke: #999; stroke-width: 0.8px; stroke-dasharray: 4 3; }
+            .fp-void        { fill: rgba(180,210,240,0.13); stroke: #6699bb; stroke-width: 0.8px; stroke-dasharray: 4 3; }
             .fp-f3-edge     { fill: none; stroke: #333; stroke-width: 1.5px; stroke-dasharray: 8 4; }
+            .fp-railing     { fill: none; stroke: #555; stroke-width: 2px; }
+            .fp-railing-post{ fill: #555; }
           `}</style>
         </defs>
 
         {/* ── Title ─────────────────────────────────────────────────── */}
-        <text className="fp-title" x={AL} y={AT - 28}>03 — THIRD LEVEL FLOOR PLAN (PARTIAL — WEST END)</text>
+        <text className="fp-title" x={AL} y={AT - 28}>03 — THIRD LEVEL FLOOR PLAN</text>
         <text className="fp-sub" x={AL} y={AT - 12}>
-          SCALE: 3px = 1&quot;  |  PARTIAL FLOOR: {fmt(THIRD_FLOOR_W)} WIDE (WEST END)  |  SHED ROOF ABOVE
+          SCALE: 3px = 1&quot;  |  LOFT: {fmt(THIRD_FLOOR_W)} WIDE (WEST END)  |  BALCONY (EAST END)  |  SHED ROOF ABOVE
         </text>
 
         {/* ══ FULL CMU SHELL (ghost outline for context) ═══════════ */}
         <rect fill="rgba(222,218,212,0.06)" stroke="#ccc" strokeWidth="1" strokeDasharray="6 4"
           x={px(0)} y={py(0)} width={pf(CMU_W)} height={pf(CMU_D)} />
 
-        {/* ── Void area (no floor — open to second floor below) ───── */}
+        {/* ── Balcony area (no deck — open interior balcony) ───────── */}
         <rect className="fp-void"
           x={px(CI_L)} y={py(CI_N)}
           width={pf(f3L - CI_L)} height={pf(CMU_INTERIOR_D)} />
-        <text style={{ fill: "#aaa", fontSize: "12px", fontFamily: "ui-monospace, monospace", textAnchor: "middle", letterSpacing: "0.2em" }}
-          x={px(CI_L + (f3L - CI_L) / 2)} y={py(CMU_D / 2 - 10)}>
-          OPEN TO BELOW
+        <text style={{ fill: "#5588aa", fontSize: "13px", fontFamily: "ui-monospace, monospace", textAnchor: "middle", letterSpacing: "0.25em", fontWeight: 700 }}
+          x={px(CI_L + (f3L - CI_L) / 2)} y={py(CMU_D / 2 - 8)}>
+          BALCONY
         </text>
-        <text style={{ fill: "#bbb", fontSize: "9px", fontFamily: "ui-monospace, monospace", textAnchor: "middle" }}
-          x={px(CI_L + (f3L - CI_L) / 2)} y={py(CMU_D / 2 + 5)}>
-          (NO FLOOR — 2ND LEVEL VISIBLE)
+        <text style={{ fill: "#88aabb", fontSize: "8.5px", fontFamily: "ui-monospace, monospace", textAnchor: "middle" }}
+          x={px(CI_L + (f3L - CI_L) / 2)} y={py(CMU_D / 2 + 6)}>
+          OPEN — OVERLOOKS 2ND FLOOR
         </text>
+
+        {/* ── Balcony railing along the floor edge (east side of loft) ── */}
+        {/* Rail cap */}
+        <line className="fp-railing"
+          x1={px(f3L)} y1={py(FN_IN)} x2={px(f3L)} y2={py(FS_IN)} />
+        {/* Balusters every 24" */}
+        {Array.from({ length: Math.floor(CMU_INTERIOR_D / 24) + 1 }, (_, i) => {
+          const yPos = FN_IN + i * 24;
+          if (yPos > FS_IN) return null;
+          return <rect key={i} className="fp-railing-post"
+            x={px(f3L) - 2} y={py(yPos) - 2} width={4} height={4} />;
+        })}
 
         {/* ══ THIRD FLOOR ZONE — solid CMU + frame ════════════════ */}
 
@@ -331,11 +345,11 @@ export function ThirdFloorPlan() {
         {/* ── ROOM LABEL ───────────────────────────────────────────── */}
         <text style={{ fill: "#999", fontSize: "14px", fontFamily: "ui-monospace, monospace", textAnchor: "middle", letterSpacing: "0.3em" }}
           x={px((f3L + CMU_W) / 2)} y={py(CMU_D / 2 - 20)}>
-          THIRD FLOOR LOFT
+          LOFT
         </text>
         <text style={{ fill: "#bbb", fontSize: "9px", fontFamily: "ui-monospace, monospace", textAnchor: "middle" }}
           x={px((f3L + CMU_W) / 2)} y={py(CMU_D / 2 + 5)}>
-          SHED ROOF — LOW SIDE EAST, HIGH SIDE WEST
+          SHED ROOF — LOW EAST, HIGH WEST
         </text>
       </svg>
     </div>
