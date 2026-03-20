@@ -365,20 +365,20 @@ export function WallElevationView({
       {!noLayerBar && <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-zinc-50 border-b border-zinc-200 sticky top-[44px] z-[9] items-center">
         <LayerBtn label="CMU Bricks" on={showCMU}   toggle={() => setShowCMU(v => !v)} />
         <LayerBtn label="Frame"      on={showFrame}  toggle={() => setShowFrame(v => !v)} />
-        {interactive && <>
+          {interactive && <>
           <LayerBtn label="Dimensions" on={showDims}     toggle={() => setShowDims(v => !v)} />
           <LayerBtn label="Stairs"     on={showStairs}   toggle={() => setShowStairs(v => !v)} />
           <LayerBtn label="Bathroom"   on={showBathroom} toggle={() => setShowBathroom(v => !v)} />
         </>}
-        {wall.id === "south" && (
-          <LayerBtn label="Outlets" on={showOutlets} toggle={() => setShowOutlets(v => !v)} />
-        )}
-        {wall.id === "north" && (
-          <LayerBtn label="Sewer Outlet" on={showSewer} toggle={() => setShowSewer(v => !v)} />
-        )}
-        {hasAnchors && (
-          <LayerBtn label="Anchor Bolts" on={showAnchors} toggle={() => setShowAnchors(v => !v)} />
-        )}
+          {wall.id === "south" && (
+            <LayerBtn label="Outlets" on={showOutlets} toggle={() => setShowOutlets(v => !v)} />
+          )}
+          {wall.id === "north" && (
+            <LayerBtn label="Sewer Outlet" on={showSewer} toggle={() => setShowSewer(v => !v)} />
+          )}
+          {hasAnchors && (
+            <LayerBtn label="Anchor Bolts" on={showAnchors} toggle={() => setShowAnchors(v => !v)} />
+          )}
         {/* Off-by-default toggles — left-aligned but last (foremost right in the row) */}
         {(interactive || wall.id === "south" || wall.id === "east") && (
           <LayerBtn label="Cabinets" on={showInterior} toggle={() => setShowInterior(v => !v)} />
@@ -400,8 +400,8 @@ export function WallElevationView({
             <span className="text-[10px] font-mono text-zinc-400 tracking-wide uppercase">3F Build:</span>
             <LayerBtn label="Step 1" on={buildStep === 1} toggle={() => setBuildStep(1)} />
             <LayerBtn label="Step 2" on={buildStep === 2} toggle={() => setBuildStep(2)} />
-          </div>
-        )}
+        </div>
+      )}
         {isWest && (
           <div className="ml-auto flex items-center gap-1.5">
             <span className="text-[10px] font-mono text-zinc-400 tracking-wide uppercase">View:</span>
@@ -1970,7 +1970,7 @@ export function WallElevationView({
                 onMouseLeave={hideTip}
                 style={{ cursor: "crosshair" }}
               >
-                <polygon points={soffitPts} fill={FILL} stroke="none" />
+              <polygon points={soffitPts} fill={FILL} stroke="none" />
               </g>
 
               {/* Stringer — notched 2×12 board (driven by sl.stringer.allPoints) */}
@@ -1982,8 +1982,8 @@ export function WallElevationView({
                 onMouseLeave={hideTip}
                 style={{ cursor: "crosshair" }}
               >
-                <polygon
-                  points={sl.stringer.allPoints.map(([x, y]) => `${wx(x)},${wy(y)}`).join(" ")}
+              <polygon
+                points={sl.stringer.allPoints.map(([x, y]) => `${wx(x)},${wy(y)}`).join(" ")}
                   fill={FILL}
                   stroke="none"
                 />
@@ -2286,11 +2286,11 @@ export function WallElevationView({
                     onMouseLeave={hideTip}
                     style={{ cursor: "crosshair" }}
                   >
-                    <polygon
-                      points={f2StringerPts.map(([x, y]) => `${wx(x)},${wy(y)}`).join(" ")}
+                  <polygon
+                    points={f2StringerPts.map(([x, y]) => `${wx(x)},${wy(y)}`).join(" ")}
                       fill={F2_FILL}
                       stroke="none"
-                    />
+                  />
                   </g>
 
                   {/* Risers */}
@@ -3472,10 +3472,9 @@ export function WallElevationView({
           );
         })()}
 
-        {/* ── Third floor — east wall: 36" loft stub + mirrored knee wedge ──
-            Mirrors the west wall Step 1 polygon exactly, flipped horizontally.
+        {/* ── Third floor — east wall: 36" loft stub + knee wedge ──
             East elevation: left = north (low), right = south (high).
-            kneeH rises left→right: 0 at x0 (north edge), +kneeMaxH*(36/W3) at W3 (south edge). ── */}
+            Structure anchored to LEFT (north) end; slope rises left→right. ── */}
         {isEast && (() => {
           const f3y     = FLOOR3_IN;
           const W3      = wall.totalLengthInches; // 166"
@@ -3486,19 +3485,20 @@ export function WallElevationView({
           const LOW_H   = WEST_F3_LOW_H;
           const HIGH_H  = WEST_F3_HIGH_H;
 
-          // 36" partial anchored to the RIGHT (south) end
-          const x0 = W3 - STEP1_W;
+          // 36" partial anchored to the LEFT (north) end
+          const x0 = 0;
+          const x1 = STEP1_W;
 
           // Plumb wall height matches west wall low side
           const mainWallH = LOW_H;
           const mainStudH = mainWallH - PLATE_H * 3;
           const kneeBot   = f3y + mainWallH;
 
-          // Flipped slope: high at left edge (x0/north), drops to 0 at right edge (W3/south)
+          // Slope: zero at left edge (x0/north), rises to high at right edge (x1/south)
           const kneeMaxH   = HIGH_H - LOW_H;
-          const kneeH      = (x: number) => kneeMaxH * Math.max(0, (W3 - x) / W3);
-          const buildKneeH = kneeH(x0); // = kneeMaxH * STEP1_W / W3 ≈ 6.9" (high at left)
-          const w3KneeH    = kneeH(W3); // = 0 (low at right)
+          const kneeH      = (x: number) => kneeMaxH * Math.max(0, x / W3);
+          const buildKneeH = kneeH(x1); // = kneeMaxH * STEP1_W / W3 ≈ 6.9" (high at right)
+          const x0KneeH    = kneeH(x0); // = 0 (low at left)
 
           return (
             <g>
@@ -3512,7 +3512,7 @@ export function WallElevationView({
                     fill="#fff" stroke="#010101" strokeWidth="1.2" />
                   {(() => {
                     const studs: number[] = [];
-                    for (let x = x0 + SW; x <= W3 - SW - OC / 2; x += OC) studs.push(x);
+                    for (let x = SW; x <= x1 - SW - OC / 2; x += OC) studs.push(x);
                     return studs.map((sx, i) => (
                       <rect key={`ews${i}`} x={wx(sx)} y={wy(f3y + PLATE_H, mainStudH)}
                         width={px(SW)} height={px(mainStudH)} fill="#fff" stroke="#010101" strokeWidth="1" />
@@ -3520,7 +3520,7 @@ export function WallElevationView({
                   })()}
                   <rect x={wx(x0)} y={wy(f3y + PLATE_H, mainStudH)} width={px(SW)} height={px(mainStudH)}
                     fill="#fff" stroke="#010101" strokeWidth="1.2" />
-                  <rect x={wx(W3 - SW)} y={wy(f3y + PLATE_H, mainStudH)} width={px(SW)} height={px(mainStudH)}
+                  <rect x={wx(x1 - SW)} y={wy(f3y + PLATE_H, mainStudH)} width={px(SW)} height={px(mainStudH)}
                     fill="#fff" stroke="#010101" strokeWidth="1.2" />
                   <rect x={wx(x0)} y={wy(f3y + mainWallH - PLATE_H * 2, PLATE_H)} width={px(STEP1_W)} height={px(PLATE_H)}
                     fill="#fff" stroke="#010101" strokeWidth="1.2" />
@@ -3529,46 +3529,46 @@ export function WallElevationView({
                 </g>
               )}
 
-              {/* ═══ KNEE WEDGE — mirrored from west wall Step 1 ═══ */}
-              {/* high at left (north/x0), drops to zero at right (south/W3) */}
+              {/* ═══ KNEE WEDGE ═══ */}
+              {/* zero at left (north/x0), rises to high at right (south/x1) */}
               <polygon points={[
                 `${wx(x0)},${wy(kneeBot)}`,
-                `${wx(x0)},${wy(kneeBot + buildKneeH)}`,
-                `${wx(W3)},${wy(kneeBot + w3KneeH)}`,
-                `${wx(W3)},${wy(kneeBot)}`,
+                `${wx(x0)},${wy(kneeBot + x0KneeH)}`,
+                `${wx(x1)},${wy(kneeBot + buildKneeH)}`,
+                `${wx(x1)},${wy(kneeBot)}`,
               ].join(" ")}
                 fill="rgba(180,150,110,0.08)" stroke={KW} strokeWidth="1.2" />
 
               {frame && (
                 <g>
-                  <line x1={wx(x0)} y1={wy(kneeBot)} x2={wx(W3)} y2={wy(kneeBot)}
+                  <line x1={wx(x0)} y1={wy(kneeBot)} x2={wx(x1)} y2={wy(kneeBot)}
                     stroke={KW} strokeWidth="1.5" />
-                  <line x1={wx(x0)} y1={wy(kneeBot + buildKneeH)}
-                    x2={wx(W3)} y2={wy(kneeBot + w3KneeH)}
+                  <line x1={wx(x0)} y1={wy(kneeBot + x0KneeH)}
+                    x2={wx(x1)} y2={wy(kneeBot + buildKneeH)}
                     stroke={KW} strokeWidth="1.5" />
-                  <line x1={wx(x0)} y1={wy(kneeBot + buildKneeH - PLATE_H)}
-                    x2={wx(W3)} y2={wy(kneeBot + w3KneeH - PLATE_H)}
+                  <line x1={wx(x0)} y1={wy(kneeBot + x0KneeH - PLATE_H)}
+                    x2={wx(x1)} y2={wy(kneeBot + buildKneeH - PLATE_H)}
                     stroke={KW} strokeWidth="1" strokeDasharray="6 3" />
                 </g>
               )}
 
-              {/* Ghost line extending the slope leftward past x0 (continuing the high-to-low slope) */}
-              <line x1={wx(x0)} y1={wy(kneeBot + buildKneeH)}
-                x2={wx(x0 - STEP1_W)} y2={wy(kneeBot + kneeH(x0 - STEP1_W))}
+              {/* Ghost line extending the slope rightward past x1 (continuing the low-to-high slope) */}
+              <line x1={wx(x1)} y1={wy(kneeBot + buildKneeH)}
+                x2={wx(x1 + STEP1_W)} y2={wy(kneeBot + kneeH(x1 + STEP1_W))}
                 stroke={KW} strokeWidth="0.8" strokeDasharray="4 6" opacity="0.35" />
 
               {/* 3rd floor deck line + label */}
-              <line x1={wx(x0)} y1={wy(f3y)} x2={wx(W3)} y2={wy(f3y)}
+              <line x1={wx(x0)} y1={wy(f3y)} x2={wx(x1)} y2={wy(f3y)}
                 stroke={BK} strokeWidth="1.2" />
               <text x={wx(x0) - 4} y={wy(f3y) + 4} fill={BK} fontSize="9"
                 fontFamily="ui-monospace,monospace" textAnchor="end">3RD FLOOR</text>
 
               {/* Dashed open edge + label */}
-              <line x1={wx(x0)} y1={wy(f3y)} x2={wx(x0)} y2={wy(f3y + THIRD_FLOOR_H)}
+              <line x1={wx(x1)} y1={wy(f3y)} x2={wx(x1)} y2={wy(f3y + THIRD_FLOOR_H)}
                 stroke={BK} strokeWidth="1.5" strokeDasharray="8 4" />
-              <text x={wx(x0) - 4} y={wy(f3y + THIRD_FLOOR_H / 2) + 4}
-                fill={BK} fontSize="9" fontFamily="ui-monospace,monospace" textAnchor="end">
-                ← OPEN
+              <text x={wx(x1) + 4} y={wy(f3y + THIRD_FLOOR_H / 2) + 4}
+                fill={BK} fontSize="9" fontFamily="ui-monospace,monospace" textAnchor="start">
+                OPEN →
               </text>
 
               {/* Wall height dimension */}
@@ -4233,10 +4233,10 @@ export function WallElevationView({
           const gap = 1.2;
 
           if (isNorth || isSouth) {
-            // Joist bay geometry for batt fills (same as the TJI rendering section)
+            // Joist bay geometry for batt fills — THIRD FLOOR ROOF joists (not second floor)
             const JOIST_W_R = SW;
-            const jBase_R   = layout.wallHeightInches;
-            const jTop_R    = jBase_R + TJI_DEPTH;
+            const jBot3     = FLOOR3_IN - SUBFLOOR_T - TJI_DEPTH; // bottom of third floor roof joists
+            const jTop3      = FLOOR3_IN - SUBFLOOR_T;              // top of third floor roof joists
             const joistOff_R = JOIST_W_R / 2;
             const lastJoist_R = wallLen - TJI_RIM_T - JOIST_W_R;
             const jPositions: number[] = [];
@@ -4250,11 +4250,11 @@ export function WallElevationView({
             const deckTop = FLOOR3_IN;
             return (
               <g>
-                {/* ── Batt fills in joist bays ── */}
+                {/* ── Batt fills in joist bays — THIRD FLOOR ROOF ── */}
                 <g
                   onMouseEnter={(e) => showTip(e, "roof-batts", "R-38 Mineral Wool Batts — friction-fit in TJI joist bays (9.5\" deep)",
                     `${jPositions.length + 1} bays × ${fmtDec(TJI_DEPTH)}" deep`,
-                    `y: ${fmtDec(jBase_R)}" to ${fmtDec(jTop_R)}" — between joists`)}
+                    `y: ${fmtDec(jBot3)}" to ${fmtDec(jTop3)}" — third floor roof joists`)}
                   onMouseMove={moveTip}
                   onMouseLeave={hideTip}
                   style={{ cursor: "crosshair" }}
@@ -4267,7 +4267,7 @@ export function WallElevationView({
                     if (bayW < 1) return null;
                     return (
                       <rect key={`batt-${i}`}
-                        x={wx(left)} y={wy(jBase_R, TJI_DEPTH)}
+                        x={wx(left)} y={wy(jBot3, TJI_DEPTH)}
                         width={px(bayW)} height={px(TJI_DEPTH)}
                         fill="rgba(234,179,8,0.3)" stroke="none" />
                     );
