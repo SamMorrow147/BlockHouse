@@ -13,7 +13,7 @@ import {
   STAIR_LAND_RIM_W, STAIR_LAND_DECK_T, STAIR_LAND_POST_W,
   secondFloorNorthWall, secondFloorSouthWall, secondFloorEastWall, secondFloorWestWall,
   STAIR2_START_X, STAIR2_LAND_TOP_W, STAIR2_LAND_BOT_W,
-  thirdFloorNorthWall, thirdFloorSouthWall, THIRD_FLOOR_W, THIRD_FLOOR_H,
+  thirdFloorNorthWall, thirdFloorSouthWall, thirdFloorEastWall, THIRD_FLOOR_W, THIRD_FLOOR_H,
   WEST_F3_LOW_H, WEST_F3_HIGH_H,
   TJI_DEPTH, TJI_FLANGE_H, TJI_WEB_W, TJI_RIM_T, TJI_OC, SUBFLOOR_T,
   BATH_JOIST_H, BATH_JOIST_OC, BATH_CLEAT_H, BATH_SUBFLOOR_T, BATH_LEDGER_T,
@@ -28,6 +28,8 @@ import {
   NCAB_U1_W, NCAB_U2_W, NCAB_U3_W,
   CAB_UPPER_BOT, CAB_UPPER_TOP,
   WCAB_L, WCAB_W1, WCAB_W2,
+  ROOF_POLYISO_T, ROOF_POLYISO_R, ROOF_COVERBOARD_T, ROOF_EPDM_T,
+  ROOF_PARAPET_H, ROOF_FLASHING_LAP, ROOF_COPING_W,
 } from "@/lib/framing-data";
 import { computeStairLayout } from "@/lib/stair-calculator";
 import { FW_IN, planPosToElevationX } from "@/lib/plan-geometry";
@@ -221,6 +223,8 @@ export function WallElevationView({
   const [showSheathing, setShowSheathing] = useState(false);
   const [showWrap, setShowWrap] = useState(false);
   const [showExterior, setShowExterior] = useState(false);
+  const [showRoof, setShowRoof] = useState(false);
+  const [buildStep, setBuildStep] = useState<1 | 2>(1);
 
   const hasAnchors = (wall.anchorBolts?.length ?? 0) > 0;
 
@@ -313,6 +317,7 @@ export function WallElevationView({
   const hasSecondFloor = isNorth || isSouth || isEast || isWest;
   const totalDisplayH = (isNorth || isSouth) ? FLOOR4_TOP
     : isWest ? FLOOR3_IN + WEST_F3_HIGH_H
+    : isEast ? FLOOR3_IN + WEST_F3_HIGH_H
     : hasSecondFloor ? FLOOR3_IN
     : layout.wallHeightInches;
 
@@ -387,6 +392,16 @@ export function WallElevationView({
         {(isNorth || isSouth || isEast || isWest || wall.id.includes("-2") || wall.id.includes("-3")) && (
           <LayerBtn label="House Wrap" on={showWrap} toggle={() => setShowWrap(v => !v)} />
         )}
+        {(isNorth || isSouth || isEast || isWest) && (
+          <LayerBtn label="Roof" on={showRoof} toggle={() => setShowRoof(v => !v)} />
+        )}
+        {isWest && (
+          <div className="flex items-center gap-1.5 mx-auto">
+            <span className="text-[10px] font-mono text-zinc-400 tracking-wide uppercase">3F Build:</span>
+            <LayerBtn label="Step 1" on={buildStep === 1} toggle={() => setBuildStep(1)} />
+            <LayerBtn label="Step 2" on={buildStep === 2} toggle={() => setBuildStep(2)} />
+          </div>
+        )}
         {isWest && (
           <div className="ml-auto flex items-center gap-1.5">
             <span className="text-[10px] font-mono text-zinc-400 tracking-wide uppercase">View:</span>
@@ -436,6 +451,34 @@ export function WallElevationView({
           {layout.topPlates.map((r) => hoverRect(r, "plate"))}
           {layout.studs.map((r) => hoverRect(r, "stud", undefined,
             `Lumber: ${LUMBER_2x6_FACE}" × ${LUMBER_2x6_DEPTH}" (2×6)  ·  Length: ${fmtDec(r.height)}"`))}
+          {/* Stairway Transfer Load — doubled stud at stair-2 landing (north wall only) */}
+          {isNorth && (() => {
+            const studH = layout.wallHeightInches - PLATE_H - TOP_H;
+            const studX = STAIR2_START_X - SW - 26;
+            const r = {
+              id:     "north-stair-transfer-stud",
+              label:  "Stair Transfer Load — Doubled 2×6 Stud",
+              x:      studX,
+              y:      PLATE_H,
+              width:  SW,
+              height: studH,
+            };
+            const cx = wx(studX + SW / 2);
+            const cy = (wy(PLATE_H) + wy(layout.wallHeightInches - TOP_H)) / 2;
+            return (
+              <g>
+                {hoverRect(r, "stud king",
+                  { fill: "#fef3c7", stroke: "#c00", strokeWidth: 1.5 },
+                  `Doubled 2×6 (2× king stud) — Stairway Transfer Load  ·  stair landing at ${STAIR2_START_X}"`
+                )}
+                <text x={cx} y={cy} fontSize="6" fill="#b91c1c"
+                  fontFamily="ui-monospace,monospace" textAnchor="middle"
+                  transform={`rotate(-90, ${cx}, ${cy})`}>
+                  STL-1
+                </text>
+              </g>
+            );
+          })()}
           {layout.headers.map((r: HeaderRect) => {
             const spec = r.headerSpec;
             const isLVL = spec && spec.label.includes("LVL");
@@ -685,12 +728,15 @@ export function WallElevationView({
           const wallLen = wall.totalLengthInches;
           const SC = "#555";
 
-          // Joist positions along the partition (elevation X), 16" OC
+          // Joist positions along the partition (elevation X), 16" OC.
+          // Positions start at 0 and step by OC; the last position is always at the
+          // right-end stud (wallLen - SW) if it isn't already covered.
           const joistXs: number[] = [];
-          for (let x = 0; x <= wallLen + 0.01; x += BATH_JOIST_OC) {
-            joistXs.push(Math.min(x, wallLen));
+          for (let x = 0; x <= wallLen - SW + 0.01; x += BATH_JOIST_OC) {
+            joistXs.push(x);
           }
-          if (joistXs[joistXs.length - 1] < wallLen - 0.01) joistXs.push(wallLen);
+          const rightEnd = wallLen - SW;
+          if (joistXs[joistXs.length - 1] < rightEnd - 0.01) joistXs.push(rightEnd);
 
           return (
             <g>
@@ -699,27 +745,62 @@ export function WallElevationView({
                 width={px(wallLen)} height={px(PLAT_H2)}
                 fill="rgba(210,200,180,0.08)" stroke="none" />
 
-              {/* Per-joist: ledger cleat + joist cross-section */}
-              {joistXs.map((jx, i) => (
-                <g key={`seat${i}`}>
-                  {/* 2×4 ledger cleat — from bottom plate top to joist bottom */}
-                  <rect
-                    x={wx(jx)} y={wy(PLATE_H, ledgerH)}
-                    width={px(SW)} height={px(ledgerH)}
-                    fill="#fff" stroke={SC} strokeWidth="0.7" />
-                  {/* 2×6 joist cross-section — sits on top of cleat */}
-                  <rect
-                    x={wx(jx)} y={wy(jBot, BATH_JOIST_H)}
-                    width={px(SW)} height={px(BATH_JOIST_H)}
-                    fill="#d8d0bc" stroke={SC} strokeWidth="0.7" />
-                </g>
-              ))}
+              {/* Per-joist: ledger cleat + joist cross-section.
+                  Cleat stays at jx (on the wall face / stud position).
+                  Joist sits to the SIDE of the cleat:
+                    • all except last → joist to the RIGHT  (jx + SW)
+                    • last (right-end stud) → joist to the LEFT (jx - SW) */}
+              {joistXs.map((jx, i) => {
+                const isLast = i === joistXs.length - 1;
+                const joistX = isLast ? jx - SW : jx + SW;
+                return (
+                  <g key={`seat${i}`}>
+                    {/* Ledger cleat — vertical bearer on wall face */}
+                    <g
+                      onMouseEnter={(e) => showTip(e, `north-bath-cleat-${i}`, `2×4 Ledger Cleat — bears bath joist, toe-nailed to bottom plate`,
+                        `${fmtDec(SW)}" × ${fmtDec(ledgerH)}" (face × height)`,
+                        `x: ${fmtDec(jx)}"  y: ${fmtDec(PLATE_H)}"`)}
+                      onMouseMove={moveTip}
+                      onMouseLeave={hideTip}
+                      style={{ cursor: "crosshair" }}
+                    >
+                      <rect
+                        x={wx(jx)} y={wy(PLATE_H, ledgerH)}
+                        width={px(SW)} height={px(ledgerH)}
+                        fill="#fff" stroke={SC} strokeWidth="0.7" />
+                    </g>
+                    {/* 2×6 joist cross-section — beside its cleat */}
+                    <g
+                      onMouseEnter={(e) => showTip(e, `north-bath-joist-${i}`, `2×6 Bath Floor Joist — spans N-S from north wall to partition`,
+                        `${fmtDec(SW)}" × ${fmtDec(BATH_JOIST_H)}" (face × depth)`,
+                        `x: ${fmtDec(joistX)}"  y: ${fmtDec(jBot)}"`)}
+                      onMouseMove={moveTip}
+                      onMouseLeave={hideTip}
+                      style={{ cursor: "crosshair" }}
+                    >
+                      <rect
+                        x={wx(joistX)} y={wy(jBot, BATH_JOIST_H)}
+                        width={px(SW)} height={px(BATH_JOIST_H)}
+                        fill="#d8d0bc" stroke={SC} strokeWidth="0.7" />
+                    </g>
+                  </g>
+                );
+              })}
 
               {/* Subfloor — 3/4" OSB across full partition length */}
-              <rect
-                x={wx(0)} y={wy(sfBot, BATH_SUBFLOOR_T)}
-                width={px(wallLen)} height={px(BATH_SUBFLOOR_T)}
-                fill="#bbb49e" stroke={SC} strokeWidth="0.8" />
+              <g
+                onMouseEnter={(e) => showTip(e, "north-bath-subfloor", `3/4" OSB Bath Subfloor — raised bathroom platform deck`,
+                  `${fmtDec(wallLen)}" × ${fmtDec(BATH_SUBFLOOR_T)}"`,
+                  `y: ${fmtDec(sfBot)}" — top at ${fmtDec(PLAT_H2)}" (matches stair landing height)`)}
+                onMouseMove={moveTip}
+                onMouseLeave={hideTip}
+                style={{ cursor: "crosshair" }}
+              >
+                <rect
+                  x={wx(0)} y={wy(sfBot, BATH_SUBFLOOR_T)}
+                  width={px(wallLen)} height={px(BATH_SUBFLOOR_T)}
+                  fill="#bbb49e" stroke={SC} strokeWidth="0.8" />
+              </g>
 
               {/* Platform top line */}
               <line x1={wx(0)} y1={wy(PLAT_H2)} x2={wx(wallLen)} y2={wy(PLAT_H2)}
@@ -1069,6 +1150,30 @@ export function WallElevationView({
                   </g>
                 );
               })}
+              {/* Stairway Transfer Load — extra doubled TJI at stair-2 landing (north wall only) */}
+              {wall.id === "north" && (() => {
+                const cx = STAIR2_START_X - SW - 26;  // center aligns with doubled stud below
+                return hoverGroup(
+                  "north-tji-stair-transfer",
+                  `Stairway Transfer Load — Doubled TJI  ·  stair landing at ${STAIR2_START_X}"`,
+                  JOIST_W * 2, TJI_DEPTH, cx - JOIST_W, jBase,
+                  <g>
+                    <rect x={wx(cx - JOIST_W)} y={wy(jBase, TJI_FLANGE_H)}
+                      width={px(JOIST_W * 2)} height={px(TJI_FLANGE_H)}
+                      fill="#fef3c7" stroke="#c00" strokeWidth="1.2" />
+                    <rect x={wx(cx - TJI_WEB_W / 2)} y={wy(jBase + TJI_FLANGE_H, TJI_DEPTH - TJI_FLANGE_H * 2)}
+                      width={px(TJI_WEB_W)} height={px(TJI_DEPTH - TJI_FLANGE_H * 2)}
+                      fill="#fef3c7" stroke="#c00" strokeWidth="1.2" />
+                    <rect x={wx(cx - JOIST_W)} y={wy(jTop - TJI_FLANGE_H, TJI_FLANGE_H)}
+                      width={px(JOIST_W * 2)} height={px(TJI_FLANGE_H)}
+                      fill="#fef3c7" stroke="#c00" strokeWidth="1.2" />
+                    {/* Label */}
+                    <text x={wx(cx)} y={wy(jBase + TJI_DEPTH / 2) + 3}
+                      fontSize="5.5" fill="#b91c1c" fontFamily="ui-monospace,monospace"
+                      textAnchor="middle">STL-1</text>
+                  </g>
+                );
+              })()}
               {hoverGroup(`${wall.id}-subfloor`, "Subfloor (3/4\" OSB)", wallLen, SUBFLOOR_T, 0, jTop,
                 <rect x={wx(0)} y={wy(jTop, SUBFLOOR_T)}
                   width={px(wallLen)} height={px(SUBFLOOR_T)}
@@ -1310,7 +1415,7 @@ export function WallElevationView({
                     const shW     = shR - shL;
                     const shBase  = PLAT_H2;
 
-                    return (
+                    return hoverGroup("north-bath-shower", `Shower Enclosure — ${SH_W}" × ${SH_H}" with ${CURB_HH}" curb, 2" drain`, shW, SH_H, shL, shBase,
                       <g>
                         <rect x={wx(shL)} y={wy(shBase, 2)} width={px(shW)} height={px(2)}
                           fill="rgba(180,200,220,0.3)" stroke="#668" strokeWidth="1" />
@@ -1325,9 +1430,9 @@ export function WallElevationView({
                         <line x1={wx(shR - 6)} y1={wy(shBase + SH_H - 6)} x2={wx(shR - 6)} y2={wy(shBase + SH_H - 2)}
                           stroke="#668" strokeWidth="1" />
                         <text x={wx(shL + shW / 2)} y={wy(shBase + SH_H / 2) + 3}
-                          fontSize="7" fill="#668" textAnchor="middle" fontFamily="ui-monospace,monospace">SHOWER</text>
+                          fontSize="7" fill="#668" textAnchor="middle" fontFamily="ui-monospace,monospace" pointerEvents="none">SHOWER</text>
                         <text x={wx(shL + shW / 2)} y={wy(shBase + SH_H / 2) + 12}
-                          fontSize="6" fill="#668" textAnchor="middle" fontFamily="ui-monospace,monospace">
+                          fontSize="6" fill="#668" textAnchor="middle" fontFamily="ui-monospace,monospace" pointerEvents="none">
                           {SH_W}&quot; × {SH_H}&quot;</text>
                       </g>
                     );
@@ -1857,14 +1962,32 @@ export function WallElevationView({
           return (
             <g>
               {/* Soffit fill — area under stringer bottom edge to floor */}
-              <polygon points={soffitPts} fill={FILL} stroke="none" />
+              <g
+                onMouseEnter={(e) => showTip(e, "north-stair-soffit", "Stair Soffit — enclosed space under stringer",
+                  `${fmtDec(sl.totalRun)}" run × ${fmtDec(sl.totalRise)}" rise`,
+                  `Slope: ${fmtDec(sl.angleDeg)}°`)}
+                onMouseMove={moveTip}
+                onMouseLeave={hideTip}
+                style={{ cursor: "crosshair" }}
+              >
+                <polygon points={soffitPts} fill={FILL} stroke="none" />
+              </g>
 
               {/* Stringer — notched 2×12 board (driven by sl.stringer.allPoints) */}
-              <polygon
-                points={sl.stringer.allPoints.map(([x, y]) => `${wx(x)},${wy(y)}`).join(" ")}
-                fill={FILL}
-                stroke="none"
-              />
+              <g
+                onMouseEnter={(e) => showTip(e, "north-stringer", `2×12 Notched Stringer (×2) — ${fmtDec(STAIR_STRINGER_DEPTH)}" depth`,
+                  `${fmtDec(sl.stringerLength)}" diagonal · throat: ${fmtDec(sl.stringer.throatDepth)}"`,
+                  `${sl.stringer.notches.length} notches · IRC min throat 3.5" ✓`)}
+                onMouseMove={moveTip}
+                onMouseLeave={hideTip}
+                style={{ cursor: "crosshair" }}
+              >
+                <polygon
+                  points={sl.stringer.allPoints.map(([x, y]) => `${wx(x)},${wy(y)}`).join(" ")}
+                  fill={FILL}
+                  stroke="none"
+                />
+              </g>
 
               {/* Risers */}
               <g>
@@ -2140,15 +2263,35 @@ export function WallElevationView({
                       `${wx(f2sl.soffit.x1)},${wy(f2sl.soffit.y2 + f2y)}`,    // up to landing height
                       `${wx(f2Bottom[1][0])},${wy(f2Bottom[1][1])}`,           // seat cut (stringer base)
                     ].join(" ");
-                    return <polygon points={f2SoffitPts} fill={F2_FILL} stroke="none" />;
+                    return (
+                      <g
+                        onMouseEnter={(e) => showTip(e, "f2-stair-soffit", "2F Stair Soffit — enclosed space under stringer",
+                          `${fmtDec(f2sl.totalRun)}" run × ${fmtDec(f2sl.totalRise)}" rise`,
+                          `Slope: ${fmtDec(f2sl.angleDeg)}°`)}
+                        onMouseMove={moveTip}
+                        onMouseLeave={hideTip}
+                        style={{ cursor: "crosshair" }}
+                      >
+                        <polygon points={f2SoffitPts} fill={F2_FILL} stroke="none" />
+                      </g>
+                    );
                   })()}
 
                   {/* Stringer — notched 2×12 board */}
-                  <polygon
-                    points={f2StringerPts.map(([x, y]) => `${wx(x)},${wy(y)}`).join(" ")}
-                    fill={F2_FILL}
-                    stroke="none"
-                  />
+                  <g
+                    onMouseEnter={(e) => showTip(e, "f2-stringer", `2×12 Notched Stringer (×2) — ${fmtDec(STAIR_STRINGER_DEPTH)}" depth`,
+                      `${fmtDec(f2sl.stringerLength)}" diagonal · throat: ${fmtDec(f2sl.stringer.throatDepth)}"`,
+                      `${f2sl.stringer.notches.length} notches · straight run, no landing`)}
+                    onMouseMove={moveTip}
+                    onMouseLeave={hideTip}
+                    style={{ cursor: "crosshair" }}
+                  >
+                    <polygon
+                      points={f2StringerPts.map(([x, y]) => `${wx(x)},${wy(y)}`).join(" ")}
+                      fill={F2_FILL}
+                      stroke="none"
+                    />
+                  </g>
 
                   {/* Risers */}
                   {f2sl.risers.map(r =>
@@ -2190,22 +2333,158 @@ export function WallElevationView({
                     );
                   })()}
 
-                  {/* Bottom landing indicator */}
+                  {/* ═══ KICK PLATE — 2×4 at bottom of stringer ═══ */}
+                  {(() => {
+                    const kp = f2sl.kickPlate;
+                    return hoverGroup(`f2-${kp.id}`, kp.label, kp.width, kp.height, kp.x, kp.y + f2y,
+                      <rect x={wx(kp.x)} y={wy(kp.y + f2y, kp.height)}
+                        width={px(kp.width)} height={px(kp.height)}
+                        fill="#d8d0b8" stroke="#555" strokeWidth="1.2" />
+                    );
+                  })()}
+
+                  {/* ═══ TOP LEDGER — 2×10 at upper floor rim (stringer bears against this) ═══ */}
+                  {(() => {
+                    const tl = f2sl.topLedger;
+                    return hoverGroup(`f2-${tl.id}`, tl.label, tl.width, tl.height, tl.x, tl.y + f2y,
+                      <rect x={wx(tl.x)} y={wy(tl.y + f2y, tl.height)}
+                        width={px(tl.width)} height={px(tl.height)}
+                        fill="#d8ccb0" stroke="#8b7348" strokeWidth="1.4" />
+                    );
+                  })()}
+
+                  {/* ═══ STRINGER HANGERS — Simpson LSCZ at top connection ═══
+                      Shown as small bracket symbols at the plumb cut / rim connection.
+                      Per IRC R311.7.5: stringer must be mechanically fastened to
+                      supporting header with approved metal connector. */}
+                  {(() => {
+                    const tl = f2sl.topLedger;
+                    const hx = tl.x + tl.width / 2;
+                    const hy = tl.y + f2y + tl.height * 0.3;
+                    const sz = 4;
+                    return (
+                      <g>
+                        {/* Bracket symbol — L-shaped connector */}
+                        <path d={`M ${wx(hx - sz)},${wy(hy + sz)} L ${wx(hx - sz)},${wy(hy - sz)} L ${wx(hx + sz)},${wy(hy - sz)}`}
+                          fill="none" stroke="#c44" strokeWidth="2" strokeLinecap="round" />
+                        <text x={wx(hx) + 8} y={wy(hy) + 3}
+                          fontSize="6" fill="#c44" fontFamily="ui-monospace,monospace" fontWeight="600">
+                          LSCZ
+                        </text>
+                      </g>
+                    );
+                  })()}
+
+                  {/* ═══ TOP LANDING FRAMING ═══
+                      At the third floor deck: rim joist, bearing block, plywood deck.
+                      Mirrors the first floor landing detail from InteriorPartitionDetails. */}
+                  {(() => {
+                    const landX = f2sl.stairEndX;  // left edge of top landing (in stair coords)
+                    const landTop = FLOOR3_IN;      // top of landing deck
+                    const deckT = STAIR_LAND_DECK_T; // 0.75"
+                    const joistD = STAIR_LAND_JOIST_D; // 9.25"
+                    const rimW = STAIR_LAND_RIM_W;   // 1.5"
+                    const deckBot = landTop - deckT;
+                    const joistBot = deckBot - joistD;
+
+                    return (
+                      <g>
+                        {/* Plywood landing deck */}
+                        {hoverGroup("f2-land-deck", `¾" Plywood Landing Deck`, STAIR2_LAND_TOP_W, deckT, landX, deckBot,
+                          <rect x={wx(landX)} y={wy(deckBot, deckT)}
+                            width={px(STAIR2_LAND_TOP_W)} height={px(deckT)}
+                            fill="#c8b898" stroke="#555" strokeWidth="1" />
+                        )}
+                        {/* 2×10 Rim header at stair opening edge */}
+                        {hoverGroup("f2-land-rim", `2×10 Rim Header`, rimW, joistD, landX + STAIR2_LAND_TOP_W - rimW, joistBot,
+                          <rect x={wx(landX + STAIR2_LAND_TOP_W - rimW)} y={wy(joistBot, joistD)}
+                            width={px(rimW)} height={px(joistD)}
+                            fill="#e0d4b8" stroke="#8b7348" strokeWidth="1.2" />
+                        )}
+                        {/* 2×10 Joist (N-S) profile — shown as dashed line across landing */}
+                        <line x1={wx(landX)} y1={wy(joistBot + joistD)}
+                          x2={wx(landX + STAIR2_LAND_TOP_W - rimW)} y2={wy(joistBot + joistD)}
+                          stroke="#8b7348" strokeWidth="0.6" strokeDasharray="4 3" />
+                        <line x1={wx(landX)} y1={wy(joistBot)}
+                          x2={wx(landX + STAIR2_LAND_TOP_W - rimW)} y2={wy(joistBot)}
+                          stroke="#8b7348" strokeWidth="0.6" strokeDasharray="4 3" />
+                      </g>
+                    );
+                  })()}
+
+                  {/* ═══ BOTTOM — straight run starts at 2F deck level ═══
+                      No elevated landing needed here. The stringer seat cut
+                      sits directly on the 2F subfloor with a kick plate.
+                      Just show the approach area indicator. */}
                   <rect x={wx(STAIR2_START_X)} y={wy(f2y, 4)}
                     width={px(STAIR2_LAND_BOT_W)} height={px(4)}
                     fill="none" stroke="#1a55bb" strokeWidth="0.8" strokeDasharray="6 3" />
-                  <text fill="#1a55bb" fontSize="9" fontFamily="ui-monospace,monospace"
-                    x={wx(STAIR2_START_X + STAIR2_LAND_BOT_W / 2)} y={wy(f2y) + 16} textAnchor="middle">
-                    {STAIR2_LAND_BOT_W}&quot; LANDING
+                  <text fill="#1a55bb" fontSize="8" fontFamily="ui-monospace,monospace"
+                    x={wx(STAIR2_START_X + STAIR2_LAND_BOT_W / 2)} y={wy(f2y) + 14} textAnchor="middle">
+                    {STAIR2_LAND_BOT_W}&quot; APPROACH (AT DECK)
                   </text>
 
-                  {/* Top landing indicator — left-anchored, mirrors first-floor indicator */}
+                  {/* ═══ STAIRWELL BOX FRAMING at 3F deck ═══
+                      The stairwell opening in the 3rd floor deck is framed as a box:
+                      - 2x Headers (run N-S, perpendicular to joists) at each end
+                      - 2x Doubled trimmer joists (run E-W, parallel to regular joists) along sides
+                      - Cut joists terminate at headers with hangers
+                      In elevation: headers show as end-grain marks, trimmers as doubled lines */}
+                  {(() => {
+                    // The stairwell opening at 3F deck level
+                    const openL = f2sl.stairEndX - 6;  // left edge of opening (a few inches past top landing)
+                    const openR = STAIR2_START_X + STAIR2_LAND_BOT_W + 6; // right edge
+                    const jBot3 = FLOOR3_IN - SUBFLOOR_T - TJI_DEPTH;
+                    const jTop3 = FLOOR3_IN - SUBFLOOR_T;
+                    const hdrW = 1.5;  // header face width (2×10)
+
+                    return (
+                      <g>
+                        {/* Left header (end-grain, at top-of-stair end) */}
+                        {hoverGroup("f2-well-hdr-L", `2×10 Header (stairwell box)`, hdrW, TJI_DEPTH, openL, jBot3,
+                          <rect x={wx(openL)} y={wy(jBot3, TJI_DEPTH)}
+                            width={px(hdrW)} height={px(TJI_DEPTH)}
+                            fill="#d8c8a0" stroke="#8b7348" strokeWidth="1.5" />
+                        )}
+                        {/* Right header */}
+                        {hoverGroup("f2-well-hdr-R", `2×10 Header (stairwell box)`, hdrW, TJI_DEPTH, openR - hdrW, jBot3,
+                          <rect x={wx(openR - hdrW)} y={wy(jBot3, TJI_DEPTH)}
+                            width={px(hdrW)} height={px(TJI_DEPTH)}
+                            fill="#d8c8a0" stroke="#8b7348" strokeWidth="1.5" />
+                        )}
+                        {/* Doubled trimmer indicators (shown as thick lines at the opening edges) */}
+                        <line x1={wx(openL)} y1={wy(jBot3)} x2={wx(openR)} y2={wy(jBot3)}
+                          stroke="#8b7348" strokeWidth="2.5" />
+                        <line x1={wx(openL)} y1={wy(jTop3)} x2={wx(openR)} y2={wy(jTop3)}
+                          stroke="#8b7348" strokeWidth="2.5" />
+                        {/* Opening void — clear fill to indicate the hole in the deck */}
+                        <rect x={wx(openL + hdrW)} y={wy(jBot3, TJI_DEPTH)}
+                          width={px(openR - openL - hdrW * 2)} height={px(TJI_DEPTH)}
+                          fill="rgba(255,250,240,0.7)" stroke="none" />
+                        {/* Hanger symbols at each header-to-trimmer joint */}
+                        {[openL, openR - hdrW].map((hx, i) => (
+                          <g key={`hgr${i}`}>
+                            <path d={`M ${wx(hx + hdrW / 2 - 2)},${wy(jBot3 + TJI_DEPTH * 0.4 + 2)} L ${wx(hx + hdrW / 2 - 2)},${wy(jBot3 + TJI_DEPTH * 0.4 - 2)} L ${wx(hx + hdrW / 2 + 2)},${wy(jBot3 + TJI_DEPTH * 0.4 - 2)}`}
+                              fill="none" stroke="#c44" strokeWidth="1.2" strokeLinecap="round" />
+                          </g>
+                        ))}
+                        {/* Label */}
+                        <text x={wx((openL + openR) / 2)} y={wy(jBot3 - 2)}
+                          fontSize="6" fill="#8b7348" fontFamily="ui-monospace,monospace"
+                          textAnchor="middle" fontWeight="600">
+                          STAIRWELL BOX — DBL TRIMMERS + 2×10 HEADERS + LUS210 HANGERS
+                        </text>
+                      </g>
+                    );
+                  })()}
+
+                  {/* Top landing indicator */}
                   <rect x={wx(SW)} y={wy(FLOOR3_IN, 4)}
                     width={px(STAIR2_LAND_TOP_W)} height={px(4)}
                     fill="none" stroke="#1a55bb" strokeWidth="0.8" strokeDasharray="6 3" />
                   <text fill="#1a55bb" fontSize="9" fontFamily="ui-monospace,monospace"
                     x={wx(SW + STAIR2_LAND_TOP_W / 2)} y={wy(FLOOR3_IN) + 16} textAnchor="middle">
-                    {STAIR2_LAND_TOP_W}&quot; LANDING
+                    {STAIR2_LAND_TOP_W}&quot; TOP LANDING
                   </text>
 
                   {/* Third floor line */}
@@ -2710,19 +2989,199 @@ export function WallElevationView({
           f3StudXs.sort((a, b) => a - b);
           const f3StudH = THIRD_FLOOR_H - PLATE_H - TOP_H;
 
+          // Door zone in absolute south-wall coords — filter field studs out of this range
+          const doorOps = thirdFloorSouthWall.openings.filter(o => o.type === "door" && !o.sillHeightInches);
+          const f3StudsFiltered = f3StudXs.filter(studX => {
+            const relX = studX - f3XOffset;
+            return !doorOps.some(d => relX > d.positionFromLeftInches - SW && relX < d.positionFromLeftInches + d.widthInches);
+          });
+
           return (
             <g>
-              {/* Third floor frame — plates & studs (studs aligned to joists below) */}
+              {/* Third floor frame — plates, door, & studs aligned to joists */}
               {frame && (
                 <g>
                   {f3Layout.bottomPlates.map(r => hoverRect(f3Offset(r), "plate"))}
                   {f3Layout.topPlates.map(r => hoverRect(f3Offset(r), "plate"))}
-                  {f3StudXs.map((studX, i) => {
+                  {/* Field studs — joist-aligned, filtered out of door zone */}
+                  {f3StudsFiltered.map((studX, i) => {
                     const r: Rect = { id: `south-3-stud-${i}`, label: "2×6 Stud", x: studX, y: f3y + PLATE_H, width: SW, height: f3StudH };
                     return hoverRect(r, "stud", undefined, `1½" × 5½" (2×6) — ${fmtDec(f3StudH)}" tall`);
                   })}
+                  {/* King & jack studs, header from layout (door framing) */}
+                  {f3Layout.studs.map(r => hoverRect(f3Offset(r), r.label.includes("king") ? "stud" : r.label.includes("jack") ? "stud jack" : "stud"))}
+                  {f3Layout.headers.map(r => hoverRect(f3Offset(r), "header"))}
+                  {f3Layout.openings.map(r => hoverRect(f3Offset(r), "opening"))}
                 </g>
               )}
+
+              {/* ── Stair headroom opening — framed triangular cut at third-floor corner ── *
+               *  Right angle at (f3XOffset, f3y).  Triangle extends LEFT into the         *
+               *  open balcony zone.  Mirrors the north-wall headroom geometry.             *
+               *    • bottom plate along the deck                                           *
+               *    • angled cripple studs at 16" OC (slope-cut tops rising right)         *
+               *    • doubled 2×6 diagonal header along the hypotenuse                     */}
+              {(() => {
+                const slope     = (FLOOR2_IN / STAIR_TOTAL_RISERS) / STAIR_TREAD_DEPTH;
+                const xStairTop = STAIR2_START_X - (STAIR_TOTAL_RISERS - 1) * STAIR_TREAD_DEPTH;
+                const xRight    = f3XOffset;          // right-angle corner = left edge of partial
+                // Use the same reference distance as the north wall (f3XEnd ≈ THIRD_FLOOR_W snapped
+                // to joist grid) so both triangles are the same size.
+                const joistOff3  = SW / 2;
+                const f3XEndRef  = Math.floor((THIRD_FLOOR_W - joistOff3) / TJI_OC) * TJI_OC + joistOff3;
+                const hFull     = (f3XEndRef - xStairTop) * slope * 0.45;
+                const spanFull  = hFull / slope;
+                const xLeft     = xRight - spanFull;  // left extent into balcony zone
+                const yBot      = f3y;
+                const yTop      = f3y + hFull;
+
+                const hypLen   = Math.sqrt(spanFull * spanFull + hFull * hFull);
+                const angleDeg = Math.atan2(hFull, spanFull) * 180 / Math.PI;
+                // Perpendicular normal into solid wall (RIGHT of hypotenuse = toward partial wall)
+                const nx = +(hFull / hypLen);
+                const ny = -(spanFull / hypLen);
+                const beamW  = SW;
+                const beamW2 = SW * 2;
+
+                // Diagonal header corners: ax,ay = top-right; bx,by = bottom-left
+                const ax = xRight, ay = yTop;
+                const bx = xLeft,  by = yBot;
+                const hdrPts = [
+                  { x: ax,               y: ay               },
+                  { x: bx,               y: by               },
+                  { x: bx + beamW2 * nx, y: by + beamW2 * ny },
+                  { x: ax + beamW2 * nx, y: ay + beamW2 * ny },
+                ];
+                const midPts = [
+                  { x: ax + beamW * nx, y: ay + beamW * ny },
+                  { x: bx + beamW * nx, y: by + beamW * ny },
+                ];
+
+                // Inner beam edge height at x — used for cripple heights
+                const beamVertProj = beamW2 * hypLen / spanFull;
+                const beamBotY = (x: number) =>
+                  yBot + hFull * (x - xLeft) / spanFull - beamVertProj;
+
+                // Cripple studs — left to right within the void triangle
+                const OC       = 16;
+                const cripBase = yBot + PLATE_H;
+                const cripples: { x: number; h: number }[] = [];
+                for (let cx = xLeft + OC; cx < xRight - beamW2; cx += OC) {
+                  const hAtX = beamBotY(cx) - cripBase;
+                  if (hAtX > 2) cripples.push({ x: cx, h: hAtX });
+                }
+
+                return (
+                  <g>
+                    {/* Light void fill */}
+                    <polygon
+                      points={[
+                        `${wx(xRight)},${wy(yBot)}`,
+                        `${wx(xRight)},${wy(yTop)}`,
+                        `${wx(xLeft)},${wy(yBot)}`,
+                      ].join(" ")}
+                      fill="rgba(200,230,255,0.08)"
+                    />
+
+                    {/* Bottom plate along deck */}
+                    {hoverGroup("stair-s-bp", "Bottom Plate — stair opening", spanFull, PLATE_H, xLeft, yBot,
+                      <rect className="plate"
+                        x={wx(xLeft)} y={wy(yBot, PLATE_H)}
+                        width={px(spanFull)} height={px(PLATE_H)} />
+                    )}
+
+                    {/* Angled cripple studs — tops slope up toward xRight */}
+                    {cripples.map((c, i) => {
+                      const topYLeft  = cripBase + c.h;
+                      const topYRight = cripBase + c.h + SW * slope;
+                      return (
+                        <g key={`stair-s-crip-${i}`}
+                          onMouseEnter={(e) => showTip(e, `stair-s-crip-${i}`,
+                            "2×6 Cripple (angled top)",
+                            `1½" × ${fmtDec(c.h)}" — top cut ${angleDeg.toFixed(1)}°`,
+                            `x: ${fmtDec(c.x)}"  y: ${fmtDec(cripBase)}"`)}
+                          onMouseMove={moveTip}
+                          onMouseLeave={hideTip}
+                          style={{ cursor: "crosshair" }}
+                        >
+                          <polygon
+                            points={[
+                              `${wx(c.x)},${wy(cripBase)}`,
+                              `${wx(c.x)},${wy(topYLeft)}`,
+                              `${wx(c.x + SW)},${wy(topYRight)}`,
+                              `${wx(c.x + SW)},${wy(cripBase)}`,
+                            ].join(" ")}
+                            fill="#fff" stroke="#010101" strokeWidth="1.5" strokeLinecap="square"
+                          />
+                        </g>
+                      );
+                    })}
+
+                    {/* Doubled 2×6 diagonal header */}
+                    <g
+                      onMouseEnter={(e) => showTip(e, "stair-s-hdr",
+                        "(2) 2×6 Diagonal Header",
+                        `${fmtDec(hypLen)}" long — ${angleDeg.toFixed(1)}° from horizontal`,
+                        "Doubled 2×6, each end beveled")}
+                      onMouseMove={moveTip}
+                      onMouseLeave={hideTip}
+                      style={{ cursor: "crosshair" }}
+                    >
+                      <polygon
+                        points={hdrPts.map(p => `${wx(p.x)},${wy(p.y)}`).join(" ")}
+                        fill="#fff" stroke="#010101" strokeWidth="1.5" strokeLinecap="square"
+                      />
+                      <line
+                        x1={wx(midPts[0].x)} y1={wy(midPts[0].y)}
+                        x2={wx(midPts[1].x)} y2={wy(midPts[1].y)}
+                        stroke="#010101" strokeWidth="0.8"
+                      />
+                    </g>
+
+                    {/* Label */}
+                    <text
+                      x={wx(xRight - spanFull * 0.42)}
+                      y={wy(yBot + hFull * 0.18)}
+                      fontSize="7.5" fill="#446" fontWeight="600"
+                      fontFamily="ui-monospace,monospace" textAnchor="middle">
+                      STAIR HEADROOM
+                    </text>
+                    <text
+                      x={wx(xRight - spanFull * 0.42)}
+                      y={wy(yBot + hFull * 0.18) + 10}
+                      fontSize="6.5" fill="#668"
+                      fontFamily="ui-monospace,monospace" textAnchor="middle">
+                      OPENING
+                    </text>
+
+                    {/* Vertical height dim — right side of triangle */}
+                    <line x1={wx(xRight) + 10} y1={wy(yBot)} x2={wx(xRight) + 10} y2={wy(yTop)} stroke="#446" strokeWidth="0.7" />
+                    <line x1={wx(xRight) + 6}  y1={wy(yBot)} x2={wx(xRight) + 14} y2={wy(yBot)} stroke="#446" strokeWidth="0.7" />
+                    <line x1={wx(xRight) + 6}  y1={wy(yTop)} x2={wx(xRight) + 14} y2={wy(yTop)} stroke="#446" strokeWidth="0.7" />
+                    <text x={wx(xRight) + 16} y={(wy(yBot) + wy(yTop)) / 2 + 3}
+                      fontSize="7" fill="#446" fontFamily="ui-monospace,monospace" textAnchor="start">
+                      {Math.round(hFull)}&quot;
+                    </text>
+                    {/* Horizontal span dim — along floor */}
+                    <line x1={wx(xLeft)} y1={wy(yBot) + 10} x2={wx(xRight)} y2={wy(yBot) + 10} stroke="#446" strokeWidth="0.7" />
+                    <line x1={wx(xLeft)}  y1={wy(yBot) + 6} x2={wx(xLeft)}  y2={wy(yBot) + 14} stroke="#446" strokeWidth="0.7" />
+                    <line x1={wx(xRight)} y1={wy(yBot) + 6} x2={wx(xRight)} y2={wy(yBot) + 14} stroke="#446" strokeWidth="0.7" />
+                    <text x={(wx(xLeft) + wx(xRight)) / 2} y={wy(yBot) + 22}
+                      fontSize="7" fill="#446" fontFamily="ui-monospace,monospace" textAnchor="middle">
+                      {Math.round(spanFull)}&quot;
+                    </text>
+                    {/* Diagonal length + angle along header */}
+                    <text
+                      x={(wx(ax) + wx(bx)) / 2 + 8}
+                      y={(wy(ay) + wy(by)) / 2 - 6}
+                      fontSize="6.5" fill="#444" fontFamily="ui-monospace,monospace"
+                      textAnchor="middle"
+                      transform={`rotate(${-angleDeg}, ${(wx(ax) + wx(bx)) / 2 + 8}, ${(wy(ay) + wy(by)) / 2 - 6})`}>
+                      {Math.round(hypLen)}&quot; @ {angleDeg.toFixed(1)}°
+                    </text>
+                  </g>
+                );
+              })()}
 
               {/* Balcony edge — dashed vertical where partial floor ends */}
               <line x1={wx(f3XOffset)} y1={wy(f3y)} x2={wx(f3XOffset)} y2={wy(f3y + THIRD_FLOOR_H)}
@@ -3013,6 +3472,120 @@ export function WallElevationView({
           );
         })()}
 
+        {/* ── Third floor — east wall: 36" loft stub + mirrored knee wedge ──
+            Mirrors the west wall Step 1 polygon exactly, flipped horizontally.
+            East elevation: left = north (low), right = south (high).
+            kneeH rises left→right: 0 at x0 (north edge), +kneeMaxH*(36/W3) at W3 (south edge). ── */}
+        {isEast && (() => {
+          const f3y     = FLOOR3_IN;
+          const W3      = wall.totalLengthInches; // 166"
+          const STEP1_W = 36;
+          const BK      = "#222";
+          const KW      = "#8b5e3c";
+          const OC      = wall.studSpacingOC;
+          const LOW_H   = WEST_F3_LOW_H;
+          const HIGH_H  = WEST_F3_HIGH_H;
+
+          // 36" partial anchored to the RIGHT (south) end
+          const x0 = W3 - STEP1_W;
+
+          // Plumb wall height matches west wall low side
+          const mainWallH = LOW_H;
+          const mainStudH = mainWallH - PLATE_H * 3;
+          const kneeBot   = f3y + mainWallH;
+
+          // Flipped slope: high at left edge (x0/north), drops to 0 at right edge (W3/south)
+          const kneeMaxH   = HIGH_H - LOW_H;
+          const kneeH      = (x: number) => kneeMaxH * Math.max(0, (W3 - x) / W3);
+          const buildKneeH = kneeH(x0); // = kneeMaxH * STEP1_W / W3 ≈ 6.9" (high at left)
+          const w3KneeH    = kneeH(W3); // = 0 (low at right)
+
+          return (
+            <g>
+              {/* ═══ MAIN PLUMB WALL ═══ */}
+              <rect x={wx(x0)} y={wy(f3y, mainWallH)} width={px(STEP1_W)} height={px(mainWallH)}
+                fill="none" stroke={BK} strokeWidth="1.5" />
+
+              {frame && (
+                <g>
+                  <rect x={wx(x0)} y={wy(f3y, PLATE_H)} width={px(STEP1_W)} height={px(PLATE_H)}
+                    fill="#fff" stroke="#010101" strokeWidth="1.2" />
+                  {(() => {
+                    const studs: number[] = [];
+                    for (let x = x0 + SW; x <= W3 - SW - OC / 2; x += OC) studs.push(x);
+                    return studs.map((sx, i) => (
+                      <rect key={`ews${i}`} x={wx(sx)} y={wy(f3y + PLATE_H, mainStudH)}
+                        width={px(SW)} height={px(mainStudH)} fill="#fff" stroke="#010101" strokeWidth="1" />
+                    ));
+                  })()}
+                  <rect x={wx(x0)} y={wy(f3y + PLATE_H, mainStudH)} width={px(SW)} height={px(mainStudH)}
+                    fill="#fff" stroke="#010101" strokeWidth="1.2" />
+                  <rect x={wx(W3 - SW)} y={wy(f3y + PLATE_H, mainStudH)} width={px(SW)} height={px(mainStudH)}
+                    fill="#fff" stroke="#010101" strokeWidth="1.2" />
+                  <rect x={wx(x0)} y={wy(f3y + mainWallH - PLATE_H * 2, PLATE_H)} width={px(STEP1_W)} height={px(PLATE_H)}
+                    fill="#fff" stroke="#010101" strokeWidth="1.2" />
+                  <rect x={wx(x0)} y={wy(f3y + mainWallH - PLATE_H, PLATE_H)} width={px(STEP1_W)} height={px(PLATE_H)}
+                    fill="#fff" stroke="#010101" strokeWidth="1.2" />
+                </g>
+              )}
+
+              {/* ═══ KNEE WEDGE — mirrored from west wall Step 1 ═══ */}
+              {/* high at left (north/x0), drops to zero at right (south/W3) */}
+              <polygon points={[
+                `${wx(x0)},${wy(kneeBot)}`,
+                `${wx(x0)},${wy(kneeBot + buildKneeH)}`,
+                `${wx(W3)},${wy(kneeBot + w3KneeH)}`,
+                `${wx(W3)},${wy(kneeBot)}`,
+              ].join(" ")}
+                fill="rgba(180,150,110,0.08)" stroke={KW} strokeWidth="1.2" />
+
+              {frame && (
+                <g>
+                  <line x1={wx(x0)} y1={wy(kneeBot)} x2={wx(W3)} y2={wy(kneeBot)}
+                    stroke={KW} strokeWidth="1.5" />
+                  <line x1={wx(x0)} y1={wy(kneeBot + buildKneeH)}
+                    x2={wx(W3)} y2={wy(kneeBot + w3KneeH)}
+                    stroke={KW} strokeWidth="1.5" />
+                  <line x1={wx(x0)} y1={wy(kneeBot + buildKneeH - PLATE_H)}
+                    x2={wx(W3)} y2={wy(kneeBot + w3KneeH - PLATE_H)}
+                    stroke={KW} strokeWidth="1" strokeDasharray="6 3" />
+                </g>
+              )}
+
+              {/* Ghost line extending the slope leftward past x0 (continuing the high-to-low slope) */}
+              <line x1={wx(x0)} y1={wy(kneeBot + buildKneeH)}
+                x2={wx(x0 - STEP1_W)} y2={wy(kneeBot + kneeH(x0 - STEP1_W))}
+                stroke={KW} strokeWidth="0.8" strokeDasharray="4 6" opacity="0.35" />
+
+              {/* 3rd floor deck line + label */}
+              <line x1={wx(x0)} y1={wy(f3y)} x2={wx(W3)} y2={wy(f3y)}
+                stroke={BK} strokeWidth="1.2" />
+              <text x={wx(x0) - 4} y={wy(f3y) + 4} fill={BK} fontSize="9"
+                fontFamily="ui-monospace,monospace" textAnchor="end">3RD FLOOR</text>
+
+              {/* Dashed open edge + label */}
+              <line x1={wx(x0)} y1={wy(f3y)} x2={wx(x0)} y2={wy(f3y + THIRD_FLOOR_H)}
+                stroke={BK} strokeWidth="1.5" strokeDasharray="8 4" />
+              <text x={wx(x0) - 4} y={wy(f3y + THIRD_FLOOR_H / 2) + 4}
+                fill={BK} fontSize="9" fontFamily="ui-monospace,monospace" textAnchor="end">
+                ← OPEN
+              </text>
+
+              {/* Wall height dimension */}
+              <line x1={wx(W3) + 22} y1={wy(f3y)} x2={wx(W3) + 22} y2={wy(f3y + THIRD_FLOOR_H)}
+                stroke="#88a" strokeWidth="0.8" />
+              <line x1={wx(W3) + 18} y1={wy(f3y)} x2={wx(W3) + 26} y2={wy(f3y)}
+                stroke="#88a" strokeWidth="0.8" />
+              <line x1={wx(W3) + 18} y1={wy(f3y + THIRD_FLOOR_H)} x2={wx(W3) + 26} y2={wy(f3y + THIRD_FLOOR_H)}
+                stroke="#88a" strokeWidth="0.8" />
+              <text x={wx(W3) + 30} y={(wy(f3y) + wy(f3y + THIRD_FLOOR_H)) / 2 + 3}
+                fontSize="7" fill="#88a" fontFamily="ui-monospace,monospace" textAnchor="start">
+                {THIRD_FLOOR_H}&quot;
+              </text>
+            </g>
+          );
+        })()}
+
         {/* ── Third floor — west wall: plumb wall + knee wall slope ──
             Standard framing: build plumb to low side (84"), double top plate,
             then triangular knee wall on top creates the pitch from 84" to 116".
@@ -3020,7 +3593,11 @@ export function WallElevationView({
             uniform stud lengths in the main wall, and the slope framed separately. ── */}
         {isWest && (() => {
           const f3y   = FLOOR3_IN;
-          const W3    = wall.totalLengthInches; // 166"
+          const W3    = wall.totalLengthInches; // 166" — full wall for Step 2
+          const STEP1_W = 36;                    // Step 1: just 36" stub wall
+          const buildW = buildStep === 1 ? STEP1_W : W3; // active build width
+          // x0: left edge of the partial — anchored to the RIGHT end of the full wall
+          const x0    = W3 - buildW;
           const BK    = "#222";
           const KW    = "#8b5e3c"; // knee wall color
           const OC    = wall.studSpacingOC;     // 16"
@@ -3033,39 +3610,41 @@ export function WallElevationView({
           const topPlateY = f3y + mainWallH;          // top of double top plate
 
           // ── KNEE WALL — triangular slope zone above the main wall ──
-          // From 0" height on the left (low end) to (HIGH_H - LOW_H) = 32" on the right (high end)
+          // Pitch is ALWAYS based on full W3 so the angle is consistent between steps
           const kneeMaxH = HIGH_H - LOW_H; // 32"
-          const kneeH = (x: number) => kneeMaxH * (x / W3); // height of knee wall at position x
-          const kneeBot = topPlateY; // knee wall sits on top of the double top plate
+          const kneeH = (x: number) => kneeMaxH * ((W3 - x) / W3); // height decreases left→right (high on left/south, low on right/north)
+          const kneeBot = topPlateY;
 
-          // Knee wall cripple studs — only where there's enough height (>3")
+          // Knee wall cripple studs — only within the right-anchored partial
           const kneeStuds: { x: number; h: number }[] = [];
-          for (let x = SW; x <= W3 - SW - OC / 2; x += OC) {
-            const h = kneeH(x) - PLATE_H; // subtract top plate (sloped)
+          for (let x = x0 + SW; x <= W3 - SW - OC / 2; x += OC) {
+            const h = kneeH(x) - PLATE_H;
             if (h > 3) kneeStuds.push({ x, h });
           }
 
           // Overall roof line (top of slope) for the outline
           const roofLineY = (x: number) => f3y + LOW_H + kneeH(x);
+          const buildKneeH = kneeH(x0);   // knee height at the LEFT edge (always tallest)
+          const x0KneeH   = kneeH(W3);    // knee height at the RIGHT edge of partial (= 0)
 
           return (
             <g>
               {/* ═══ MAIN PLUMB WALL ═══ */}
 
               {/* Wall outline — main rectangular wall */}
-              <rect x={wx(0)} y={wy(f3y, mainWallH)} width={px(W3)} height={px(mainWallH)}
+              <rect x={wx(x0)} y={wy(f3y, mainWallH)} width={px(buildW)} height={px(mainWallH)}
                 fill="none" stroke={BK} strokeWidth="1.5" />
 
               {frame && (
                 <g>
                   {/* Bottom plate */}
-                  <rect x={wx(0)} y={wy(f3y, PLATE_H)} width={px(W3)} height={px(PLATE_H)}
+                  <rect x={wx(x0)} y={wy(f3y, PLATE_H)} width={px(buildW)} height={px(PLATE_H)}
                     fill="#fff" stroke="#010101" strokeWidth="1.2" />
 
                   {/* Field studs — all uniform height */}
                   {(() => {
                     const wallStuds: number[] = [];
-                    for (let x = SW; x <= W3 - SW - OC / 2; x += OC) wallStuds.push(x);
+                    for (let x = x0 + SW; x <= W3 - SW - OC / 2; x += OC) wallStuds.push(x);
                     return wallStuds.map((sx, i) => (
                       <rect key={`ws${i}`}
                         x={wx(sx)} y={wy(f3y + PLATE_H, mainStudH)} width={px(SW)} height={px(mainStudH)}
@@ -3074,57 +3653,67 @@ export function WallElevationView({
                   })()}
 
                   {/* Left king stud */}
-                  <rect x={wx(0)} y={wy(f3y + PLATE_H, mainStudH)} width={px(SW)} height={px(mainStudH)}
+                  <rect x={wx(x0)} y={wy(f3y + PLATE_H, mainStudH)} width={px(SW)} height={px(mainStudH)}
                     fill="#fff" stroke="#010101" strokeWidth="1.2" />
                   {/* Right king stud */}
                   <rect x={wx(W3 - SW)} y={wy(f3y + PLATE_H, mainStudH)} width={px(SW)} height={px(mainStudH)}
                     fill="#fff" stroke="#010101" strokeWidth="1.2" />
 
-                  {/* Double top plate — horizontal at 84" (the diaphragm chord) */}
-                  <rect x={wx(0)} y={wy(f3y + mainWallH - PLATE_H * 2, PLATE_H)} width={px(W3)} height={px(PLATE_H)}
+                  {/* Double top plate */}
+                  <rect x={wx(x0)} y={wy(f3y + mainWallH - PLATE_H * 2, PLATE_H)} width={px(buildW)} height={px(PLATE_H)}
                     fill="#fff" stroke="#010101" strokeWidth="1.2" />
-                  <rect x={wx(0)} y={wy(f3y + mainWallH - PLATE_H, PLATE_H)} width={px(W3)} height={px(PLATE_H)}
+                  <rect x={wx(x0)} y={wy(f3y + mainWallH - PLATE_H, PLATE_H)} width={px(buildW)} height={px(PLATE_H)}
                     fill="#fff" stroke="#010101" strokeWidth="1.2" />
                 </g>
               )}
 
               {/* ═══ KNEE WALL (slope zone above main wall) ═══ */}
 
-              {/* Triangular outline — left at 0", slopes up to 32" on right */}
+              {/* Trapezoidal outline — high on LEFT (south), low on RIGHT (north) */}
               <polygon points={[
-                `${wx(0)},${wy(kneeBot)}`,
+                `${wx(x0)},${wy(kneeBot)}`,
                 `${wx(W3)},${wy(kneeBot)}`,
-                `${wx(W3)},${wy(kneeBot + kneeMaxH)}`,
+                `${wx(W3)},${wy(kneeBot + x0KneeH)}`,
+                `${wx(x0)},${wy(kneeBot + buildKneeH)}`,
               ].join(" ")}
                 fill="rgba(180,150,110,0.08)" stroke={KW} strokeWidth="1.2" />
 
               {frame && (
                 <g>
-                  {/* Knee wall bottom plate — sits on top of main wall double top plate */}
-                  <line x1={wx(0)} y1={wy(kneeBot)} x2={wx(W3)} y2={wy(kneeBot)}
+                  {/* Knee wall bottom plate */}
+                  <line x1={wx(x0)} y1={wy(kneeBot)} x2={wx(W3)} y2={wy(kneeBot)}
                     stroke={KW} strokeWidth="1.5" />
-                  <line x1={wx(0)} y1={wy(kneeBot + PLATE_H)} x2={wx(W3)} y2={wy(kneeBot + PLATE_H)}
+                  <line x1={wx(x0)} y1={wy(kneeBot + PLATE_H)} x2={wx(W3)} y2={wy(kneeBot + PLATE_H)}
                     stroke={KW} strokeWidth="0.8" strokeDasharray="4 3" />
 
-                  {/* Knee wall cripple studs — each trimmed to slope */}
+                  {/* Knee wall cripple studs */}
                   {kneeStuds.map((s, i) => (
                     <rect key={`kw${i}`}
                       x={wx(s.x)} y={wy(kneeBot + PLATE_H, s.h)} width={px(SW)} height={px(s.h)}
                       fill="rgba(255,250,240,0.6)" stroke={KW} strokeWidth="0.8" />
                   ))}
 
-                  {/* Right end king stud (tallest) */}
-                  <rect x={wx(W3 - SW)} y={wy(kneeBot + PLATE_H, kneeMaxH - PLATE_H * 2)} width={px(SW)} height={px(kneeMaxH - PLATE_H * 2)}
-                    fill="rgba(255,250,240,0.6)" stroke={KW} strokeWidth="1" />
+                  {/* Left end king stud at x0 edge (tall/south side) */}
+                  {buildKneeH > PLATE_H * 2 + 3 && (
+                    <rect x={wx(x0)} y={wy(kneeBot + PLATE_H, buildKneeH - PLATE_H * 2)} width={px(SW)} height={px(buildKneeH - PLATE_H * 2)}
+                      fill="rgba(255,250,240,0.6)" stroke={KW} strokeWidth="1" />
+                  )}
 
-                  {/* Sloped top plate — follows the roof line */}
-                  <line x1={wx(0)} y1={wy(kneeBot)}
-                    x2={wx(W3)} y2={wy(kneeBot + kneeMaxH - PLATE_H)}
+                  {/* Sloped top plate — follows the roof line across buildW (high-left, low-right) */}
+                  <line x1={wx(x0)} y1={wy(kneeBot + buildKneeH - PLATE_H)}
+                    x2={wx(W3)} y2={wy(kneeBot + x0KneeH - PLATE_H)}
                     stroke={KW} strokeWidth="1" strokeDasharray="6 3" />
-                  <line x1={wx(0)} y1={wy(kneeBot)}
-                    x2={wx(W3)} y2={wy(kneeBot + kneeMaxH)}
+                  <line x1={wx(x0)} y1={wy(kneeBot + buildKneeH)}
+                    x2={wx(W3)} y2={wy(kneeBot + x0KneeH)}
                     stroke={KW} strokeWidth="1.5" />
                 </g>
+              )}
+
+              {/* Step 1 ghost line — show the slope continuing leftward where knee height increases */}
+              {buildStep === 1 && (
+                <line x1={wx(x0)} y1={wy(kneeBot + buildKneeH)}
+                  x2={wx(0)} y2={wy(kneeBot + kneeH(0))}
+                  stroke={KW} strokeWidth="0.8" strokeDasharray="4 6" opacity="0.35" />
               )}
 
               {/* ═══ OSB SHEATHING — 3F plumb wall only (knee wall is roof structure) ═══ */}
@@ -3146,8 +3735,8 @@ export function WallElevationView({
                   const rowH = clipY2 - rowY;
                   if (rowH < 1) continue;
                   const xOff = (rowIdx % 2 === 0) ? 0 : SHEET_L / 2;
-                  for (let sx = -xOff; sx < W3; sx += SHEET_L) {
-                    const cx1 = Math.max(sx, 0);
+                  for (let sx = x0 - xOff; sx < W3; sx += SHEET_L) {
+                    const cx1 = Math.max(sx, x0);
                     const cx2 = Math.min(sx + SHEET_L, W3);
                     if (cx2 <= cx1) continue;
                     sheets.push({ x: cx1, y: rowY, w: cx2 - cx1, h: rowH, label: (cx2 - cx1) > 50 && rowH > 18 });
@@ -3175,10 +3764,10 @@ export function WallElevationView({
                         )}
                       </g>
                     ))}
-                    <text x={wx(W3 / 2)} y={wy(f3y + mainWallH / 2) + 16}
+                    <text x={wx(x0 + buildW / 2)} y={wy(f3y + mainWallH / 2) + 16}
                       fontSize="8" fill="#8b6914" fontFamily="ui-monospace,monospace"
                       textAnchor="middle" opacity="0.8" fontWeight="700">
-                      7/16&quot; OSB · {sheets.length} SHEETS (3F SHED)
+                      7/16&quot; OSB · {sheets.length} SHEETS (3F {buildStep === 1 ? "STEP 1" : "SHED"})
                     </text>
                   </g>
                 );
@@ -3187,58 +3776,70 @@ export function WallElevationView({
               {/* ═══ LABELS ═══ */}
 
               {/* Main wall label */}
-              <text x={wx(W3 / 2)} y={wy(f3y + mainWallH / 2) + 4}
+              <text x={wx(x0 + buildW / 2)} y={wy(f3y + mainWallH / 2) + 4}
                 fill={BK} fontSize="8" fontFamily="ui-monospace,monospace"
                 textAnchor="middle" opacity="0.5">
-                PLUMB WALL — {LOW_H}&quot; ({Math.floor(LOW_H / 12)}&apos;-{LOW_H % 12}&quot;)
+                {buildStep === 1 ? "STEP 1 — STAIR ENCLOSURE" : "PLUMB WALL"} — {buildW}&quot; × {LOW_H}&quot;
               </text>
 
               {/* Knee wall label */}
-              <text x={wx(W3 * 0.7)} y={wy(kneeBot + kneeH(W3 * 0.7) / 2) + 3}
-                fill={KW} fontSize="7" fontFamily="ui-monospace,monospace"
-                textAnchor="middle" fontWeight="600">
-                KNEE WALL — SLOPE TO {HIGH_H}&quot;
-              </text>
+              {buildKneeH > 5 && (
+                <text x={wx(x0 + buildW * 0.4)} y={wy(kneeBot + kneeH(x0 + buildW * 0.4) / 2) + 3}
+                  fill={KW} fontSize="7" fontFamily="ui-monospace,monospace"
+                  textAnchor="middle" fontWeight="600">
+                  KNEE WALL — SLOPE
+                </text>
+              )}
 
               {/* Roof line label */}
-              <text x={wx(W3 / 2)} y={wy(roofLineY(W3 / 2)) - 6}
+              <text x={wx(x0 + buildW / 2)} y={wy(roofLineY(x0 + buildW / 2)) - 6}
                 fill={BK} fontSize="8" fontFamily="ui-monospace,monospace" textAnchor="middle">
-                SHED ROOF — {LOW_H}&quot; low · {HIGH_H}&quot; high
+                SHED ROOF — {LOW_H}&quot; low · {Math.round(LOW_H + buildKneeH)}&quot; at {buildW}&quot;
               </text>
 
               {/* Horizontal top plate label */}
-              <text x={wx(W3 / 2)} y={wy(topPlateY) + 12}
+              <text x={wx(x0 + buildW / 2)} y={wy(topPlateY) + 12}
                 fill="#446" fontSize="6.5" fontFamily="ui-monospace,monospace" textAnchor="middle">
-                ▲ DBL TOP PLATE @ {LOW_H}&quot; — DIAPHRAGM CHORD
+                ▲ DBL TOP PLATE @ {LOW_H}&quot;
               </text>
 
               {/* 3rd floor deck line */}
-              <line x1={wx(0)} y1={wy(f3y)} x2={wx(W3)} y2={wy(f3y)}
+              <line x1={wx(x0)} y1={wy(f3y)} x2={wx(W3)} y2={wy(f3y)}
                 stroke={BK} strokeWidth="1.2" strokeDasharray="5 3" />
-              <text x={wx(0) - 4} y={wy(f3y) + 4} fill={BK} fontSize="9"
+              <text x={wx(x0) - 4} y={wy(f3y) + 4} fill={BK} fontSize="9"
                 fontFamily="ui-monospace,monospace" textAnchor="end">3RD FLOOR</text>
 
               {/* Height dimensions — left and right ends */}
-              {/* Left: plumb wall height */}
-              <line x1={wx(0) - 10} y1={wy(f3y)} x2={wx(0) - 10} y2={wy(f3y + LOW_H)} stroke="#88a" strokeWidth="0.8" />
-              <line x1={wx(0) - 14} y1={wy(f3y)} x2={wx(0) - 6}  y2={wy(f3y)} stroke="#88a" strokeWidth="0.8" />
-              <line x1={wx(0) - 14} y1={wy(f3y + LOW_H)} x2={wx(0) - 6} y2={wy(f3y + LOW_H)} stroke="#88a" strokeWidth="0.8" />
-              <text x={wx(0) - 18} y={(wy(f3y) + wy(f3y + LOW_H)) / 2 + 3}
+              {/* Left: plumb wall height at x0 */}
+              <line x1={wx(x0) - 10} y1={wy(f3y)} x2={wx(x0) - 10} y2={wy(f3y + LOW_H)} stroke="#88a" strokeWidth="0.8" />
+              <line x1={wx(x0) - 14} y1={wy(f3y)} x2={wx(x0) - 6}  y2={wy(f3y)} stroke="#88a" strokeWidth="0.8" />
+              <line x1={wx(x0) - 14} y1={wy(f3y + LOW_H)} x2={wx(x0) - 6} y2={wy(f3y + LOW_H)} stroke="#88a" strokeWidth="0.8" />
+              <text x={wx(x0) - 18} y={(wy(f3y) + wy(f3y + LOW_H)) / 2 + 3}
                 fill="#88a" fontSize="7" fontFamily="ui-monospace,monospace" textAnchor="end">{LOW_H}&quot;</text>
 
-              {/* Right: full height including knee wall */}
-              <line x1={wx(W3) + 10} y1={wy(f3y)} x2={wx(W3) + 10} y2={wy(f3y + HIGH_H)} stroke="#88a" strokeWidth="0.8" />
+              {/* Right: total height at W3 edge including full knee wall */}
+              <line x1={wx(W3) + 10} y1={wy(f3y)} x2={wx(W3) + 10} y2={wy(f3y + LOW_H + buildKneeH)} stroke="#88a" strokeWidth="0.8" />
               <line x1={wx(W3) + 6}  y1={wy(f3y)} x2={wx(W3) + 14} y2={wy(f3y)} stroke="#88a" strokeWidth="0.8" />
-              <line x1={wx(W3) + 6}  y1={wy(f3y + HIGH_H)} x2={wx(W3) + 14} y2={wy(f3y + HIGH_H)} stroke="#88a" strokeWidth="0.8" />
-              <text x={wx(W3) + 18} y={(wy(f3y) + wy(f3y + HIGH_H)) / 2 + 3}
-                fill="#88a" fontSize="7" fontFamily="ui-monospace,monospace" textAnchor="start">{HIGH_H}&quot;</text>
+              <line x1={wx(W3) + 6}  y1={wy(f3y + LOW_H + buildKneeH)} x2={wx(W3) + 14} y2={wy(f3y + LOW_H + buildKneeH)} stroke="#88a" strokeWidth="0.8" />
+              <text x={wx(W3) + 18} y={(wy(f3y) + wy(f3y + LOW_H + buildKneeH)) / 2 + 3}
+                fill="#88a" fontSize="7" fontFamily="ui-monospace,monospace" textAnchor="start">{Math.round(LOW_H + buildKneeH)}&quot;</text>
 
               {/* Right: knee wall height callout */}
-              <line x1={wx(W3) + 26} y1={wy(kneeBot)} x2={wx(W3) + 26} y2={wy(kneeBot + kneeMaxH)} stroke={KW} strokeWidth="0.8" />
-              <line x1={wx(W3) + 22} y1={wy(kneeBot)} x2={wx(W3) + 30} y2={wy(kneeBot)} stroke={KW} strokeWidth="0.8" />
-              <line x1={wx(W3) + 22} y1={wy(kneeBot + kneeMaxH)} x2={wx(W3) + 30} y2={wy(kneeBot + kneeMaxH)} stroke={KW} strokeWidth="0.8" />
-              <text x={wx(W3) + 34} y={(wy(kneeBot) + wy(kneeBot + kneeMaxH)) / 2 + 3}
-                fill={KW} fontSize="7" fontFamily="ui-monospace,monospace" textAnchor="start">{kneeMaxH}&quot; knee</text>
+              {buildKneeH > 3 && (
+                <>
+                  <line x1={wx(W3) + 26} y1={wy(kneeBot)} x2={wx(W3) + 26} y2={wy(kneeBot + buildKneeH)} stroke={KW} strokeWidth="0.8" />
+                  <line x1={wx(W3) + 22} y1={wy(kneeBot)} x2={wx(W3) + 30} y2={wy(kneeBot)} stroke={KW} strokeWidth="0.8" />
+                  <line x1={wx(W3) + 22} y1={wy(kneeBot + buildKneeH)} x2={wx(W3) + 30} y2={wy(kneeBot + buildKneeH)} stroke={KW} strokeWidth="0.8" />
+                  <text x={wx(W3) + 34} y={(wy(kneeBot) + wy(kneeBot + buildKneeH)) / 2 + 3}
+                    fill={KW} fontSize="7" fontFamily="ui-monospace,monospace" textAnchor="start">{Math.round(buildKneeH)}&quot; knee</text>
+                </>
+              )}
+
+              {/* Build width dimension */}
+              <text x={wx(x0 + buildW / 2)} y={wy(f3y) + 14}
+                fill="#88a" fontSize="7" fontFamily="ui-monospace,monospace" textAnchor="middle">
+                {buildW}&quot; {buildStep === 1 ? "(STEP 1)" : ""}
+              </text>
             </g>
           );
         })()}
@@ -3258,7 +3859,7 @@ export function WallElevationView({
 
           return (
             <g>
-              {/* Partial third-floor wall — studs & plates */}
+              {/* Partial third-floor wall — studs, plates, loft door */}
               {frame && (
                 <g>
                   {f3Layout.bottomPlates.map(r => hoverRect(f3Offset(r), "plate"))}
@@ -3266,6 +3867,8 @@ export function WallElevationView({
                   {f3Layout.studs.map(r =>
                     hoverRect(f3Offset(r), "stud", undefined, `1½" × 5½" (2×6) — ${fmtDec(r.height)}" tall`)
                   )}
+                  {f3Layout.headers.map(r => hoverRect(f3Offset(r), "header"))}
+                  {f3Layout.openings.map(r => hoverRect(f3Offset(r), "opening"))}
                 </g>
               )}
 
@@ -3609,6 +4212,162 @@ export function WallElevationView({
             })()}
           </g>
         )}
+
+        {/* ── Roof Assembly ──
+            Batts: shown as yellow fills BETWEEN joist bays (N/S walls only — joist cross-sections visible).
+            Above-deck layers: thin colored strokes along the roof line.
+            N/S walls: horizontal strokes at FLOOR3_IN.
+            E/W walls: angled strokes following shed roof slope.
+            Colors match cut list chips for cross-reference. ── */}
+        {showRoof && (isNorth || isSouth || isEast || isWest) && (() => {
+          const wallLen = layout.totalLengthInches;
+
+          // Above-deck layers (everything ON TOP of the deck — not the batts)
+          const aboveDeckLayers: { id: string; label: string; color: string; sw: number; dash?: string }[] = [
+            { id: "roof-vapor",      label: "6-mil Poly Vapor Retarder",                        color: "#a78bfa", sw: 1.5 },
+            { id: "roof-polyiso",    label: "2\" Polyiso Rigid (R-11.4 continuous)",             color: "#6366f1", sw: 2.5 },
+            { id: "roof-taper",      label: "Tapered Polyiso (1/4\"/ft drainage slope)",         color: "#818cf8", sw: 2,   dash: "6 3" },
+            { id: "roof-coverboard", label: "1/2\" High-Density Cover Board",                   color: "#4338ca", sw: 1.5 },
+            { id: "roof-epdm",       label: "60-mil EPDM Membrane (fully adhered)",             color: "#1e1b4b", sw: 3 },
+          ];
+          const gap = 1.2;
+
+          if (isNorth || isSouth) {
+            // Joist bay geometry for batt fills (same as the TJI rendering section)
+            const JOIST_W_R = SW;
+            const jBase_R   = layout.wallHeightInches;
+            const jTop_R    = jBase_R + TJI_DEPTH;
+            const joistOff_R = JOIST_W_R / 2;
+            const lastJoist_R = wallLen - TJI_RIM_T - JOIST_W_R;
+            const jPositions: number[] = [];
+            for (let x = TJI_OC + joistOff_R; x <= lastJoist_R; x += TJI_OC) jPositions.push(x);
+
+            // Build bay edges: left rim → joist1 → joist2 → ... → right rim
+            const edges: number[] = [TJI_RIM_T]; // left edge = right side of left rim
+            for (const cx of jPositions) edges.push(cx - JOIST_W_R, cx + JOIST_W_R);
+            edges.push(wallLen - TJI_RIM_T); // right edge = left side of right rim
+
+            const deckTop = FLOOR3_IN;
+            return (
+              <g>
+                {/* ── Batt fills in joist bays ── */}
+                <g
+                  onMouseEnter={(e) => showTip(e, "roof-batts", "R-38 Mineral Wool Batts — friction-fit in TJI joist bays (9.5\" deep)",
+                    `${jPositions.length + 1} bays × ${fmtDec(TJI_DEPTH)}" deep`,
+                    `y: ${fmtDec(jBase_R)}" to ${fmtDec(jTop_R)}" — between joists`)}
+                  onMouseMove={moveTip}
+                  onMouseLeave={hideTip}
+                  style={{ cursor: "crosshair" }}
+                >
+                  {/* Fill each bay between pairs of edges */}
+                  {Array.from({ length: Math.floor(edges.length / 2) }, (_, i) => {
+                    const left  = edges[i * 2];
+                    const right = edges[i * 2 + 1];
+                    const bayW  = right - left;
+                    if (bayW < 1) return null;
+                    return (
+                      <rect key={`batt-${i}`}
+                        x={wx(left)} y={wy(jBase_R, TJI_DEPTH)}
+                        width={px(bayW)} height={px(TJI_DEPTH)}
+                        fill="rgba(234,179,8,0.3)" stroke="none" />
+                    );
+                  })}
+                </g>
+
+                {/* ── Above-deck layer strokes ── */}
+                {aboveDeckLayers.map((l, i) => {
+                  const yOff = deckTop + (i + 1) * gap;
+                  return (
+                    <g key={l.id}
+                      onMouseEnter={(e) => showTip(e, l.id, l.label,
+                        `${fmtDec(wallLen)}" wide`,
+                        `y: ${fmtDec(yOff)}" above slab`)}
+                      onMouseMove={moveTip}
+                      onMouseLeave={hideTip}
+                      style={{ cursor: "crosshair" }}
+                    >
+                      <line x1={wx(0)} y1={wy(yOff)} x2={wx(wallLen)} y2={wy(yOff)}
+                        stroke={l.color} strokeWidth={l.sw} strokeDasharray={l.dash}
+                        strokeLinecap="round" />
+                    </g>
+                  );
+                })}
+
+                {/* Key label */}
+                <text x={wx(wallLen / 2)} y={wy(deckTop + (aboveDeckLayers.length + 1) * gap) - 3}
+                  fontSize="6" fill="#4338ca" fontFamily="ui-monospace,monospace"
+                  textAnchor="middle" pointerEvents="none" fontWeight="700">
+                  ROOF ASSEMBLY — R-49 · 42 PSF · hover for layer detail
+                </text>
+              </g>
+            );
+          }
+
+          // East wall: roof deck is flat at FLOOR3_IN (slope runs parallel to view, not visible)
+          if (isEast) {
+            const deckTop = FLOOR3_IN;
+            return (
+              <g>
+                {aboveDeckLayers.map((l, i) => {
+                  const yOff = deckTop + (i + 1) * gap;
+                  return (
+                    <g key={l.id}
+                      onMouseEnter={(e) => showTip(e, l.id, l.label,
+                        `${fmtDec(wallLen)}" wide`,
+                        `y: ${fmtDec(yOff)}" above slab`)}
+                      onMouseMove={moveTip}
+                      onMouseLeave={hideTip}
+                      style={{ cursor: "crosshair" }}
+                    >
+                      <line x1={wx(0)} y1={wy(yOff)} x2={wx(wallLen)} y2={wy(yOff)}
+                        stroke={l.color} strokeWidth={l.sw} strokeDasharray={l.dash}
+                        strokeLinecap="round" />
+                    </g>
+                  );
+                })}
+                <text x={wx(wallLen / 2)} y={wy(deckTop + (aboveDeckLayers.length + 1) * gap) - 3}
+                  fontSize="6" fill="#4338ca" fontFamily="ui-monospace,monospace"
+                  textAnchor="middle" pointerEvents="none" fontWeight="700">
+                  ROOF ASSEMBLY — R-49 · 42 PSF · hover for layer detail
+                </text>
+              </g>
+            );
+          }
+
+          // West wall: above-deck strokes follow the shed roof slope
+          const LOW_H  = WEST_F3_LOW_H;
+          const HIGH_H = WEST_F3_HIGH_H;
+          const yLeft  = FLOOR3_IN + HIGH_H;
+          const yRight = FLOOR3_IN + LOW_H;
+
+          return (
+            <g>
+              {aboveDeckLayers.map((l, i) => {
+                const off = (i + 1) * gap;
+                return (
+                  <g key={l.id}
+                    onMouseEnter={(e) => showTip(e, l.id, l.label,
+                      `${fmtDec(wallLen)}" wide · slope ${LOW_H}" → ${HIGH_H}"`,
+                      `follows shed roof line`)}
+                    onMouseMove={moveTip}
+                    onMouseLeave={hideTip}
+                    style={{ cursor: "crosshair" }}
+                  >
+                    <line x1={wx(0)} y1={wy(yLeft + off)} x2={wx(wallLen)} y2={wy(yRight + off)}
+                      stroke={l.color} strokeWidth={l.sw} strokeDasharray={l.dash}
+                      strokeLinecap="round" />
+                  </g>
+                );
+              })}
+              {/* Key label */}
+              <text x={wx(wallLen / 2)} y={(wy(yLeft) + wy(yRight)) / 2 - 8}
+                fontSize="6" fill="#4338ca" fontFamily="ui-monospace,monospace"
+                textAnchor="middle" pointerEvents="none" fontWeight="700">
+                ROOF ASSEMBLY — R-49 · 42 PSF · hover for detail
+              </text>
+            </g>
+          );
+        })()}
 
         </g>{/* end exterior flip wrapper */}
       </svg>

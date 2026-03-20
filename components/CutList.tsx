@@ -77,6 +77,62 @@ function CatIcon({ cat }: { cat: string }) {
       <rect x="12" y="5" width="3" height="6" rx="0.5" fill="#8BA0B4" stroke="#556" strokeWidth="0.8" />
     </svg>
   );
+  if (cat === "Floor System") return (
+    <svg width={s} height={s} viewBox="0 0 16 16">
+      <rect x="1" y="3" width="14" height="3" rx="0.5" fill="#92400e" stroke="#333" strokeWidth="0.8" />
+      <rect x="1" y="7" width="14" height="3" rx="0.5" fill="#92400e" stroke="#333" strokeWidth="0.8" opacity="0.7" />
+      <rect x="1" y="11" width="14" height="2" rx="0.5" fill="#ca8a04" stroke="#333" strokeWidth="0.8" />
+    </svg>
+  );
+  if (cat === "Bathroom Floor") return (
+    <svg width={s} height={s} viewBox="0 0 16 16">
+      <rect x="2" y="2" width="3" height="8" rx="0.5" fill="#059669" stroke="#333" strokeWidth="0.8" />
+      <rect x="6" y="6" width="8" height="3" rx="0.5" fill="#059669" stroke="#333" strokeWidth="0.8" opacity="0.8" />
+      <rect x="2" y="11" width="12" height="2" rx="0.5" fill="#059669" stroke="#333" strokeWidth="0.8" opacity="0.5" />
+    </svg>
+  );
+  if (cat === "Stair Lumber") return (
+    <svg width={s} height={s} viewBox="0 0 16 16">
+      <line x1="2" y1="14" x2="14" y2="2" stroke="#78350f" strokeWidth="2" />
+      <rect x="5" y="6" width="4" height="2" rx="0.5" fill="#a08850" stroke="#333" strokeWidth="0.6" />
+      <rect x="9" y="3" width="4" height="2" rx="0.5" fill="#a08850" stroke="#333" strokeWidth="0.6" />
+    </svg>
+  );
+  if (cat === "Blocking") return (
+    <svg width={s} height={s} viewBox="0 0 16 16">
+      <rect x="2" y="4" width="12" height="4" rx="1" fill="#a16207" stroke="#333" strokeWidth="0.8" />
+      <rect x="2" y="9" width="12" height="4" rx="1" fill="#a16207" stroke="#333" strokeWidth="0.8" opacity="0.6" />
+    </svg>
+  );
+  if (cat === "Fire Blocking") return (
+    <svg width={s} height={s} viewBox="0 0 16 16">
+      <rect x="2" y="5" width="12" height="6" rx="1" fill="#dc2626" stroke="#991b1b" strokeWidth="0.8" />
+      <line x1="4" y1="7" x2="12" y2="7" stroke="#fff" strokeWidth="0.8" />
+      <line x1="4" y1="9" x2="12" y2="9" stroke="#fff" strokeWidth="0.8" />
+    </svg>
+  );
+  if (cat === "Stairwell Framing") return (
+    <svg width={s} height={s} viewBox="0 0 16 16">
+      <rect x="2" y="2" width="12" height="12" rx="1" fill="none" stroke="#7c3aed" strokeWidth="1.5" />
+      <line x1="2" y1="8" x2="14" y2="8" stroke="#7c3aed" strokeWidth="1" />
+      <line x1="8" y1="2" x2="8" y2="14" stroke="#7c3aed" strokeWidth="1" />
+    </svg>
+  );
+  if (cat === "Corner Framing") return (
+    <svg width={s} height={s} viewBox="0 0 16 16">
+      <rect x="2" y="2" width="5" height="12" rx="1" fill="#0d9488" stroke="#333" strokeWidth="0.8" />
+      <rect x="8" y="2" width="5" height="12" rx="1" fill="#0d9488" stroke="#333" strokeWidth="0.8" opacity="0.6" />
+    </svg>
+  );
+  if (cat === "Roof Assembly") return (
+    <svg width={s} height={s} viewBox="0 0 16 16">
+      {/* Layered roof stack: insulation + membrane + coping */}
+      <rect x="1" y="9" width="14" height="3" rx="0.5" fill="#6366f1" stroke="#333" strokeWidth="0.7" />
+      <rect x="1" y="6" width="14" height="3" rx="0.5" fill="#6366f1" stroke="#333" strokeWidth="0.7" opacity="0.5" />
+      <rect x="1" y="4" width="14" height="2" rx="0.5" fill="#1e1b4b" stroke="#333" strokeWidth="0.7" />
+      <rect x="0" y="2" width="16" height="2" rx="0.5" fill="#8BA0B4" stroke="#333" strokeWidth="0.7" />
+    </svg>
+  );
   return null;
 }
 
@@ -237,8 +293,23 @@ function CutRow({ line, showCat }: { line: CutLine; showCat: boolean }) {
       </div>
 
       {/* Label */}
-      <div style={{ minWidth: 0 }}>
+      <div style={{ minWidth: 0, display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
         <span style={{ fontWeight: showCat ? 600 : 400 }}>{line.label}</span>
+        {line.code && (
+          <span style={{
+            fontFamily: "ui-monospace, monospace",
+            fontSize: "0.68rem",
+            color: "#6b7280",
+            background: "#f3f4f6",
+            border: "1px solid #e5e7eb",
+            borderRadius: 3,
+            padding: "0 4px",
+            lineHeight: 1.5,
+            whiteSpace: "nowrap",
+          }}>
+            {line.code}
+          </span>
+        )}
       </div>
 
       {/* Cut length */}
@@ -368,7 +439,12 @@ export function CutList({
 
   // Sort all lines by canonical category order before grouping so that
   // repeated categories across floors (Plates → Openings → Plates …) merge correctly.
-  const CAT_ORDER: Record<string, number> = { "Plates": 0, "Full Studs": 1, "Short Studs": 2, "Headers": 3, "Openings": 4, "Hardware": 5 };
+  const CAT_ORDER: Record<string, number> = {
+    "Plates": 0, "Full Studs": 1, "Short Studs": 2, "Headers": 3,
+    "Corner Framing": 4, "Floor System": 5, "Bathroom Floor": 6,
+    "Stair Lumber": 7, "Blocking": 8, "Fire Blocking": 9,
+    "Stairwell Framing": 10, "Roof Assembly": 11, "Openings": 12, "Hardware": 13,
+  };
   allLines.sort((a, b) => (CAT_ORDER[a.category] ?? 9) - (CAT_ORDER[b.category] ?? 9));
 
   // Group lines by category

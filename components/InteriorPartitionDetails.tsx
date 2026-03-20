@@ -408,6 +408,36 @@ function DoorWallWithStairs({ showCMU, showStairs }: { showCMU: boolean; showSta
         );
       })}
 
+      {/* ═══ KICK PLATE — 2×4 at base of stringer (prevents stringer sliding) ═══ */}
+      {(() => {
+        const kpX = STAIR_WIDTH + 2 * STAIR_TREAD_DEPTH; // at the base/bottom of stringer
+        const kpW = 1.5; // 2×4 face
+        const kpH = 3.5; // 2×4 depth
+        return (
+          <g onMouseEnter={e => showTip(e, "2×4 Kick Plate", `${kpW}" × ${kpH}"`, `Prevents stringer sliding at base — nailed to floor`)} onMouseMove={moveTip} onMouseLeave={hideTip} style={{ cursor: "crosshair" }}>
+            <rect x={wx(kpX)} y={wy(0, kpH)} width={kpW * PX} height={kpH * PX}
+              fill="#d8d0b8" stroke="#555" strokeWidth="1.2" />
+          </g>
+        );
+      })()}
+
+      {/* ═══ STRINGER HANGER — Simpson LSCZ at top (stringer-to-rim connection) ═══ */}
+      {(() => {
+        // The stringer connects to the landing rim header at the top.
+        // Simpson LSCZ adjustable stringer connector is the standard hardware.
+        const hx = STAIR_WIDTH - STAIR_LAND_RIM_W;
+        const hy = LAND_JOIST + STAIR_LAND_JOIST_D * 0.3;
+        const sz = 3;
+        return (
+          <g>
+            <path d={`M ${wx(hx - sz)},${wy(hy + sz)} L ${wx(hx - sz)},${wy(hy - sz)} L ${wx(hx + sz)},${wy(hy - sz)}`}
+              fill="none" stroke="#c44" strokeWidth="2" strokeLinecap="round" />
+            <text x={wx(hx + sz) + 4} y={wy(hy) + 3}
+              fontSize="6" fill="#c44" fontFamily="ui-monospace,monospace" fontWeight="600">LSCZ</text>
+          </g>
+        );
+      })()}
+
       {/* Main floor line */}
       <line stroke="#333" strokeWidth="1.2"
         x1={wx(0)} y1={floorY} x2={wx(STAIR_END) + 8} y2={floorY} />
@@ -433,6 +463,8 @@ function DoorWallWithStairs({ showCMU, showStairs }: { showCMU: boolean; showSta
         { y: LAND_TOP - RH + STAIR_TREAD_T / 2,   fromX: STAIR_WIDTH + STAIR_TREAD_DEPTH / 2,    label: "5/4×12 TREAD BOARDS (×2)" },
         { y: (steps[0].topY + steps[0].botY) / 2, fromX: steps[0].rx,  label: "1×8 RISER BOARDS (×2)" },
         { y: WALL_H / 2,                        fromX: -FR_D / 2, label: "2×6 N. WALL BACKING" },
+        { y: 1.75,                             fromX: STAIR_WIDTH + 2 * STAIR_TREAD_DEPTH, label: "2×4 KICK PLATE" },
+        { y: LAND_JOIST + STAIR_LAND_JOIST_D * 0.3, fromX: STAIR_WIDTH - STAIR_LAND_RIM_W, label: "SIMPSON LSCZ STRINGER HANGER" },
       ].map(({ y, fromX, label }, i) => {
         const py = wy(y);
         const lx = callX;

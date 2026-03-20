@@ -284,6 +284,51 @@ export const BATH_CLEAT_H    = 3.5;
 export const BATH_SUBFLOOR_T = 0.75;
 export const BATH_LEDGER_T   = 1.5;
 
+// ═══ ROOF ASSEMBLY (shed roof over CMU shell) ══════════════════════
+//
+// Flat/low-slope shed roof for Alexandria, MN (climate zone 7).
+// Design roof snow load: 42 psf (MSBC 1303.1700, northern MN zone).
+// Roof area = CMU exterior footprint: 304" E-W × 184" N-S.
+//
+// HYBRID INSULATION — between joists + continuous rigid on top:
+//   Between joists: R-38 mineral wool batts in 9.5" TJI bays
+//   On top of deck:  2" rigid polyiso (R-11.4) continuous thermal break
+//   Combined: R-38 + R-11.4 = R-49.4 (meets IRC R-49 min for zone 7)
+//
+// Assembly from deck up:
+//   1. Structural deck (TJI + 3/4" OSB — same as floor system)
+//   2. R-38 mineral wool batts between TJI joists (9.5" bays)
+//   3. 6-mil poly vapor retarder on top of deck
+//   4. 2" rigid polyiso (continuous over joist flanges)
+//   5. Tapered polyiso cricket (1/4"/ft slope to scuppers)
+//   6. 1/2" high-density cover board
+//   7. 60-mil EPDM membrane (fully adhered)
+//   8. Parapet flashing + termination bar + metal coping cap
+
+export const ROOF_EXT_W         = 304;    // CMU exterior E-W (roof span)
+export const ROOF_EXT_D         = 184;    // CMU exterior N-S (roof span)
+
+// Between-joist insulation
+export const ROOF_BATT_R        = 38;     // R-38 mineral wool batts
+export const ROOF_BATT_T        = 9.5;    // fills full TJI joist depth
+
+// Above-deck continuous insulation
+export const ROOF_POLYISO_T     = 2;      // 2" rigid polyiso on top of deck
+export const ROOF_POLYISO_R     = 5.7;    // R-value per inch of polyiso
+export const ROOF_TOTAL_R       = 49.4;   // R-38 batts + R-11.4 polyiso
+
+export const ROOF_TAPER_MIN     = 0.5;    // tapered polyiso min thickness (low end)
+export const ROOF_TAPER_SLOPE   = 0.25;   // 1/4" per foot slope
+export const ROOF_COVERBOARD_T  = 0.5;    // 1/2" high-density cover board
+export const ROOF_EPDM_T        = 0.060;  // 60-mil EPDM membrane
+export const ROOF_PARAPET_H     = 8;      // CMU parapet above roof deck (1 course min)
+export const ROOF_FLASHING_LAP  = 12;     // membrane laps 12" up parapet wall (min)
+export const ROOF_COPING_W      = 12;     // metal coping cap width
+export const ROOF_SCUPPER_W     = 8;      // scupper opening width through CMU
+export const ROOF_SCUPPER_H     = 4;      // scupper opening height
+export const ROOF_SCUPPER_COUNT = 2;      // primary scuppers on low side
+export const ROOF_SNOW_LOAD     = 42;     // design roof snow load (psf)
+
 // ═══ EXTERIOR WALLS ═════════════════════════════════════════════════
 /**
  * CMU shell with wood frame built 1″ off the interior CMU face.
@@ -472,11 +517,22 @@ export const initialWalls: Record<string, WallElevation> = {
 // The third floor is a partial floor on the west end above the second-floor
 // staircase. The remainder of the north wall at this level is open balcony.
 export const THIRD_FLOOR_W  = 120;   // partial north wall width at 3rd floor (10' = 120")
-export const THIRD_FLOOR_H  = 116;   // third floor wall height — 9'8", matches other floors
+export const THIRD_FLOOR_H  = 90;    // third floor wall height — 7'6", loft level
 
 // West wall third floor — full width, shed roof sloping low-left → high-right
 export const WEST_F3_LOW_H  = 84;    // low end (left/west) wall height at 3rd floor — 7'0"
 export const WEST_F3_HIGH_H = 116;   // high end (right/east) wall height — matches north wall 3rd floor
+
+export const thirdFloorEastWall: WallElevation = {
+  id: "east-3" as WallId,
+  name: "East Wall — Third Floor (Loft Landing)",
+  totalLengthInches: 36,  // 36" wide — stair landing width at south end
+  wallHeightInches:  THIRD_FLOOR_H,
+  studSpacingOC: 16,
+  sections: [{ lengthInches: 36, label: "36\" loft landing (S end)" }],
+  openings: [],
+  anchorBolts: [],
+};
 
 export const thirdFloorNorthWall: WallElevation = {
   id: "north-3" as WallId,
@@ -484,8 +540,27 @@ export const thirdFloorNorthWall: WallElevation = {
   totalLengthInches: THIRD_FLOOR_W,
   wallHeightInches:  THIRD_FLOOR_H,
   studSpacingOC: 16,
-  sections: [{ lengthInches: THIRD_FLOOR_W, label: `${THIRD_FLOOR_W}" partial third floor (W end)` }],
-  openings: [],
+  sections: [
+    { lengthInches: 36, label: "36\" loft door RO" },
+    { lengthInches: 84, label: "84\" right of loft door" },
+  ],
+  openings: [
+    {
+      type: "door",
+      widthInches: 36,
+      heightInches: 80,
+      positionFromLeftInches: 0,
+      label: "3'-0\" × 6'-8\"",
+      openingSubtype: "Loft Access Door",
+      jackCount: 1,
+      headerSpec: {
+        depth: 5.5,
+        plies: 2,
+        label: "(2) 2×6 flat header",
+        note: "36\" span at loft level — double 2×6 flat header adequate under shed roof.",
+      },
+    },
+  ],
   anchorBolts: [],
 };
 
@@ -495,8 +570,28 @@ export const thirdFloorSouthWall: WallElevation = {
   totalLengthInches: THIRD_FLOOR_W,
   wallHeightInches:  THIRD_FLOOR_H,
   studSpacingOC: 16,
-  sections: [{ lengthInches: THIRD_FLOOR_W, label: `${THIRD_FLOOR_W}" partial third floor (W end)` }],
-  openings: [],
+  sections: [
+    { lengthInches: 80, label: "80\" left of loft door" },
+    { lengthInches: 36, label: "36\" loft door RO" },
+    { lengthInches: 4,  label: "4\" closure (R of door)" },
+  ],
+  openings: [
+    {
+      type: "door",
+      widthInches: 36,
+      heightInches: 80,
+      positionFromLeftInches: 80,
+      label: "3'-0\" × 6'-8\"",
+      openingSubtype: "Loft Access Door",
+      jackCount: 1,
+      headerSpec: {
+        depth: 5.5,
+        plies: 2,
+        label: "(2) 2×6 flat header",
+        note: "36\" span at loft level — double 2×6 flat header adequate under shed roof.",
+      },
+    },
+  ],
   anchorBolts: [],
 };
 
