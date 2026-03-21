@@ -278,7 +278,9 @@ export function WallElevationView({
 
   // Hover wrapper for layout Rects (optional dimsOverride for e.g. stud material size)
   const hoverRect = (r: Rect, className: string, extra?: React.SVGProps<SVGRectElement>, dimsOverride?: string) => (
-    <g key={r.id}
+    <g key={r.id} id={r.id}
+      data-label={r.label}
+      data-x={r.x} data-y={r.y} data-w={r.width} data-h={r.height}
       onMouseEnter={(e) => showTip(e, r.id, r.label,
         dimsOverride ?? `${fmtDec(r.width)}" × ${fmtDec(r.height)}"`,
         `x: ${fmtDec(r.x)}"  y: ${fmtDec(r.y)}"`)}
@@ -294,7 +296,9 @@ export function WallElevationView({
 
   // Hover wrapper for ad-hoc inline elements
   const hoverGroup = (id: string, label: string, w: number, h: number, xIn: number, yIn: number, children: React.ReactNode) => (
-    <g key={id}
+    <g key={id} id={id}
+      data-label={label}
+      data-x={xIn} data-y={yIn} data-w={w} data-h={h}
       onMouseEnter={(e) => showTip(e, id, label,
         `${fmtDec(w)}" × ${fmtDec(h)}"`,
         `x: ${fmtDec(xIn)}"  y: ${fmtDec(yIn)}"`)}
@@ -2434,8 +2438,11 @@ export function WallElevationView({
                       In elevation: headers show as end-grain marks, trimmers as doubled lines */}
                   {(() => {
                     // The stairwell opening at 3F deck level
-                    const openL = f2sl.stairEndX - 6;  // left edge of opening (a few inches past top landing)
-                    const openR = STAIR2_START_X + STAIR2_LAND_BOT_W + 6; // right edge
+                    // Left edge: 6" past the top landing (where stairs arrive at 3F)
+                    // Right edge: extends only to where the ascending stairs need headroom,
+                    // NOT past the stair start into the 2F approach area (which has full clearance above)
+                    const openL = f2sl.stairEndX - 6;
+                    const openR = STAIR2_START_X - STAIR2_LAND_BOT_W / 2;
                     const jBot3 = FLOOR3_IN - SUBFLOOR_T - TJI_DEPTH;
                     const jTop3 = FLOOR3_IN - SUBFLOOR_T;
                     const hdrW = 1.5;  // header face width (2×10)

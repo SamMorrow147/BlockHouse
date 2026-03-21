@@ -11,6 +11,34 @@ interface DownloadSvgButtonProps {
   filename: string;
 }
 
+/** Extract a manifest of every tagged element (those with data-label) from the SVG */
+function buildManifest(svg: SVGSVGElement) {
+  const entries: Record<string, { label: string; x: number; y: number; w: number; h: number }> = {};
+  svg.querySelectorAll("[data-label]").forEach((el) => {
+    const id = el.id;
+    if (!id) return;
+    entries[id] = {
+      label: el.getAttribute("data-label") ?? "",
+      x: parseFloat(el.getAttribute("data-x") ?? "0"),
+      y: parseFloat(el.getAttribute("data-y") ?? "0"),
+      w: parseFloat(el.getAttribute("data-w") ?? "0"),
+      h: parseFloat(el.getAttribute("data-h") ?? "0"),
+    };
+  });
+  return entries;
+}
+
+function downloadBlob(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export function DownloadSvgButton({ cardId, filename }: DownloadSvgButtonProps) {
   const handleDownload = useCallback(() => {
     const card = document.getElementById(cardId);
@@ -20,6 +48,9 @@ export function DownloadSvgButton({ cardId, filename }: DownloadSvgButtonProps) 
     const svgs = card.querySelectorAll("svg");
     const svg = Array.from(svgs).find((s) => !s.closest("button"));
     if (!svg) return;
+
+    // ── Build manifest BEFORE cloning (data-* attrs are on the live DOM) ──
+    const manifest = buildManifest(svg);
 
     // Clone so we don't mutate the live DOM
     const clone = svg.cloneNode(true) as SVGSVGElement;
@@ -35,18 +66,24 @@ export function DownloadSvgButton({ cardId, filename }: DownloadSvgButtonProps) 
       .replace(/ui-sans-serif/g, "Helvetica")
       .replace(/ui-serif/g, "Times");
 
-    const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
+    // Download the SVG
+    downloadBlob(
+      new Blob([svgString], { type: "image/svg+xml;charset=utf-8" }),
+      `${filename}.svg`
+    );
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${filename}.svg`;
-    document.body.appendChild(a);
-    a.click();
-
-    // Cleanup
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Download the companion manifest (same name, .json)
+    if (Object.keys(manifest).length > 0) {
+      const manifestJson = JSON.stringify(
+        { filename: `${filename}.svg`, exported: new Date().toISOString(), elements: manifest },
+        null,
+        2
+      );
+      downloadBlob(
+        new Blob([manifestJson], { type: "application/json;charset=utf-8" }),
+        `${filename}.manifest.json`
+      );
+    }
   }, [cardId, filename]);
 
   return (
