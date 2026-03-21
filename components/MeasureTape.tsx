@@ -55,6 +55,51 @@ function formatFtIn(totalInches: number): string {
   return `${ft}'-${inStr}`;
 }
 
+/* ─── Coordinate label helper ────────────────────────────────────────────── */
+
+function formatCoord(vx: number, vy: number, pxPerInch: number): string {
+  const xIn = vx / pxPerInch;
+  const yIn = vy / pxPerInch;
+  return `(${formatFtIn(Math.abs(xIn))}, ${formatFtIn(Math.abs(yIn))})`;
+}
+
+function formatCoordCompact(vx: number, vy: number, pxPerInch: number): string {
+  const xIn = vx / pxPerInch;
+  const yIn = vy / pxPerInch;
+  return `${formatFtIn(Math.abs(xIn))}, ${formatFtIn(Math.abs(yIn))}`;
+}
+
+/* ─── Pill label sub-component ──────────────────────────────────────────── */
+
+interface PillProps {
+  x: number; y: number;
+  label: string;
+  color: string;
+  anchor?: "start" | "end" | "middle";
+}
+
+function Pill({ x, y, label, color, anchor = "middle" }: PillProps) {
+  const charW = 7.2;
+  const padX = 8;
+  const lw = label.length * charW + padX * 2;
+  const lh = 20;
+  const lx = anchor === "end" ? x - lw : anchor === "start" ? x : x - lw / 2;
+  const ly = y - lh / 2;
+
+  return (
+    <g>
+      <rect x={lx} y={ly} width={lw} height={lh} rx="4"
+        fill="rgba(20,20,20,0.88)" stroke={color} strokeWidth="1" />
+      <text x={lx + lw / 2} y={ly + lh / 2 + 0.5}
+        fill="white" fontSize="11" fontWeight="600"
+        fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+        textAnchor="middle" dominantBaseline="middle">
+        {label}
+      </text>
+    </g>
+  );
+}
+
 /* ─── Component ──────────────────────────────────────────────────────────── */
 
 export function MeasureTape({ children, pxPerInch }: Props) {
@@ -144,9 +189,21 @@ export function MeasureTape({ children, pxPerInch }: Props) {
 
   const handleUp = useCallback(() => {
     setDragging(false);
-    setStart(null);
-    setEnd(null);
+    // Keep start/end visible so user can screenshot — clear on next mousedown
   }, []);
+
+  // Clear previous measurement when starting a new drag
+  const handleDownWrapped = useCallback(
+    (e: ReactMouseEvent) => {
+      // If there's a stale measurement, clear it first
+      if (!dragging && start && end) {
+        setStart(null);
+        setEnd(null);
+      }
+      handleDown(e);
+    },
+    [dragging, start, end, handleDown],
+  );
 
   /* ── Distance computation ────────────────────────────────────────────── */
 
@@ -158,13 +215,20 @@ export function MeasureTape({ children, pxPerInch }: Props) {
 
   const show = !!(start && end && (distInches > 0.25 || dragging));
 
+  /* ── Bounding rect (screen coords) ──────────────────────────────────── */
+
+  const rectX = start && end ? Math.min(start.sx, end.sx) : 0;
+  const rectY = start && end ? Math.min(start.sy, end.sy) : 0;
+  const rectW = start && end ? Math.abs(end.sx - start.sx) : 0;
+  const rectH = start && end ? Math.abs(end.sy - start.sy) : 0;
+
   /* ── Render ──────────────────────────────────────────────────────────── */
 
   return (
     <div
       ref={wrapRef}
       style={{ position: "relative", width: "100%" }}
-      onMouseDown={handleDown}
+      onMouseDown={handleDownWrapped}
       onMouseMove={handleMove}
       onMouseUp={handleUp}
       onMouseLeave={handleUp}
@@ -183,6 +247,20 @@ export function MeasureTape({ children, pxPerInch }: Props) {
             overflow: "visible",
           }}
         >
+          {/* ── Bounding rectangle ── */}
+          {rectW > 2 && rectH > 2 && (
+            <rect
+              x={rectX}
+              y={rectY}
+              width={rectW}
+              height={rectH}
+              fill="rgba(230,81,0,0.06)"
+              stroke="#e65100"
+              strokeWidth="1.2"
+              strokeDasharray="4 3"
+            />
+          )}
+
           {/* ── Measurement line ── */}
           <line
             x1={start!.sx}
@@ -195,10 +273,26 @@ export function MeasureTape({ children, pxPerInch }: Props) {
           />
 
           {/* ── Endpoint dots ── */}
-          <circle cx={start!.sx} cy={start!.sy} r="4.5" fill="#e65100" />
-          <circle cx={end!.sx} cy={end!.sy} r="4.5" fill="#e65100" />
+          <circle cx={start!.sx} cy={start!.sy} r="5" fill="#e65100" />
+          <circle cx={end!.sx} cy={end!.sy} r="5" fill="#e65100" />
 
-          {/* ── Distance label (follows cursor) ── */}
+          {/* ── Start coordinate label ── */}
+          <Pill
+            x={start!.sx}
+            y={start!.sy - 16}
+            label={`A ${formatCoordCompact(start!.vx, start!.vy, pxPerInch)}`}
+            color="#e65100"
+          />
+
+          {/* ── End coordinate label ── */}
+          <Pill
+            x={end!.sx}
+            y={end!.sy + 18}
+            label={`B ${formatCoordCompact(end!.vx, end!.vy, pxPerInch)}`}
+            color="#e65100"
+          />
+
+          {/* ── Distance label (at midpoint of line) ── */}
           {distInches > 0.25 &&
             (() => {
               const label = formatFtIn(distInches);
@@ -252,6 +346,41 @@ export function MeasureTape({ children, pxPerInch }: Props) {
                 </g>
               );
             })()}
+
+          {/* ── Coordinate info panel (bottom-left of bounding box) ── */}
+          {distInches > 0.25 && (() => {
+            const panelW = 220;
+            const panelH = 58;
+            const px = rectX;
+            const py = rectY + rectH + 8;
+
+            const startCoord = formatCoord(start!.vx, start!.vy, pxPerInch);
+            const endCoord = formatCoord(end!.vx, end!.vy, pxPerInch);
+            const widthIn = Math.abs(end!.vx - start!.vx) / pxPerInch;
+            const heightIn = Math.abs(end!.vy - start!.vy) / pxPerInch;
+
+            return (
+              <g>
+                <rect x={px} y={py} width={panelW} height={panelH} rx="6"
+                  fill="rgba(10,10,10,0.92)" stroke="#e65100" strokeWidth="1" />
+                <text x={px + 8} y={py + 16}
+                  fill="#ffab40" fontSize="10.5" fontWeight="700"
+                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace">
+                  A: {startCoord}
+                </text>
+                <text x={px + 8} y={py + 30}
+                  fill="#ffab40" fontSize="10.5" fontWeight="700"
+                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace">
+                  B: {endCoord}
+                </text>
+                <text x={px + 8} y={py + 46}
+                  fill="rgba(255,255,255,0.7)" fontSize="10" fontWeight="500"
+                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace">
+                  W: {formatFtIn(widthIn)}  H: {formatFtIn(heightIn)}  D: {formatFtIn(distInches)}
+                </text>
+              </g>
+            );
+          })()}
         </svg>
       )}
     </div>

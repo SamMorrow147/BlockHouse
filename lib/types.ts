@@ -5,6 +5,11 @@ export interface HeaderSpec {
   plies: number;   // number of members
   label: string;   // human readable e.g. "(3) 2×8 w/ OSB spacer"
   note?: string;   // engineer flag if needed
+  /** Flat 2× plate under the header (spans RO between jack studs) */
+  subPlate?: {
+    depth: number;   // plate thickness (e.g. 1.5" for a 2× laid flat)
+    label: string;   // e.g. "2×6 flat plate under header"
+  };
 }
 
 export interface Opening {

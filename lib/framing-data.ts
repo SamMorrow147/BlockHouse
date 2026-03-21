@@ -422,10 +422,14 @@ export const initialWalls: Record<string, WallElevation> = {
         positionFromLeftInches: 151,
         label: "3'-4\" × 4'-0\"",
         headerSpec: {
-          depth: 7.25,
+          depth: 5.5,
           plies: 1,
-          label: "(2) 2×8 solid — engineer to verify",
+          label: "(2) 2×6 solid — engineer to verify",
           note: "Renders as single solid piece. Final spec TBD by engineer.",
+          subPlate: {
+            depth: 1.5,
+            label: "2×6 flat plate under header",
+          },
         },
       },
     ],

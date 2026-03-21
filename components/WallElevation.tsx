@@ -457,34 +457,6 @@ export function WallElevationView({
           {layout.topPlates.map((r) => hoverRect(r, "plate"))}
           {layout.studs.map((r) => hoverRect(r, "stud", undefined,
             `Lumber: ${LUMBER_2x6_FACE}" × ${LUMBER_2x6_DEPTH}" (2×6)  ·  Length: ${fmtDec(r.height)}"`))}
-          {/* Stairway Transfer Load — doubled stud at stair-2 landing (north wall only) */}
-          {isNorth && (() => {
-            const studH = layout.wallHeightInches - PLATE_H - TOP_H;
-            const studX = STAIR2_START_X - SW - 26;
-            const r = {
-              id:     "north-stair-transfer-stud",
-              label:  "Stair Transfer Load — Doubled 2×6 Stud",
-              x:      studX,
-              y:      PLATE_H,
-              width:  SW,
-              height: studH,
-            };
-            const cx = wx(studX + SW / 2);
-            const cy = (wy(PLATE_H) + wy(layout.wallHeightInches - TOP_H)) / 2;
-            return (
-              <g>
-                {hoverRect(r, "stud king",
-                  { fill: "#fef3c7", stroke: "#c00", strokeWidth: 1.5 },
-                  `Doubled 2×6 (2× king stud) — Stairway Transfer Load  ·  stair landing at ${STAIR2_START_X}"`
-                )}
-                <text x={cx} y={cy} fontSize="6" fill="#b91c1c"
-                  fontFamily="ui-monospace,monospace" textAnchor="middle"
-                  transform={`rotate(-90, ${cx}, ${cy})`}>
-                  STL-1
-                </text>
-              </g>
-            );
-          })()}
           {layout.headers.map((r: HeaderRect) => {
             const spec = r.headerSpec;
             const isLVL = spec && spec.label.includes("LVL");
@@ -536,6 +508,7 @@ export function WallElevationView({
               </>
             );
           })}
+          {layout.subPlates.map((r) => hoverRect(r, "header"))}
           {layout.sills.map((r) => hoverRect(r, "header"))}
           {layout.openings.map((r) => hoverRect(r, "opening"))}
         </>}
@@ -1156,30 +1129,6 @@ export function WallElevationView({
                   </g>
                 );
               })}
-              {/* Stairway Transfer Load — extra doubled TJI at stair-2 landing (north wall only) */}
-              {wall.id === "north" && (() => {
-                const cx = STAIR2_START_X - SW - 26;  // center aligns with doubled stud below
-                return hoverGroup(
-                  "north-tji-stair-transfer",
-                  `Stairway Transfer Load — Doubled TJI  ·  stair landing at ${STAIR2_START_X}"`,
-                  JOIST_W * 2, TJI_DEPTH, cx - JOIST_W, jBase,
-                  <g>
-                    <rect x={wx(cx - JOIST_W)} y={wy(jBase, TJI_FLANGE_H)}
-                      width={px(JOIST_W * 2)} height={px(TJI_FLANGE_H)}
-                      fill="#fef3c7" stroke="#c00" strokeWidth="1.2" />
-                    <rect x={wx(cx - TJI_WEB_W / 2)} y={wy(jBase + TJI_FLANGE_H, TJI_DEPTH - TJI_FLANGE_H * 2)}
-                      width={px(TJI_WEB_W)} height={px(TJI_DEPTH - TJI_FLANGE_H * 2)}
-                      fill="#fef3c7" stroke="#c00" strokeWidth="1.2" />
-                    <rect x={wx(cx - JOIST_W)} y={wy(jTop - TJI_FLANGE_H, TJI_FLANGE_H)}
-                      width={px(JOIST_W * 2)} height={px(TJI_FLANGE_H)}
-                      fill="#fef3c7" stroke="#c00" strokeWidth="1.2" />
-                    {/* Label */}
-                    <text x={wx(cx)} y={wy(jBase + TJI_DEPTH / 2) + 3}
-                      fontSize="5.5" fill="#b91c1c" fontFamily="ui-monospace,monospace"
-                      textAnchor="middle">STL-1</text>
-                  </g>
-                );
-              })()}
               {hoverGroup(`${wall.id}-subfloor`, "Subfloor (3/4\" OSB)", wallLen, SUBFLOOR_T, 0, jTop,
                 <rect x={wx(0)} y={wy(jTop, SUBFLOOR_T)}
                   width={px(wallLen)} height={px(SUBFLOOR_T)}
@@ -1951,34 +1900,8 @@ export function WallElevationView({
           const BK_W = 3.5;
           const WH_W = 1.5;
 
-          // Soffit polygon: fills the enclosed area under the stringer.
-          // Point order traces the shape without crossing:
-          //   plumb-cut corner → down to floor → across floor → up to landing → seat cut
-          // The polygon auto-closes back to the plumb-cut via the diagonal stringer bottom edge.
-          const sBottomEdge = sl.stringer.bottomEdge;  // [[stairEndX, plumbCutY], [seatCutX, landH]]
-          const soffitPts = [
-            `${wx(sBottomEdge[0][0] - 4)},${wy(sBottomEdge[0][1] + 3)}`, // plumb-cut corner (left 4", up 4")
-            `${wx(sBottomEdge[0][0] - 24)},${wy(108)}`,             // step left 24" (was 126; −18″)
-            `${wx(sBottomEdge[0][0] - 26)},${wy(96)}`,              // step left 26" (was 114; −18″)
-            `${wx(sl.soffit.x1)},${wy(0)}`,                       // floor across to landing
-            `${wx(sl.soffit.x1)},${wy(sl.soffit.y2)}`,            // up to landing height
-            `${wx(sBottomEdge[1][0])},${wy(sBottomEdge[1][1])}`,  // seat cut (stringer base)
-          ].join(" ");
-
           return (
             <g>
-              {/* Soffit fill — area under stringer bottom edge to floor */}
-              <g id="north-stair-soffit" data-label="Stair Soffit"
-                onMouseEnter={(e) => showTip(e, "north-stair-soffit", "Stair Soffit — enclosed space under stringer",
-                  `${fmtDec(sl.totalRun)}" run × ${fmtDec(sl.totalRise)}" rise`,
-                  `Slope: ${fmtDec(sl.angleDeg)}°`)}
-                onMouseMove={moveTip}
-                onMouseLeave={hideTip}
-                style={{ cursor: "crosshair" }}
-              >
-              <polygon points={soffitPts} fill={FILL} stroke="none" />
-              </g>
-
               {/* Stringer — notched 2×12 board (driven by sl.stringer.allPoints) */}
               <g id="north-stringer" data-label="2x12 Notched Stringer"
                 onMouseEnter={(e) => showTip(e, "north-stringer", `2×12 Notched Stringer (×2) — ${fmtDec(STAIR_STRINGER_DEPTH)}" depth`,
@@ -1990,8 +1913,9 @@ export function WallElevationView({
               >
               <polygon
                 points={sl.stringer.allPoints.map(([x, y]) => `${wx(x)},${wy(y)}`).join(" ")}
-                  fill={FILL}
-                  stroke="none"
+                  fill="none"
+                  stroke="#444"
+                  strokeWidth="1.2"
                 />
               </g>
 
@@ -2017,22 +1941,6 @@ export function WallElevationView({
                 )}
               </g>
 
-              {/* Stringer bottom edge — hoverable line showing board sizing */}
-              <g id={`${wall.id}-stringer-line`} data-label="2x12 Stringer Board"
-                onMouseEnter={(e) => showTip(e, `${wall.id}-stringer-line`, "2×12 Stringer Board",
-                  `${fmtDec(STAIR_STRINGER_FACE)}" × ${fmtDec(STAIR_STRINGER_DEPTH)}" (face × depth)  ·  Length: ${fmtDec(sl.stringerLength)}"`,
-                  `Angle: ${sl.angleDeg.toFixed(1)}°`
-                )}
-                onMouseMove={moveTip}
-                onMouseLeave={hideTip}
-                style={{ cursor: "crosshair" }}
-              >
-                <line
-                  x1={wx(sBottomEdge[0][0] - 22)} y1={wy(sBottomEdge[0][1] - 12)}
-                  x2={wx(sl.soffit.x1)} y2={wy(0)}
-                  stroke="#8b7348" strokeWidth="2" strokeLinecap="square"
-                />
-              </g>
 
               {/* Landing */}
               {sl.landing && hoverGroup(`${wall.id}-landing`, "Landing", landR - landL, sl.landingHeight, landL, 0,
@@ -2051,6 +1959,22 @@ export function WallElevationView({
                   })}
                 </>
               )}
+
+              {/* Solid wood blocking — west of landing/post B, below stringer (matches field detail) */}
+              {(() => {
+                const WOOD_BLK_W = 16 + 4.25;   // 1′-4¼″
+                const WOOD_BLK_H = 12 + 1.25;   // 1′-1¼″
+                const blkL = landL - WOOD_BLK_W;
+                const blkBot = sl.landingHeight - WOOD_BLK_H;
+                return hoverGroup(
+                  "north-landing-solid-block",
+                  `Solid wood blocking (2× material) — landing / stringer bearing`,
+                  WOOD_BLK_W, WOOD_BLK_H, blkL, blkBot,
+                  <rect x={wx(blkL)} y={wy(blkBot, WOOD_BLK_H)}
+                    width={px(WOOD_BLK_W)} height={px(WOOD_BLK_H)}
+                    fill={FILL} stroke="#a09078" strokeWidth="0.6" />,
+                );
+              })()}
 
               {/* 2nd floor dashed line */}
               <line x1={wx(sl.stairEndX - 6)} y1={wy(FLOOR2_IN)} x2={wx(landR)} y2={wy(FLOOR2_IN)}
@@ -2081,6 +2005,73 @@ export function WallElevationView({
                 x={wx(landL - (sl.mainTreads * STAIR_TREAD_DEPTH) / 2)} y={wy(sl.landingHeight + sl.totalRise * 0.35) + 12}>
                 {`@ ${sl.riserHeight.toFixed(2)}\u2033 ea`}
               </text>
+
+              {/* ── Structural 4×4 Posts & Beams (stairwell load path) ──── */}
+              {(() => {
+                const P = STAIR_LAND_POST_W;  // 3.5" (4×4 actual)
+                const WALL_H = wall.wallHeightInches;  // 96" first floor wall
+
+                // ── Post positions in elevation X ──
+                // These match the floor plan 4×4 posts that carry stairwell loads.
+
+                // Post B — in north wall, at landing/stair junction.
+                // Plan X = NW_R = 144" (landing west edge = window west jamb).
+                // In elevation: landL.
+                const postBx = landL;
+
+                // Post C — in north wall, at top of stair (west end).
+                // Plan X = stairR (= 144 + MAIN_STEPS×TREAD in floor plan).
+                // In elevation: sl.stairEndX area.
+                const postCx = sl.stairEndX;
+
+                // All posts run slab (Y=0) to top plate (WALL_H) at minimum.
+                // They continue up through the 2nd floor zone to support the
+                // floor above (FLOOR2_IN = WALL_H + TJI_DEPTH + SUBFLOOR_T).
+                const postTop = FLOOR2_IN;
+
+                // ── Beam at joist level ──
+                // Doubled 2×10 header spanning between posts at T.O. wall (top plate
+                // level) to support interrupted TJI joists over the stairwell opening.
+                const BEAM_H = TJI_DEPTH;  // 9.5" — matches joist depth
+                const beamBot = WALL_H;    // sits on top plates
+                const beamTop = WALL_H + BEAM_H;
+
+                // Beam spans Post B → Post C; east end pulled in 3′-3″ (matches 2F header)
+                const beamL = Math.min(postBx, postCx);
+                const STAIRWELL_BEAM_R_TRIM_IN = 39;
+                const beamR = Math.max(postBx, postCx) + P - STAIRWELL_BEAM_R_TRIM_IN;
+
+                return (
+                  <g>
+                    {/* Post B — north wall at landing junction */}
+                    {hoverGroup("north-struct-post-B",
+                      `4×4 Structural Post (north wall — stairwell west edge, carries 2F loads)`,
+                      P, postTop, postBx, 0,
+                      <rect x={wx(postBx)} y={wy(postTop)}
+                        width={px(P)} height={px(postTop)}
+                        fill="#e8d8b8" stroke="#8b7348" strokeWidth="1.4" />
+                    )}
+
+                    {/* Post C — north wall at stair top (west end) */}
+                    {hoverGroup("north-struct-post-C",
+                      `4×4 Structural Post (north wall — stairwell east edge, carries 2F + 3F loads)`,
+                      P, postTop, postCx, 0,
+                      <rect x={wx(postCx)} y={wy(postTop)}
+                        width={px(P)} height={px(postTop)}
+                        fill="#e8d8b8" stroke="#8b7348" strokeWidth="1.4" />
+                    )}
+
+                    {/* Stairwell header beam — spans between posts at joist level */}
+                    {hoverGroup("north-stairwell-beam",
+                      `(2) 2×10 Stairwell Header Beam — carries interrupted TJI joists over stairwell`,
+                      beamR - beamL, BEAM_H, beamL, beamBot,
+                      <rect x={wx(beamL)} y={wy(beamTop)}
+                        width={px(beamR - beamL)} height={px(BEAM_H)}
+                        fill="rgba(200,180,140,0.6)" stroke="#8b6914" strokeWidth="1.2" />
+                    )}
+                  </g>
+                );
+              })()}
             </g>
           );
         })()}
@@ -2257,32 +2248,6 @@ export function WallElevationView({
               {/* Second floor stair run */}
               {stairs && (
                 <g>
-                  {/* Soffit fill — area under second floor stringer bottom edge to deck */}
-                  {(() => {
-                    const f2Bottom = f2sl.stringer.bottomEdge.map(([x, y]): [number, number] => [x, y + f2y]);
-                    const f2SoffitPts = [
-                      `${wx(f2Bottom[0][0] - 4)},${wy(f2Bottom[0][1] + 3)}`,  // plumb-cut corner (left 4", up 4")
-                      `${wx(f2Bottom[0][0] - 24)},${wy(f2y + 110)}`,           // step left 24" (−16" total from original +126)
-                      `${wx(f2Bottom[0][0] - 26)},${wy(f2y + 98)}`,            // step left 26" (−16" from original +114)
-                      `${wx(f2Bottom[0][0] + 85)},${wy(f2y + 2)}`,              // deck knee (−24" vs +109 — 2′ left)
-                      `${wx(f2sl.soffit.x1)},${wy(f2y)}`,                      // deck across to landing
-                      `${wx(f2sl.soffit.x1)},${wy(f2sl.soffit.y2 + f2y)}`,    // up to landing height
-                      `${wx(f2Bottom[1][0])},${wy(f2Bottom[1][1])}`,           // seat cut (stringer base)
-                    ].join(" ");
-                    return (
-                      <g id="f2-stair-soffit" data-label="2F Stair Soffit"
-                        onMouseEnter={(e) => showTip(e, "f2-stair-soffit", "2F Stair Soffit — enclosed space under stringer",
-                          `${fmtDec(f2sl.totalRun)}" run × ${fmtDec(f2sl.totalRise)}" rise`,
-                          `Slope: ${fmtDec(f2sl.angleDeg)}°`)}
-                        onMouseMove={moveTip}
-                        onMouseLeave={hideTip}
-                        style={{ cursor: "crosshair" }}
-                      >
-                        <polygon points={f2SoffitPts} fill={F2_FILL} stroke="none" />
-                      </g>
-                    );
-                  })()}
-
                   {/* Stringer — notched 2×12 board */}
                   <g id="f2-stringer" data-label="2x12 Notched Stringer"
                     onMouseEnter={(e) => showTip(e, "f2-stringer", `2×12 Notched Stringer (×2) — ${fmtDec(STAIR_STRINGER_DEPTH)}" depth`,
@@ -2294,8 +2259,9 @@ export function WallElevationView({
                   >
                   <polygon
                     points={f2StringerPts.map(([x, y]) => `${wx(x)},${wy(y)}`).join(" ")}
-                      fill={F2_FILL}
-                      stroke="none"
+                      fill="none"
+                      stroke="#444"
+                      strokeWidth="1.2"
                   />
                   </g>
 
@@ -2317,27 +2283,6 @@ export function WallElevationView({
                     )
                   )}
 
-                  {/* Stringer bottom edge — hoverable line showing board sizing */}
-                  {(() => {
-                    const f2Bottom = f2sl.stringer.bottomEdge.map(([x, y]): [number, number] => [x, y + f2y]);
-                    return (
-                      <g id="f2-stringer-line" data-label="2x12 Stringer Board"
-                        onMouseEnter={(e) => showTip(e, "f2-stringer-line", "2×12 Stringer Board",
-                          `${fmtDec(STAIR_STRINGER_FACE)}" × ${fmtDec(STAIR_STRINGER_DEPTH)}" (face × depth)  ·  Length: ${fmtDec(f2sl.stringerLength)}"`,
-                          `Angle: ${f2sl.angleDeg.toFixed(1)}°`
-                        )}
-                        onMouseMove={moveTip}
-                        onMouseLeave={hideTip}
-                        style={{ cursor: "crosshair" }}
-                      >
-                        <line
-                          x1={wx(f2Bottom[0][0] - 34)} y1={wy(f2Bottom[0][1])}
-                          x2={wx(f2Bottom[1][0] - 24)} y2={wy(f2Bottom[1][1])}
-                          stroke="#8b7348" strokeWidth="2" strokeLinecap="square"
-                        />
-                      </g>
-                    );
-                  })()}
 
                   {/* ═══ KICK PLATE — 2×4 at bottom of stringer ═══ */}
                   {(() => {
@@ -2346,38 +2291,6 @@ export function WallElevationView({
                       <rect x={wx(kp.x)} y={wy(kp.y + f2y, kp.height)}
                         width={px(kp.width)} height={px(kp.height)}
                         fill="#d8d0b8" stroke="#555" strokeWidth="1.2" />
-                    );
-                  })()}
-
-                  {/* ═══ TOP LEDGER — 2×10 at upper floor rim (stringer bears against this) ═══ */}
-                  {(() => {
-                    const tl = f2sl.topLedger;
-                    return hoverGroup(`f2-${tl.id}`, tl.label, tl.width, tl.height, tl.x, tl.y + f2y,
-                      <rect x={wx(tl.x)} y={wy(tl.y + f2y, tl.height)}
-                        width={px(tl.width)} height={px(tl.height)}
-                        fill="#d8ccb0" stroke="#8b7348" strokeWidth="1.4" />
-                    );
-                  })()}
-
-                  {/* ═══ STRINGER HANGERS — Simpson LSCZ at top connection ═══
-                      Shown as small bracket symbols at the plumb cut / rim connection.
-                      Per IRC R311.7.5: stringer must be mechanically fastened to
-                      supporting header with approved metal connector. */}
-                  {(() => {
-                    const tl = f2sl.topLedger;
-                    const hx = tl.x + tl.width / 2;
-                    const hy = tl.y + f2y + tl.height * 0.3;
-                    const sz = 4;
-                    return (
-                      <g id="f2-stringer-hanger" data-label="Simpson LSCZ Hanger">
-                        {/* Bracket symbol — L-shaped connector */}
-                        <path d={`M ${wx(hx - sz)},${wy(hy + sz)} L ${wx(hx - sz)},${wy(hy - sz)} L ${wx(hx + sz)},${wy(hy - sz)}`}
-                          fill="none" stroke="#c44" strokeWidth="2" strokeLinecap="round" />
-                        <text x={wx(hx) + 8} y={wy(hy) + 3}
-                          fontSize="6" fill="#c44" fontFamily="ui-monospace,monospace" fontWeight="600">
-                          LSCZ
-                        </text>
-                      </g>
                     );
                   })()}
 
@@ -2430,6 +2343,50 @@ export function WallElevationView({
                     {STAIR2_LAND_BOT_W}&quot; APPROACH (AT DECK)
                   </text>
 
+                  {/* ═══ STAIRWELL BOX FRAMING at 2F deck (hole for 1F stair) ═══
+                      Same box detail as 3F — headers, trimmer lines, void fill — at 2F joist plane. */}
+                  {(() => {
+                    const STAIRWELL_BOX_SHIFT_X = 13.5; // 7½″ + 6″ east
+                    const openL = f2sl.stairEndX - 6 + STAIRWELL_BOX_SHIFT_X;
+                    const openR = STAIR2_START_X - STAIR2_LAND_BOT_W / 2 + STAIRWELL_BOX_SHIFT_X;
+                    const jBot2 = FLOOR2_IN - SUBFLOOR_T - TJI_DEPTH;
+                    const jTop2 = FLOOR2_IN - SUBFLOOR_T;
+                    const hdrW = 1.5;
+
+                    return (
+                      <g>
+                        {hoverGroup("f2deck-well-hdr-L", `2×10 Header (stairwell box — 2F deck)`, hdrW, TJI_DEPTH, openL, jBot2,
+                          <rect x={wx(openL)} y={wy(jBot2, TJI_DEPTH)}
+                            width={px(hdrW)} height={px(TJI_DEPTH)}
+                            fill="#d8c8a0" stroke="#8b7348" strokeWidth="1.5" />
+                        )}
+                        {hoverGroup("f2deck-well-hdr-R", `2×10 Header (stairwell box — 2F deck)`, hdrW, TJI_DEPTH, openR - hdrW, jBot2,
+                          <rect x={wx(openR - hdrW)} y={wy(jBot2, TJI_DEPTH)}
+                            width={px(hdrW)} height={px(TJI_DEPTH)}
+                            fill="#d8c8a0" stroke="#8b7348" strokeWidth="1.5" />
+                        )}
+                        <line id="f2deck-well-trimmer-bot" x1={wx(openL)} y1={wy(jBot2)} x2={wx(openR)} y2={wy(jBot2)}
+                          stroke="#8b7348" strokeWidth="2.5" />
+                        <line id="f2deck-well-trimmer-top" x1={wx(openL)} y1={wy(jTop2)} x2={wx(openR)} y2={wy(jTop2)}
+                          stroke="#8b7348" strokeWidth="2.5" />
+                        <rect x={wx(openL + hdrW)} y={wy(jBot2, TJI_DEPTH)}
+                          width={px(openR - openL - hdrW * 2)} height={px(TJI_DEPTH)}
+                          fill="rgba(255,250,240,0.7)" stroke="none" />
+                        {[openL, openR - hdrW].map((hx, i) => (
+                          <g key={`f2deck-hgr${i}`}>
+                            <path d={`M ${wx(hx + hdrW / 2 - 2)},${wy(jBot2 + TJI_DEPTH * 0.4 + 2)} L ${wx(hx + hdrW / 2 - 2)},${wy(jBot2 + TJI_DEPTH * 0.4 - 2)} L ${wx(hx + hdrW / 2 + 2)},${wy(jBot2 + TJI_DEPTH * 0.4 - 2)}`}
+                              fill="none" stroke="#c44" strokeWidth="1.2" strokeLinecap="round" />
+                          </g>
+                        ))}
+                        <text x={wx((openL + openR) / 2)} y={wy(jBot2 - 2)}
+                          fontSize="6" fill="#8b7348" fontFamily="ui-monospace,monospace"
+                          textAnchor="middle" fontWeight="600">
+                          STAIRWELL BOX (2F DECK) — DBL TRIMMERS + 2×10 HEADERS + LUS210 HANGERS
+                        </text>
+                      </g>
+                    );
+                  })()}
+
                   {/* ═══ STAIRWELL BOX FRAMING at 3F deck ═══
                       The stairwell opening in the 3rd floor deck is framed as a box:
                       - 2x Headers (run N-S, perpendicular to joists) at each end
@@ -2441,8 +2398,9 @@ export function WallElevationView({
                     // Left edge: 6" past the top landing (where stairs arrive at 3F)
                     // Right edge: extends only to where the ascending stairs need headroom,
                     // NOT past the stair start into the 2F approach area (which has full clearance above)
-                    const openL = f2sl.stairEndX - 6;
-                    const openR = STAIR2_START_X - STAIR2_LAND_BOT_W / 2;
+                    const STAIRWELL_BOX_SHIFT_X = 13.5; // 7½″ + 6″ east
+                    const openL = f2sl.stairEndX - 6 + STAIRWELL_BOX_SHIFT_X;
+                    const openR = STAIR2_START_X - STAIR2_LAND_BOT_W / 2 + STAIRWELL_BOX_SHIFT_X;
                     const jBot3 = FLOOR3_IN - SUBFLOOR_T - TJI_DEPTH;
                     const jTop3 = FLOOR3_IN - SUBFLOOR_T;
                     const hdrW = 1.5;  // header face width (2×10)
@@ -2450,13 +2408,13 @@ export function WallElevationView({
                     return (
                       <g>
                         {/* Left header (end-grain, at top-of-stair end) */}
-                        {hoverGroup("f2-well-hdr-L", `2×10 Header (stairwell box)`, hdrW, TJI_DEPTH, openL, jBot3,
+                        {hoverGroup("f2-well-hdr-L", `2×10 Header (stairwell box — 3F deck)`, hdrW, TJI_DEPTH, openL, jBot3,
                           <rect x={wx(openL)} y={wy(jBot3, TJI_DEPTH)}
                             width={px(hdrW)} height={px(TJI_DEPTH)}
                             fill="#d8c8a0" stroke="#8b7348" strokeWidth="1.5" />
                         )}
                         {/* Right header */}
-                        {hoverGroup("f2-well-hdr-R", `2×10 Header (stairwell box)`, hdrW, TJI_DEPTH, openR - hdrW, jBot3,
+                        {hoverGroup("f2-well-hdr-R", `2×10 Header (stairwell box — 3F deck)`, hdrW, TJI_DEPTH, openR - hdrW, jBot3,
                           <rect x={wx(openR - hdrW)} y={wy(jBot3, TJI_DEPTH)}
                             width={px(hdrW)} height={px(TJI_DEPTH)}
                             fill="#d8c8a0" stroke="#8b7348" strokeWidth="1.5" />
@@ -2481,7 +2439,7 @@ export function WallElevationView({
                         <text x={wx((openL + openR) / 2)} y={wy(jBot3 - 2)}
                           fontSize="6" fill="#8b7348" fontFamily="ui-monospace,monospace"
                           textAnchor="middle" fontWeight="600">
-                          STAIRWELL BOX — DBL TRIMMERS + 2×10 HEADERS + LUS210 HANGERS
+                          STAIRWELL BOX (3F DECK) — DBL TRIMMERS + 2×10 HEADERS + LUS210 HANGERS
                         </text>
                       </g>
                     );
@@ -2513,6 +2471,46 @@ export function WallElevationView({
                     y={wy(f2y + f2sl.totalRise * 0.35) + 12}>
                     {`@ ${f2sl.riserHeight.toFixed(2)}\u2033 ea`}
                   </text>
+
+                  {/* ── 2F Structural 4×4 Posts (stairwell load path, continued) ── */}
+                  {(() => {
+                    const P = STAIR_LAND_POST_W;  // 3.5" (4×4 actual)
+
+                    // Same elevation X positions as the 1st floor structural posts.
+                    // Recompute from plan coordinates (1F stair scope not accessible here).
+                    const f1LandL = wall.openings[0].positionFromLeftInches;  // = 151
+                    const f1MainTreads = STAIR_TOTAL_RISERS - STAIR_LAND_RISERS - 1; // 11
+                    const f1StairEndX = f1LandL - f1MainTreads * STAIR_TREAD_DEPTH;  // 151 - 99 = 52
+
+                    const postBx = f1LandL;
+                    const postCx = f1StairEndX;
+
+                    // Posts run from 2F deck (f2y) up to 3F deck (FLOOR3_IN)
+                    const postBot = f2y;
+                    const postTop = FLOOR3_IN;
+
+                    return (
+                      <g>
+                        {/* Post B — north wall at landing junction (continuous from 1F) */}
+                        {hoverGroup("f2-struct-post-B",
+                          `4×4 Structural Post (north wall — continuous, carries 3F loads)`,
+                          P, postTop - postBot, postBx, postBot,
+                          <rect x={wx(postBx)} y={wy(postTop)}
+                            width={px(P)} height={px(postTop - postBot)}
+                            fill="#e8d8b8" stroke="#8b7348" strokeWidth="1.4" />
+                        )}
+
+                        {/* Post C — north wall at stair top (continuous from 1F) */}
+                        {hoverGroup("f2-struct-post-C",
+                          `4×4 Structural Post (north wall — continuous, carries 3F + roof loads)`,
+                          P, postTop - postBot, postCx, postBot,
+                          <rect x={wx(postCx)} y={wy(postTop)}
+                            width={px(P)} height={px(postTop - postBot)}
+                            fill="#e8d8b8" stroke="#8b7348" strokeWidth="1.4" />
+                        )}
+                      </g>
+                    );
+                  })()}
                 </g>
               )}
 
@@ -2708,6 +2706,8 @@ export function WallElevationView({
                       </>
                     );
                   })}
+                  {/* Sub-plates under headers */}
+                  {s2Layout.subPlates.map(r => hoverRect(s2Offset(r), "header"))}
                   {/* Sills */}
                   {s2Layout.sills.map(r => hoverRect(s2Offset(r), "header"))}
                   {/* Opening outlines */}
@@ -3020,6 +3020,7 @@ export function WallElevationView({
                   {/* King & jack studs, header from layout (door framing) */}
                   {f3Layout.studs.map(r => hoverRect(f3Offset(r), r.label.includes("king") ? "stud" : r.label.includes("jack") ? "stud jack" : "stud"))}
                   {f3Layout.headers.map(r => hoverRect(f3Offset(r), "header"))}
+                  {f3Layout.subPlates.map(r => hoverRect(f3Offset(r), "header"))}
                   {f3Layout.openings.map(r => hoverRect(f3Offset(r), "opening"))}
                 </g>
               )}
@@ -3328,6 +3329,8 @@ export function WallElevationView({
                       </>
                     );
                   })}
+                  {/* Second floor — sub-plates under headers */}
+                  {f2Layout.subPlates.map(r => hoverRect(f2Offset(r), "header"))}
                   {/* Second floor — sills */}
                   {f2Layout.sills.map(r => hoverRect(f2Offset(r), "header"))}
                   {/* Second floor — opening outlines (dashed) */}
@@ -3877,6 +3880,7 @@ export function WallElevationView({
                     hoverRect(f3Offset(r), "stud", undefined, `1½" × 5½" (2×6) — ${fmtDec(r.height)}" tall`)
                   )}
                   {f3Layout.headers.map(r => hoverRect(f3Offset(r), "header"))}
+                  {f3Layout.subPlates.map(r => hoverRect(f3Offset(r), "header"))}
                   {f3Layout.openings.map(r => hoverRect(f3Offset(r), "opening"))}
                 </g>
               )}

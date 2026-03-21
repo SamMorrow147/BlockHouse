@@ -23,7 +23,8 @@ export interface WallLayout {
   bottomPlates: Rect[];
   topPlates: Rect[];
   headers: HeaderRect[];
-  sills: Rect[];     // rough sill plates (single piece, windows only)
+  subPlates: Rect[];  // flat 2× plates under headers (spans RO between jacks)
+  sills: Rect[];      // rough sill plates (single piece, windows only)
   studs: Rect[];
   openings: Rect[];
   wallHeightInches: number;
@@ -50,6 +51,7 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
     sills: [],
     topPlates: [],
     headers: [],
+    subPlates: [],
     studs:   [],
     openings: [],
     wallHeightInches:   H,
@@ -214,6 +216,17 @@ export function computeWallLayout(wall: WallElevation): WallLayout {
       width: oRight - oLeft - 2 * SW, height: hDepth,
       headerSpec: op.headerSpec,
     });
+
+    // Flat 2× plate under header (spans RO between jack inner faces)
+    if (op.headerSpec?.subPlate) {
+      const sp = op.headerSpec.subPlate;
+      layout.subPlates.push({
+        id: `${wId}-sub-plate-${openIdx}`,
+        label: sp.label,
+        x: oLeft + SW, y: oTop - sp.depth,
+        width: oRight - oLeft - 2 * SW, height: sp.depth,
+      });
+    }
 
     layout.openings.push({
       id: `${wId}-open-${openIdx++}`, label: `${op.type === "door" ? "Door" : "Window"} Opening`,

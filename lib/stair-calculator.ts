@@ -66,9 +66,11 @@ export function computeStairLayout(config: StairConfig): StairLayout {
   const perpY     = (treadDepth  / hyp) * stringerDepth;
 
   // Raw perpendicular-offset bottom edge (before trimming)
-  const botRightX = stairStartX + perpX;
+  // The offset moves LEFT (−X) and DOWN (−Y) from the notch hypotenuse,
+  // placing the bottom edge on the soffit side of the stringer.
+  const botRightX = stairStartX - perpX;
   const botRightY = landingHeight - perpY;
-  const botLeftX  = stairEndX   + perpX;
+  const botLeftX  = stairEndX   - perpX;
   const botLeftY  = (landingHeight + mainRisers * riserHeight) - perpY;
 
   // Plumb cut at top: vertical cut at x = stairEndX
@@ -86,8 +88,16 @@ export function computeStairLayout(config: StairConfig): StairLayout {
     [seatCutX, landingHeight],    // seat cut (bottom end, at bearing surface)
   ];
 
-  // Combined polygon (topEdge → bottomEdge, closed)
-  const allPoints: [number, number][] = [...topEdge, ...bottomEdge];
+  // Combined polygon: topEdge → plumb cut → bottom diagonal → seat cut
+  // Plumb cut is a vertical face at stairEndX (the last riser line).
+  // Bottom diagonal is the straight bottom edge of the 2×12 board.
+  // Seat cut is a horizontal bearing surface back to stairStartX.
+  const allPoints: [number, number][] = [
+    ...topEdge,
+    [stairEndX, plumbCutY],         // plumb cut (vertical drop at last riser)
+    [seatCutX, landingHeight],      // bottom diagonal meets landing level
+    [stairStartX, landingHeight],   // seat cut (horizontal bearing surface)
+  ];
 
   // Throat depth: perpendicular distance from notch inner corner to bottom edge
   const throatDepth = stringerDepth - (treadDepth * riserHeight / hyp);
