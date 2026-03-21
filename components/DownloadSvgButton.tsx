@@ -11,19 +11,40 @@ interface DownloadSvgButtonProps {
   filename: string;
 }
 
-/** Extract a manifest of every tagged element (those with data-label) from the SVG */
+/** Extract a manifest of every tagged element (those with id) from the SVG */
 function buildManifest(svg: SVGSVGElement) {
-  const entries: Record<string, { label: string; x: number; y: number; w: number; h: number }> = {};
-  svg.querySelectorAll("[data-label]").forEach((el) => {
+  const entries: Record<string, {
+    label: string; x: number; y: number; w: number; h: number;
+    bbox?: { x: number; y: number; w: number; h: number };
+  }> = {};
+
+  svg.querySelectorAll("[id]").forEach((el) => {
     const id = el.id;
     if (!id) return;
-    entries[id] = {
-      label: el.getAttribute("data-label") ?? "",
+    const label = el.getAttribute("data-label");
+    if (!label) return;
+
+    const entry: typeof entries[string] = {
+      label,
       x: parseFloat(el.getAttribute("data-x") ?? "0"),
       y: parseFloat(el.getAttribute("data-y") ?? "0"),
       w: parseFloat(el.getAttribute("data-w") ?? "0"),
       h: parseFloat(el.getAttribute("data-h") ?? "0"),
     };
+
+    // For groups with multiple child shapes, compute pixel bounding box
+    // so the diff algorithm doesn't rely on just the first child rect
+    if (el instanceof SVGGraphicsElement) {
+      try {
+        const bb = el.getBBox();
+        if (bb.width > 0 && bb.height > 0) {
+          entry.bbox = { x: Math.round(bb.x * 100) / 100, y: Math.round(bb.y * 100) / 100,
+                         w: Math.round(bb.width * 100) / 100, h: Math.round(bb.height * 100) / 100 };
+        }
+      } catch { /* getBBox can throw on hidden elements */ }
+    }
+
+    entries[id] = entry;
   });
   return entries;
 }

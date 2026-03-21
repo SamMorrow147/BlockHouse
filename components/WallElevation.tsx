@@ -762,7 +762,7 @@ export function WallElevationView({
                 return (
                   <g key={`seat${i}`}>
                     {/* Ledger cleat — vertical bearer beside stud (not on top) */}
-                    <g
+                    <g id={`north-bath-cleat-${i}`}
                       onMouseEnter={(e) => showTip(e, `north-bath-cleat-${i}`, `2×4 Ledger Cleat — bears bath joist, toe-nailed to bottom plate`,
                         `${fmtDec(SW)}" × ${fmtDec(ledgerH)}" (face × height)`,
                         `x: ${fmtDec(ledgerX)}"  y: ${fmtDec(PLATE_H)}"`)}
@@ -776,7 +776,7 @@ export function WallElevationView({
                         fill="#fff" stroke={SC} strokeWidth="0.7" />
                     </g>
                     {/* 2×6 joist cross-section — beside its cleat */}
-                    <g
+                    <g id={`north-bath-joist-${i}`}
                       onMouseEnter={(e) => showTip(e, `north-bath-joist-${i}`, `2×6 Bath Floor Joist — spans N-S from north wall to partition`,
                         `${fmtDec(SW)}" × ${fmtDec(BATH_JOIST_H)}" (face × depth)`,
                         `x: ${fmtDec(joistX)}"  y: ${fmtDec(jBot)}"`)}
@@ -794,7 +794,7 @@ export function WallElevationView({
               })}
 
               {/* Subfloor — 3/4" OSB across full partition length */}
-              <g
+              <g id="north-bath-subfloor" data-label="OSB Bath Subfloor"
                 onMouseEnter={(e) => showTip(e, "north-bath-subfloor", `3/4" OSB Bath Subfloor — raised bathroom platform deck`,
                   `${fmtDec(wallLen)}" × ${fmtDec(BATH_SUBFLOOR_T)}"`,
                   `y: ${fmtDec(sfBot)}" — top at ${fmtDec(PLAT_H2)}" (matches stair landing height)`)}
@@ -1968,7 +1968,7 @@ export function WallElevationView({
           return (
             <g>
               {/* Soffit fill — area under stringer bottom edge to floor */}
-              <g
+              <g id="north-stair-soffit" data-label="Stair Soffit"
                 onMouseEnter={(e) => showTip(e, "north-stair-soffit", "Stair Soffit — enclosed space under stringer",
                   `${fmtDec(sl.totalRun)}" run × ${fmtDec(sl.totalRise)}" rise`,
                   `Slope: ${fmtDec(sl.angleDeg)}°`)}
@@ -1980,7 +1980,7 @@ export function WallElevationView({
               </g>
 
               {/* Stringer — notched 2×12 board (driven by sl.stringer.allPoints) */}
-              <g
+              <g id="north-stringer" data-label="2x12 Notched Stringer"
                 onMouseEnter={(e) => showTip(e, "north-stringer", `2×12 Notched Stringer (×2) — ${fmtDec(STAIR_STRINGER_DEPTH)}" depth`,
                   `${fmtDec(sl.stringerLength)}" diagonal · throat: ${fmtDec(sl.stringer.throatDepth)}"`,
                   `${sl.stringer.notches.length} notches · IRC min throat 3.5" ✓`)}
@@ -2018,7 +2018,7 @@ export function WallElevationView({
               </g>
 
               {/* Stringer bottom edge — hoverable line showing board sizing */}
-              <g
+              <g id={`${wall.id}-stringer-line`} data-label="2x12 Stringer Board"
                 onMouseEnter={(e) => showTip(e, `${wall.id}-stringer-line`, "2×12 Stringer Board",
                   `${fmtDec(STAIR_STRINGER_FACE)}" × ${fmtDec(STAIR_STRINGER_DEPTH)}" (face × depth)  ·  Length: ${fmtDec(sl.stringerLength)}"`,
                   `Angle: ${sl.angleDeg.toFixed(1)}°`
@@ -2059,7 +2059,7 @@ export function WallElevationView({
                 textAnchor="end" fontSize="9" fill={BK}>2ND FLOOR</text>
 
               {/* Top-of-stair landing indicator — 36" landing at 2nd floor level */}
-              <rect x={wx(SW)} y={wy(FLOOR2_IN, 4)}
+              <rect id="north-stair-1f-landing-indicator" x={wx(SW)} y={wy(FLOOR2_IN, 4)}
                 width={px(STAIR_WIDTH)} height={px(4)}
                 fill="none" stroke="#1a55bb" strokeWidth="0.8" strokeDasharray="6 3" />
               <text fill="#1a55bb" fontSize="9" fontFamily="ui-monospace,monospace"
@@ -2270,7 +2270,7 @@ export function WallElevationView({
                       `${wx(f2Bottom[1][0])},${wy(f2Bottom[1][1])}`,           // seat cut (stringer base)
                     ].join(" ");
                     return (
-                      <g
+                      <g id="f2-stair-soffit" data-label="2F Stair Soffit"
                         onMouseEnter={(e) => showTip(e, "f2-stair-soffit", "2F Stair Soffit — enclosed space under stringer",
                           `${fmtDec(f2sl.totalRun)}" run × ${fmtDec(f2sl.totalRise)}" rise`,
                           `Slope: ${fmtDec(f2sl.angleDeg)}°`)}
@@ -2284,7 +2284,7 @@ export function WallElevationView({
                   })()}
 
                   {/* Stringer — notched 2×12 board */}
-                  <g
+                  <g id="f2-stringer" data-label="2x12 Notched Stringer"
                     onMouseEnter={(e) => showTip(e, "f2-stringer", `2×12 Notched Stringer (×2) — ${fmtDec(STAIR_STRINGER_DEPTH)}" depth`,
                       `${fmtDec(f2sl.stringerLength)}" diagonal · throat: ${fmtDec(f2sl.stringer.throatDepth)}"`,
                       `${f2sl.stringer.notches.length} notches · straight run, no landing`)}
@@ -2321,7 +2321,7 @@ export function WallElevationView({
                   {(() => {
                     const f2Bottom = f2sl.stringer.bottomEdge.map(([x, y]): [number, number] => [x, y + f2y]);
                     return (
-                      <g
+                      <g id="f2-stringer-line" data-label="2x12 Stringer Board"
                         onMouseEnter={(e) => showTip(e, "f2-stringer-line", "2×12 Stringer Board",
                           `${fmtDec(STAIR_STRINGER_FACE)}" × ${fmtDec(STAIR_STRINGER_DEPTH)}" (face × depth)  ·  Length: ${fmtDec(f2sl.stringerLength)}"`,
                           `Angle: ${f2sl.angleDeg.toFixed(1)}°`
@@ -2369,7 +2369,7 @@ export function WallElevationView({
                     const hy = tl.y + f2y + tl.height * 0.3;
                     const sz = 4;
                     return (
-                      <g>
+                      <g id="f2-stringer-hanger" data-label="Simpson LSCZ Hanger">
                         {/* Bracket symbol — L-shaped connector */}
                         <path d={`M ${wx(hx - sz)},${wy(hy + sz)} L ${wx(hx - sz)},${wy(hy - sz)} L ${wx(hx + sz)},${wy(hy - sz)}`}
                           fill="none" stroke="#c44" strokeWidth="2" strokeLinecap="round" />
@@ -2422,7 +2422,7 @@ export function WallElevationView({
                       No elevated landing needed here. The stringer seat cut
                       sits directly on the 2F subfloor with a kick plate.
                       Just show the approach area indicator. */}
-                  <rect x={wx(STAIR2_START_X)} y={wy(f2y, 4)}
+                  <rect id="north-stair-2f-approach-indicator" x={wx(STAIR2_START_X)} y={wy(f2y, 4)}
                     width={px(STAIR2_LAND_BOT_W)} height={px(4)}
                     fill="none" stroke="#1a55bb" strokeWidth="0.8" strokeDasharray="6 3" />
                   <text fill="#1a55bb" fontSize="8" fontFamily="ui-monospace,monospace"
@@ -2462,9 +2462,9 @@ export function WallElevationView({
                             fill="#d8c8a0" stroke="#8b7348" strokeWidth="1.5" />
                         )}
                         {/* Doubled trimmer indicators (shown as thick lines at the opening edges) */}
-                        <line x1={wx(openL)} y1={wy(jBot3)} x2={wx(openR)} y2={wy(jBot3)}
+                        <line id="f2-well-trimmer-bot" x1={wx(openL)} y1={wy(jBot3)} x2={wx(openR)} y2={wy(jBot3)}
                           stroke="#8b7348" strokeWidth="2.5" />
-                        <line x1={wx(openL)} y1={wy(jTop3)} x2={wx(openR)} y2={wy(jTop3)}
+                        <line id="f2-well-trimmer-top" x1={wx(openL)} y1={wy(jTop3)} x2={wx(openR)} y2={wy(jTop3)}
                           stroke="#8b7348" strokeWidth="2.5" />
                         {/* Opening void — clear fill to indicate the hole in the deck */}
                         <rect x={wx(openL + hdrW)} y={wy(jBot3, TJI_DEPTH)}
@@ -2488,7 +2488,7 @@ export function WallElevationView({
                   })()}
 
                   {/* Top landing indicator */}
-                  <rect x={wx(SW)} y={wy(FLOOR3_IN, 4)}
+                  <rect id="north-stair-3f-landing-indicator" x={wx(SW)} y={wy(FLOOR3_IN, 4)}
                     width={px(STAIR2_LAND_TOP_W)} height={px(4)}
                     fill="none" stroke="#1a55bb" strokeWidth="0.8" strokeDasharray="6 3" />
                   <text fill="#1a55bb" fontSize="9" fontFamily="ui-monospace,monospace"
@@ -3104,7 +3104,7 @@ export function WallElevationView({
                       const topYLeft  = cripBase + c.h;
                       const topYRight = cripBase + c.h + SW * slope;
                       return (
-                        <g key={`stair-s-crip-${i}`}
+                        <g key={`stair-s-crip-${i}`} id={`stair-s-crip-${i}`}
                           onMouseEnter={(e) => showTip(e, `stair-s-crip-${i}`,
                             "2×6 Cripple (angled top)",
                             `1½" × ${fmtDec(c.h)}" — top cut ${angleDeg.toFixed(1)}°`,
@@ -3127,7 +3127,7 @@ export function WallElevationView({
                     })}
 
                     {/* Doubled 2×6 diagonal header */}
-                    <g
+                    <g id="stair-s-hdr" data-label="2x6 Diagonal Header"
                       onMouseEnter={(e) => showTip(e, "stair-s-hdr",
                         "(2) 2×6 Diagonal Header",
                         `${fmtDec(hypLen)}" long — ${angleDeg.toFixed(1)}° from horizontal`,
@@ -3968,7 +3968,7 @@ export function WallElevationView({
                       const topY      = cripBase + c.h;
                       const topYRight = cripBase + c.h - SW * slope; // slope cut across stud width
                       return (
-                        <g key={`stair-crip-${i}`}
+                        <g key={`stair-crip-${i}`} id={`stair-crip-${i}`}
                           onMouseEnter={(e) => showTip(e, `stair-crip-${i}`,
                             "2×6 Cripple (angled top)",
                             `1½" × ${fmtDec(c.h)}" — top cut ${angleDeg.toFixed(1)}°`,
@@ -3991,7 +3991,7 @@ export function WallElevationView({
                     })}
 
                     {/* ── Doubled 2×6 diagonal header ── */}
-                    <g
+                    <g id="stair-open-hdr" data-label="2x6 Diagonal Header"
                       onMouseEnter={(e) => showTip(e, "stair-open-hdr",
                         "(2) 2×6 Diagonal Header",
                         `${fmtDec(hypLen)}" long — ${angleDeg.toFixed(1)}° from horizontal`,
@@ -4260,7 +4260,7 @@ export function WallElevationView({
             return (
               <g>
                 {/* ── Batt fills in joist bays — THIRD FLOOR ROOF ── */}
-                <g
+                <g id="roof-batts" data-label="R-38 Mineral Wool Batts"
                   onMouseEnter={(e) => showTip(e, "roof-batts", "R-38 Mineral Wool Batts — friction-fit in TJI joist bays (9.5\" deep)",
                     `${jPositions.length + 1} bays × ${fmtDec(TJI_DEPTH)}" deep`,
                     `y: ${fmtDec(jBot3)}" to ${fmtDec(jTop3)}" — third floor roof joists`)}
@@ -4287,7 +4287,7 @@ export function WallElevationView({
                 {aboveDeckLayers.map((l, i) => {
                   const yOff = deckTop + (i + 1) * gap;
                   return (
-                    <g key={l.id}
+                    <g key={l.id} id={l.id} data-label={l.label}
                       onMouseEnter={(e) => showTip(e, l.id, l.label,
                         `${fmtDec(wallLen)}" wide`,
                         `y: ${fmtDec(yOff)}" above slab`)}
@@ -4351,7 +4351,7 @@ export function WallElevationView({
                   return (
                     <g key={`membrane-path-${side}`}>
                       {/* Membrane path line */}
-                      <g
+                      <g id={`roof-membrane-${side}`} data-label="EPDM Membrane"
                         onMouseEnter={(e) => showTip(e, `roof-membrane-${side}`,
                           "EPDM-to-CMU Transition — Self-Adhered Membrane",
                           `Runs ${fmtDec(deckTop - CMU_TOTAL_H)}" down frame + ${fmtDec(CMU_T + FR_GAP)}" across CMU top + ${ROOF_MEMBRANE_TURNDOWN}" down exterior`,
@@ -4365,7 +4365,7 @@ export function WallElevationView({
                       </g>
 
                       {/* Drip edge flashing at CMU termination */}
-                      <g
+                      <g id={`roof-drip-${side}`} data-label="Drip-Edge Flashing"
                         onMouseEnter={(e) => showTip(e, `roof-drip-${side}`,
                           "Metal Drip-Edge Flashing",
                           `Set into mortar joint at course 22/23 · kicks out ${ROOF_DRIP_EDGE_W}" from CMU face`,
@@ -4384,7 +4384,7 @@ export function WallElevationView({
                       </g>
 
                       {/* Termination bar indicator at roof parapet top */}
-                      <g
+                      <g id={`roof-term-bar-${side}`} data-label="Aluminum Termination Bar"
                         onMouseEnter={(e) => showTip(e, `roof-term-bar-${side}`,
                           "Aluminum Termination Bar",
                           `${fmtDec(ROOF_TERM_BAR_W)}" wide · mechanically fastened to wood framing`,
@@ -4422,7 +4422,7 @@ export function WallElevationView({
                 {aboveDeckLayers.map((l, i) => {
                   const yOff = deckTop + (i + 1) * gap;
                   return (
-                    <g key={l.id}
+                    <g key={l.id} id={l.id} data-label={l.label}
                       onMouseEnter={(e) => showTip(e, l.id, l.label,
                         `${fmtDec(wallLen)}" wide`,
                         `y: ${fmtDec(yOff)}" above slab`)}
@@ -4465,7 +4465,7 @@ export function WallElevationView({
                     `${i === 0 ? "M" : "L"}${wx(x)} ${wy(y)}`).join(" ");
                   return (
                     <g key={`membrane-path-e-${side}`}>
-                      <g
+                      <g id={`roof-membrane-e-${side}`} data-label="EPDM Membrane"
                         onMouseEnter={(e) => showTip(e, `roof-membrane-e-${side}`,
                           "EPDM-to-CMU Transition — Self-Adhered Membrane",
                           `Runs ${fmtDec(deckTop - CMU_TOTAL_H)}" down frame + ${fmtDec(CMU_T + FR_GAP)}" across CMU top + ${ROOF_MEMBRANE_TURNDOWN}" down exterior`,
@@ -4477,7 +4477,7 @@ export function WallElevationView({
                         <path d={pathD} fill="none" stroke={memColor} strokeWidth={memSW}
                           strokeLinecap="round" strokeLinejoin="round" />
                       </g>
-                      <g
+                      <g id={`roof-drip-e-${side}`} data-label="Drip-Edge Flashing"
                         onMouseEnter={(e) => showTip(e, `roof-drip-e-${side}`,
                           "Metal Drip-Edge Flashing",
                           `Set into mortar joint · kicks out ${ROOF_DRIP_EDGE_W}" from CMU face`,
@@ -4493,7 +4493,7 @@ export function WallElevationView({
                           x2={wx(dripKick)} y2={wy(dripY - 1.5)}
                           stroke={dripColor} strokeWidth={dripSW} strokeLinecap="round" />
                       </g>
-                      <g
+                      <g id={`roof-term-bar-e-${side}`} data-label="Aluminum Termination Bar"
                         onMouseEnter={(e) => showTip(e, `roof-term-bar-e-${side}`,
                           "Aluminum Termination Bar",
                           `${fmtDec(ROOF_TERM_BAR_W)}" wide · mechanically fastened`,
@@ -4532,7 +4532,7 @@ export function WallElevationView({
               {aboveDeckLayers.map((l, i) => {
                 const off = (i + 1) * gap;
                 return (
-                  <g key={l.id}
+                  <g key={l.id} id={l.id} data-label={l.label}
                     onMouseEnter={(e) => showTip(e, l.id, l.label,
                       `${fmtDec(wallLen)}" wide · slope ${LOW_H}" → ${HIGH_H}"`,
                       `follows shed roof line`)}
@@ -4578,7 +4578,7 @@ export function WallElevationView({
                   `${i === 0 ? "M" : "L"}${wx(x)} ${wy(y)}`).join(" ");
                 return (
                   <g key={`membrane-path-w-${side}`}>
-                    <g
+                    <g id={`roof-membrane-w-${side}`} data-label="EPDM Membrane"
                       onMouseEnter={(e) => showTip(e, `roof-membrane-w-${side}`,
                         "EPDM-to-CMU Transition — Self-Adhered Membrane",
                         `Runs ${fmtDec(roofEdgeY - CMU_TOTAL_H)}" down frame + ${fmtDec(CMU_T + FR_GAP)}" across CMU top + ${ROOF_MEMBRANE_TURNDOWN}" down exterior`,
@@ -4590,7 +4590,7 @@ export function WallElevationView({
                       <path d={pathD} fill="none" stroke={memColor} strokeWidth={memSW}
                         strokeLinecap="round" strokeLinejoin="round" />
                     </g>
-                    <g
+                    <g id={`roof-drip-w-${side}`} data-label="Drip-Edge Flashing"
                       onMouseEnter={(e) => showTip(e, `roof-drip-w-${side}`,
                         "Metal Drip-Edge Flashing",
                         `Set into mortar joint · kicks out ${ROOF_DRIP_EDGE_W}" from CMU face`,
@@ -4606,7 +4606,7 @@ export function WallElevationView({
                         x2={wx(dripKick)} y2={wy(dripY - 1.5)}
                         stroke={dripColor} strokeWidth={dripSW} strokeLinecap="round" />
                     </g>
-                    <g
+                    <g id={`roof-term-bar-w-${side}`} data-label="Aluminum Termination Bar"
                       onMouseEnter={(e) => showTip(e, `roof-term-bar-w-${side}`,
                         "Aluminum Termination Bar",
                         `${fmtDec(ROOF_TERM_BAR_W)}" wide · mechanically fastened`,
