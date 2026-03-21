@@ -9,6 +9,7 @@ import type { WallId } from "@/lib/types";
 import { WallElevationView } from "@/components/WallElevation";
 import { FloorPlan } from "@/components/FloorPlan";
 import { InteriorPartitionDetails } from "@/components/InteriorPartitionDetails";
+
 import { HamburgerMenu } from "@/components/HamburgerMenu";
 import { MeasureTape } from "@/components/MeasureTape";
 import { CutList, type FloorDef } from "@/components/CutList";
@@ -17,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollLabel, type ScrollSection } from "@/components/ScrollLabel";
 import { SecondFloorPlan } from "@/components/SecondFloorPlan";
 import { ThirdFloorPlan } from "@/components/ThirdFloorPlan";
+import { DownloadSvgButton } from "@/components/DownloadSvgButton";
 
 const WALL_ORDER_TOP: WallId[] = ["south", "north"];
 const WALL_ORDER_BOTTOM: WallId[] = ["east", "west"];
@@ -90,10 +92,11 @@ export default function Home() {
 
         {/* ── Floor Plan ── */}
         <Card id="section-floor-plan" className="overflow-visible shadow-sm mb-6">
-          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg">
+          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
               Main Level — Floor Plan
             </CardTitle>
+            <DownloadSvgButton cardId="section-floor-plan" filename="Main-Level-Floor-Plan" />
           </CardHeader>
           <CardContent className="p-0">
             <MeasureTape pxPerInch={3}>
@@ -106,10 +109,11 @@ export default function Home() {
 
         {/* ── Second Floor Plan ── */}
         <Card id="section-floor-plan-2" className="overflow-visible shadow-sm mb-6">
-          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg">
+          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
               Second Floor — Floor Plan
             </CardTitle>
+            <DownloadSvgButton cardId="section-floor-plan-2" filename="Second-Floor-Plan" />
           </CardHeader>
           <CardContent className="p-0">
             <MeasureTape pxPerInch={3}>
@@ -122,10 +126,11 @@ export default function Home() {
 
         {/* ── Third Floor Plan ── */}
         <Card id="section-floor-plan-3" className="overflow-visible shadow-sm mb-6">
-          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg">
+          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
               Third Floor — Floor Plan
             </CardTitle>
+            <DownloadSvgButton cardId="section-floor-plan-3" filename="Third-Floor-Plan" />
           </CardHeader>
           <CardContent className="p-0">
             <MeasureTape pxPerInch={3}>
@@ -146,12 +151,15 @@ export default function Home() {
                   <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
                     {wall.name}
                   </CardTitle>
-                  <Badge
-                    variant="secondary"
-                    className="font-mono text-xs font-normal text-zinc-500 bg-zinc-200 border-0"
-                  >
-                    {formatInches(wall.totalLengthInches)}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="secondary"
+                      className="font-mono text-xs font-normal text-zinc-500 bg-zinc-200 border-0"
+                    >
+                      {formatInches(wall.totalLengthInches)}
+                    </Badge>
+                    <DownloadSvgButton cardId={`section-wall-${id}`} filename={`${wall.name.replace(/\s+/g, "-")}-Elevation`} />
+                  </div>
                 </CardHeader>
                 <CardContent className="p-3">
                   <MeasureTape pxPerInch={4}>
@@ -177,10 +185,11 @@ export default function Home() {
 
         {/* ── Interior Partitions ── */}
         <Card id="section-interior-partitions" className="overflow-hidden shadow-sm mt-6">
-          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg">
+          <CardHeader className="py-2.5 px-4 bg-zinc-100 border-b rounded-t-lg flex-row items-center justify-between space-y-0">
             <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
               Interior Partitions — Kitchen / Bathroom
             </CardTitle>
+            <DownloadSvgButton cardId="section-interior-partitions" filename="Interior-Partitions" />
           </CardHeader>
           <CardContent className="p-0">
             <div style={{ overflowX: "auto", width: "100%", minWidth: 0 }}>
@@ -204,12 +213,15 @@ export default function Home() {
                   <CardTitle className="text-xs font-semibold text-zinc-600 tracking-widest uppercase m-0">
                     {wall.name}
                   </CardTitle>
-                  <Badge
-                    variant="secondary"
-                    className="font-mono text-xs font-normal text-zinc-500 bg-zinc-200 border-0"
-                  >
-                    {formatInches(wall.totalLengthInches)}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="secondary"
+                      className="font-mono text-xs font-normal text-zinc-500 bg-zinc-200 border-0"
+                    >
+                      {formatInches(wall.totalLengthInches)}
+                    </Badge>
+                    <DownloadSvgButton cardId={`section-wall-${id}`} filename={`${wall.name.replace(/\s+/g, "-")}-Elevation`} />
+                  </div>
                 </CardHeader>
                 <CardContent className="p-3">
                   <MeasureTape pxPerInch={4}>
@@ -229,6 +241,7 @@ export default function Home() {
             );
           })}
         </div>
+
 
       </main>
     </div>

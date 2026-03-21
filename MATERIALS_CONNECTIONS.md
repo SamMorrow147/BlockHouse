@@ -103,6 +103,64 @@ Legend:
 
 ---
 
+## Roof Assembly / EPDM Membrane System
+
+Materials for the flat roof assembly and EPDM-to-CMU wall transition. See `EPDM_ROOF_DETAIL.md` for full detail drawings and recommendations.
+
+| SKU | Description | Physical Location | App Element(s) | Status |
+|-----|-------------|-------------------|----------------|--------|
+| — (spec TBD) | 60-mil EPDM Membrane (RubberGard or equiv.) | **Roof field** — fully adhered on top of cover board over entire roof deck at FLOOR3_IN (~252.5") | `roof-epdm` stroke in Roof layer | ✅ Rendered (roof layer stroke) |
+| — (spec TBD) | 6-mil Polyethylene Vapor Retarder | On top of roof deck OSB, under rigid insulation | `roof-vapor` stroke in Roof layer | ✅ Rendered (roof layer stroke) |
+| — (spec TBD) | 2" Polyisocyanurate Rigid Insulation (R-11.4) | Continuous layer on top of vapor barrier — no thermal bridging at joists | `roof-polyiso` stroke in Roof layer | ✅ Rendered (roof layer stroke) |
+| — (spec TBD) | Tapered Polyiso Cricket Boards (1/4"/ft slope) | On top of flat polyiso — creates drainage slope toward scuppers | `roof-taper` stroke in Roof layer | ✅ Rendered (roof layer stroke) |
+| — (spec TBD) | 1/2" High-Density Cover Board (DensDeck or equiv.) | On top of tapered polyiso — smooth substrate for EPDM adhesion | `roof-coverboard` stroke in Roof layer | ✅ Rendered (roof layer stroke) |
+| — (spec TBD) | R-38 Mineral Wool Batts (9.5" thick) | Friction-fit in TJI joist bays between roof deck joists | `roof-batts` fills in Roof layer (N/S walls) | ✅ Rendered (batt fills) |
+| — (spec TBD) | Self-Adhered Membrane (Grace Ice & Water Shield, Blueskin VP160, or equiv.) | **EPDM-to-CMU transition** — runs 68.5" down exposed wood frame from roof edge to CMU top, over CMU top (8"), and 2-3" down CMU exterior face | `roof-membrane-path` in Roof layer | ✅ Rendered (membrane path) |
+| 1519706 (C043491) | **10' EPDM Aluminum Termination Bar — $9.99/ea** | Secures EPDM at roof parapet top + secures membrane at CMU drip edge. Need 2× perimeter (~18 bars). | `roof-term-bar` in Roof layer | ✅ Rendered + in cut list |
+| — (spec TBD) | Sheet-Metal Coping Cap (pre-bent, 12" wide) | Covers parapet/curb top, laps over termination bar by 3" min | `roof-coping` in Roof layer | ✅ Rendered (coping element) |
+| — (spec TBD) | Metal Drip-Edge Flashing | At CMU top termination — set into mortar joint, kicks out 1/2" to shed water off CMU face | `roof-drip-edge` in Roof layer | ✅ Rendered (drip edge) |
+| — (spec TBD) | Polyurethane Caulk (Sikaflex or equiv.) | Seals reglet at CMU mortar joint termination, seals around all termination bar fasteners | — | ⚪ Consumable |
+| — (spec TBD) | Scupper Assembly (EPDM-wrapped sheet metal, 8"W × 4"H) | 2 primary scuppers on low side of drainage slope, through parapet/wall | `roof-scupper` in Roof layer | 🟡 Not yet rendered |
+| — (spec TBD) | Masonry Water Repellent (Prosoco Sure Klean Weather Seal or equiv.) | Applied to exposed CMU face below drip-edge flashing — breathable water repellent | — | ⚪ Consumable (no SVG representation) |
+| — (spec TBD) | Drainage Mat (Mortairvent or Delta-Dry) | Optional — inside 1" cavity (FR_GAP) on CMU interior face to channel condensation to base weeps | — | ⚪ Consumable (no SVG representation) |
+
+**Calculated Quantities (from cut-list.ts, south wall "Roof Assembly" section):**
+
+| Material | Quantity | Calculation | Notes |
+|----------|----------|-------------|-------|
+| Roof area | ~389 SF | 304" × 184" CMU exterior footprint | |
+| Perimeter | ~82 LF | 2 × (304" + 184") = 976" | |
+| R-38 Mineral Wool Batts | ~86 pieces | 389 SF ÷ 5 SF/batt × 1.10 waste | 15"×48" batts for 16" OC bays |
+| 6-mil Poly Vapor Retarder | 389 SF | Full roof area | |
+| 2" Polyiso Rigid (4×8 sheets) | ~13 sheets | 389 ÷ 32 × 1.05 | R-11.4 continuous |
+| Tapered Polyiso (4×8 sheets) | ~14 sheets | 389 ÷ 32 × 1.10 | 1/4"/ft slope |
+| 1/2" Cover Board (4×8 sheets) | ~13 sheets | 389 ÷ 32 × 1.05 | |
+| 60-mil EPDM Membrane | ~448 SF | 389 × 1.15 waste | Fully adhered field membrane |
+| EPDM Bonding Adhesive | ~14 gal | 389 ÷ 60 × 2 coats | |
+| 3" EPDM Seam Tape | ~45 LF | epdmSF ÷ 10 | |
+| EPDM Parapet Flashing | 82 LF | Full perimeter | 12" lap up parapet |
+| **Aluminum Term Bar (SKU 1519706)** | **~18 bars** | 82 LF ÷ 10' × 2 runs (parapet + CMU) | **$9.99/ea = ~$179.82** |
+| Aluminum Coping Cap | 82 LF | Full perimeter | 12" wide |
+| Self-Adhered Membrane (CMU transition) | ~517 SF | 80.5" run × 976" perimeter × 1.15 | Ice & Water Shield or Blueskin |
+| Self-Adhered Membrane Rolls | ~3 rolls | 517 SF ÷ 225 SF/roll | 36" × 75' rolls |
+| Metal Drip-Edge Flashing | 82 LF | Full perimeter at CMU mortar joint | |
+| Polyurethane Caulk (Sikaflex) | ~6 tubes | 164 LF of term bar ÷ 30 LF/tube | 10.1 oz tubes |
+| Masonry Water Repellent | ~3 gal | ~326 SF ÷ 150 SF/gal | Treats 4' below drip edge |
+| Scuppers (primary) | 2 | Through-wall 8"×4" galv. | |
+| Scuppers (overflow) | 2 | 2" higher than primary | |
+| Heat Cable | 4 runs | ~6' per scupper opening | Self-regulating |
+
+**Key dimensions for app rendering (from framing-data.ts + EPDM_ROOF_DETAIL.md):**
+
+- Roof deck elevation: FLOOR3_IN (~252.5")
+- CMU top: 184" (23 courses × 8")
+- Exposed wood frame zone: 184" → 252.5" (68.5")
+- Membrane turn-down on CMU exterior: 2-3" below CMU top course
+- FR_GAP (cavity to cap): 1"
+- CMU_T (width of CMU top to bridge): 8"
+
+---
+
 ## ⚠️ Dimension Discrepancies to Resolve
 
 These constants in `framing-data.ts` don't match the actual purchased materials:
@@ -141,6 +199,7 @@ SKU numbers in hover tooltips. Zero risk to SVG drawing logic.
 11. **House wrap layer** (161-3015) — thin line/fill outside the sheathing
 12. **Roof deck section** — third floor TJI system, partial north wall full draw
 13. **Second floor walls** — `north-2`, `east-2`, `west-2`, `south-2` elevation drawings
+14. **Scupper assemblies** — 2 scupper openings through parapet on low side of drainage slope
 
 ### No App Representation Needed
 

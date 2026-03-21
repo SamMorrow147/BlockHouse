@@ -11,7 +11,7 @@ import {
   TOILET_W, TOILET_TANK_D, TOILET_BOWL_D,
   BATH_JOIST_OC, BATH_LEDGER_T,
   STAIR_TREAD_DEPTH, STAIR_APPR_STEPS, STAIR_WIDTH, STAIR_MAIN_STEPS,
-  STAIR_LAND_RISERS, STAIR_TOTAL_RISERS, TJI_DEPTH, SUBFLOOR_T,
+  STAIR_LAND_RISERS, STAIR_TOTAL_RISERS, STAIR_LAND_POST_W, TJI_DEPTH, SUBFLOOR_T,
 } from "@/lib/framing-data";
 import { computeWallLayout } from "@/lib/layout-calculator";
 import {
@@ -960,6 +960,32 @@ export function FloorPlan() {
             x={px(platL + (platR - platL) / 2)} y={py(platT + (platB - platT) / 2 + 16)}>
             ← UP
           </text>
+
+          {/* ── 4×4 Landing & Stair Posts ─────────────────────────────── */}
+          {(() => {
+            const P = STAIR_LAND_POST_W; // 3.5"
+            const posts: { x: number; y: number; label: string }[] = [
+              // Kitty-corner from landing — beside first main-run step & approach,
+              // sits in the open room at the junction of landing/approach/main run
+              { x: platR, y: platT - P,       label: "4×4 POST (landing corner)" },
+              // Mirror SE post — SW kitty-corner (landing NE of post; right edge at landing west)
+              { x: platL - P, y: platT - P,   label: "4×4 POST (landing SW corner)" },
+              // SW corner of main stair run — far west end, south side
+              { x: stairR - P, y: stairT,     label: "4×4 POST (stair SW)" },
+              // Kitty-corner at top of staircase — far west end, offset south
+              // mirrors the landing corner post at the arrival end of the main run
+              { x: stairR, y: stairT - P,     label: "4×4 POST (stair top corner)" },
+              // North side of staircase — same x as SE landing and stair top, against north wall
+              { x: platR, y: stairB,         label: "4×4 POST (landing N)" },
+              { x: stairR, y: stairB,        label: "4×4 POST (stair top N)" },
+            ];
+            return posts.map((p, i) => (
+              <rect key={`lp${i}`}
+                x={px(p.x)} y={py(p.y)}
+                width={pf(P)} height={pf(P)}
+                fill="#e8d8b8" stroke="#8b7348" strokeWidth="1.4" />
+            ));
+          })()}
 
           {/* ③ Main stair run — turn left (west), heading up */}
           <rect className="fp-stair-run"

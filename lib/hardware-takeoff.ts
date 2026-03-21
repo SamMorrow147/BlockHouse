@@ -213,7 +213,7 @@ export interface HouseWrapTakeoff {
 
 export function computeHouseWrap(walls: WallElevation[]): HouseWrapTakeoff {
   const perimeter = walls.reduce((s, w) => s + w.totalLengthInches, 0);
-  const height = walls[0]?.wallHeightInches ?? 116;
+  const height = walls[0]?.wallHeightInches ?? 96;
   const gross = perimeter * height;
   return {
     perimeterInches: perimeter,

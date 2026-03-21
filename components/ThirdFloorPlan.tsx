@@ -112,7 +112,7 @@ export function ThirdFloorPlan() {
 
   // ── Stair headroom triangle (mirrors north-wall elevation geometry) ──────
   // First-floor wall height + joist stack gives floor-to-floor rise
-  const WALL_H_1   = 116;                                    // 1st floor wall height (in)
+  const WALL_H_1   = 96;                                     // 1st floor wall height (in)
   const FLOOR2_IN  = WALL_H_1 + TJI_DEPTH + SUBFLOOR_T;     // 126.25"
   // Same joist-snap logic as WallElevation.tsx (SW = 1.5" face of a 2×6)
   const SW          = 1.5;
@@ -149,12 +149,9 @@ export function ThirdFloorPlan() {
   const f3FrameR = FE_IN;                 // west inner frame face (289.5")
 
   // ── Stairwell opening (from 2nd floor stair arriving) ─────────────
-  // Second floor stair top: planX = FW_OUT + 286 - 36 = 259
-  // Top landing: from 259 to 259+36 = 295 (at west wall)
-  // The stairwell opening is the stair footprint in the 3rd floor deck.
   const STAIR2_TREADS = STAIR2_TOTAL_RISERS - 1;
-  const stair2BotX = FW_OUT + nTotalLen - STAIR2_START_X;  // 115
-  const stair2TopX = stair2BotX + STAIR2_TREADS * STAIR_TREAD_DEPTH; // 259
+  const stair2BotX = FW_OUT + nTotalLen - STAIR2_START_X;
+  const stair2TopX = stair2BotX + STAIR2_TREADS * STAIR_TREAD_DEPTH;
   const stairN = FS_IN;
   const stairS = FS_IN - STAIR_WIDTH;
   // The stairwell opening on the 3rd floor covers the upper portion of the stair run

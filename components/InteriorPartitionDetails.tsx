@@ -13,7 +13,7 @@ import {
   STAIR_LAND_JOIST_W, STAIR_LAND_JOIST_D, STAIR_LAND_RIM_W,
   STAIR_LAND_DECK_T, STAIR_LAND_POST_W, STAIR_LAND_LEDGER_W,
   TJI_DEPTH, SUBFLOOR_T,
-  BATH_JOIST_H, BATH_JOIST_OC, BATH_SUBFLOOR_T,
+  BATH_JOIST_H, BATH_JOIST_OC, BATH_SUBFLOOR_T, BATH_DOOR_RO,
 } from "@/lib/framing-data";
 import { computeApproachStringer } from "@/lib/stair-calculator";
 import { Toggle } from "@/components/ui/toggle";
@@ -45,7 +45,7 @@ function LayerBtn({ label, on, toggle }: { label: string; on: boolean; toggle: (
 }
 
 const PX = PX_PER_INCH;
-const AL = 120; const AR = 140; const AT = 120; const AB = 84;
+const AL = 120; const AR = 140; const AT = 120; const AB = 110;
 
 const WALL_W   = vertPartition.totalLengthInches;
 const WALL_H   = vertPartition.wallHeightInches;
@@ -480,11 +480,8 @@ function DoorWallWithStairs({ showCMU, showStairs }: { showCMU: boolean; showSta
 
       {/* ════ DIMENSIONS ════ */}
 
-      {/* Wall width */}
-      <HDim x1={wx(0)} x2={wx(WALL_W)} y={floorY + 28} label={`${WALL_W}" wall`} />
-
       {/* Landing */}
-      <HDim x1={wx(0)} x2={wx(STAIR_WIDTH)} y={floorY + 54} label={`${STAIR_WIDTH}" landing`} />
+      <HDim x1={wx(0)} x2={wx(STAIR_WIDTH)} y={floorY + 80} label={`${STAIR_WIDTH}" landing`} />
 
       {/* Individual treads */}
       <HDim x1={wx(STAIR_WIDTH)} x2={wx(STAIR_WIDTH + STAIR_TREAD_DEPTH)} y={floorY + 28} label={`${STAIR_TREAD_DEPTH}" run`} />
@@ -516,6 +513,20 @@ function DoorWallWithStairs({ showCMU, showStairs }: { showCMU: boolean; showSta
         label={`${LAND_JOIST.toFixed(1)}" post`} anchor="left" />
 
       </>}
+
+      {/* ════ DOOR DIMS — always visible ════ */}
+      {/* Chain: door RO | solid wall */}
+      <HDim x1={wx(0)} x2={wx(BATH_DOOR_RO)} y={floorY + 28}
+        label={`${fmt(BATH_DOOR_RO)} door RO`} />
+      <HDim x1={wx(BATH_DOOR_RO)} x2={wx(WALL_W)} y={floorY + 28}
+        label={fmt(WALL_W - BATH_DOOR_RO)} />
+      {/* Overall wall total */}
+      <HDim x1={wx(0)} x2={wx(WALL_W)} y={floorY + 54}
+        label={`${fmt(WALL_W)} wall`} />
+      {/* Door height */}
+      <VDim x={wx(BATH_DOOR_RO) + 16}
+        y1={wy(vertPartition.openings[0].heightInches)} y2={wy(0)}
+        label={`${fmt(vertPartition.openings[0].heightInches)} door`} anchor="right" />
 
       {/* Wall height — always visible */}
       <VDim x={wx(-FR_D) - 32} y1={wy(0)} y2={wy(WALL_H)} label={`${fmt(WALL_H)} wall`} anchor="left" />

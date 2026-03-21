@@ -19,7 +19,7 @@
 | **1st Floor** | Full floor — all 4 exterior walls, interior partitions, kitchen, bathroom, stairs | ~126.25" (FLOOR2_IN) | TJI joists + subfloor form the 2F deck |
 | **2nd Floor** | Full floor — all 4 exterior walls, straight stair run | ~252.5" (FLOOR3_IN) | TJI joists + subfloor form the **ROOF DECK** |
 | **ROOF** | **The roof membrane assembly sits HERE at FLOOR3_IN (~252.5")** | ~252.5" + buildup | Batts in joist bays, polyiso, EPDM membrane on TOP of the 2F joist system |
-| **3rd Floor (Loft)** | **Partial** — only the west ~120" of the building. Built ON TOP of the roof deck. | ~342.5" (FLOOR3_IN + 90") | Open balcony on the east side. Shed roof slopes from 84" to 116" above the loft deck. |
+| **3rd Floor (Loft)** | **Partial** — only the west ~120" of the building. Built ON TOP of the roof deck. | ~342.5" (FLOOR3_IN + 90") | Open balcony on the east side. Shed roof slopes from 84" to 96" above the loft deck. |
 
 **The roof deck = the top of the 2nd floor structure = FLOOR3_IN.** The 3rd floor loft is a partial structure built on top of the roof, not under it. The shed roof at the loft level is a separate, higher roof structure over just the loft portion.
 
@@ -119,7 +119,7 @@ Each type is defined once. Instances (in Part 2) reference these types by ID.
 | **Orientation** | Vertical (narrow face toward wall surface) |
 | **Function** | Transfers vertical loads from top plate to bottom plate. Provides nailing surface for sheathing and interior finish. |
 | **Sub-Types** | |
-| — Full stud | Floor-to-ceiling (111.5" in 116" wall). 16" OC field layout. |
+| — Full stud | Floor-to-ceiling (91.5" in 96" wall). 16" OC field layout. |
 | — King stud | Full-height stud immediately flanking an opening. Carries header load to plate. |
 | — Jack stud | Shortened stud from bottom plate to underside of header. Bears header directly. Single or double per engineering. |
 | — Cripple (above header) | Short stud from top of header to underside of top plate. Maintains 16" OC layout through opening zone. |
@@ -262,7 +262,7 @@ Each type is defined once. Instances (in Part 2) reference these types by ID.
 | **Common Name** | Stair system |
 | **Sub-Assemblies** | Landing platform, main stair run, stringers, treads, risers, kick plate, approach steps |
 | **Function** | Provides code-compliant vertical circulation between floors. |
-| **Key Dimensions** | Riser: 7.566" (IRC max 7.75" ✓). Tread run: 9" + 1" nosing (IRC min 10" tread depth ✓ with nosing). Total risers 1→2: 17. Landing risers: 4. Main risers: 13. Approach steps: 3. Main treads: 12. Second floor stair: straight run, 17 risers, no landing, starts at x=180". |
+| **Key Dimensions** | Riser: 7.566" (IRC max 7.75" ✓). Tread run: 9" + 1" nosing (IRC min 10" tread depth ✓ with nosing). Total risers 1→2: 17. Landing risers: 4. Main risers: 13. Approach steps: 3. Main treads: 12. Second floor stair: straight run, 17 risers, no landing, starts at x=159.5". |
 | **Standard Connections** | **Landing:** bears on north wall + 4×4 post + rim header. **Stringers:** seat cut on landing deck, plumb cut at second floor rim. **Treads/risers:** face-nailed to stringer notches. |
 | **Code Reference** | IRC R311.7 — Stairways |
 | **App Rendering** | ✅ First and second floor stairs rendered. Notched stringer polygons. |
@@ -401,7 +401,7 @@ Each type is defined once. Instances (in Part 2) reference these types by ID.
 |-----------|-------|--------|
 | Opening width (E-W) | STAIR_WIDTH = 36" | framing-data.ts |
 | Opening length (N-S) | ~144" (16 treads × 9" run) — straight run, no landing | STAIR2_TOTAL_RISERS − 1 = 16 treads × STAIR_TREAD_DEPTH |
-| Opening position | STAIR2_START_X = 180" to ~36" along north wall | framing-data.ts |
+| Opening position | STAIR2_START_X = 159.5" to ~36" along north wall | framing-data.ts |
 | Trimmer joist locations | At east and west edges, 36" apart | STAIR_WIDTH |
 | Tail joists (interrupted) | ~2 TJI joists within 36" opening | TJI_OC = 16" |
 | Joist hangers needed | 8 minimum (same logic as 1F) | IRC R502.10 |
@@ -517,8 +517,8 @@ Every physical piece in the house, organized by zone. Each row references a Comp
 | north-sill-0 | CT-004 | 2×6 on edge | 37" | 1 | ✅ Data + Render |
 | north-hdr-0 | CT-003 | (2) 2×8 solid | over 40" window RO | 1 | ✅ Data + Render |
 | north-open-0 | — | Window void | 40"×48", sill 40" | 1 | ✅ Data + Render |
-| north-backing-1, 2 | CT-006 | 2×6 SPF | 111.5" | 2 | ✅ Data + Render |
-| north-partition-vert | CT-007 | Partition overlay | 116" | 1 | ✅ Data + Render |
+| north-backing-1, 2 | CT-006 | 2×6 SPF | 91.5" | 2 | ✅ Data + Render |
+| north-partition-vert | CT-007 | Partition overlay | 96" | 1 | ✅ Data + Render |
 | north-bath-cleat-0 – 4 | CT-012 | 2×4 cleat | 14" | 5 | ✅ Data + Render |
 | north-bath-joist-0 – 4 | CT-012 | 2×6 joist | 5.5" | 5 | ✅ Data + Render |
 | north-bath-subfloor | CT-012 | 3/4" OSB | ~87" | 1 | ✅ Data + Render |
@@ -570,14 +570,14 @@ Every physical piece in the house, organized by zone. Each row references a Comp
 |-------------|------|--------|-------------|-----|--------|
 | horiz-partition-bp-0 | CT-001 | 2×6 treated | 86" | 1 | ✅ Data + Render |
 | horiz-partition-tp-0, 1 | CT-002 | 2×6 SPF | 86" ea | 2 | ✅ Data + Render |
-| horiz-partition-stud-0 – N | CT-005 | 2×6 SPF | 111.5" | ~6 | ✅ Data + Render |
+| horiz-partition-stud-0 – N | CT-005 | 2×6 SPF | 91.5" | ~6 | ✅ Data + Render |
 | vert-partition-bp-0 | CT-001 | 2×6 treated | 1.5" | 1 | ✅ Data + Render |
 | vert-partition-bp-1 | CT-001 | 2×6 treated | 23.5" | 1 | ✅ Data + Render |
 | vert-partition-tp-0, 1 | CT-002 | 2×6 SPF | 50" ea | 2 | ✅ Data + Render |
 | vert-partition-stud-0 – N | CT-005 | 2×4 SPF | varies | ~5 | ✅ Data + Render |
 | vert-partition-hdr-0 | CT-003 | (2) 2×6 | 25" span | 1 | ✅ Data + Render |
 | vert-partition-open-0 | — | Door void | 28"×80" | 1 | ✅ Data + Render |
-| bathroom-east | CT-007 | Bathroom east wall (no openings) | 50" × 116" | 1 | ✅ Data defined |
+| bathroom-east | CT-007 | Bathroom east wall (no openings) | 50" × 96" | 1 | ✅ Data defined |
 
 ### Zone 6: Second Floor
 
@@ -589,7 +589,7 @@ All four second floor walls are fully defined in `framing-data.ts` with openings
 | south-2 wall | CT-001–005 | 2×6 SPF | 286", 1 window 40"×40" at pos 166" | 1 wall | ✅ Data defined |
 | west-2 wall | CT-001–005 | 2×6 SPF | 166", 1 picture window 71"×40" at pos 48" | 1 wall | ✅ Data defined |
 | east-2 wall | CT-001–005 | 2×6 SPF | 166", 1 window 40"×40" at pos 54" | 1 wall | ✅ Data defined |
-| second-floor-stair | CT-013 | Straight run | 17 risers, starts x=180" | 1 | ✅ Data + Render |
+| second-floor-stair | CT-013 | Straight run | 17 risers, starts x=159.5" | 1 | ✅ Data + Render |
 | 2F-stairwell-opening | CT-020 | Floor opening framing (1→2) | ~36"×108" in 1F ceiling | 1 | ⚪ Not defined — see CT-020 |
 | 2F-stairwell-opening-upper | CT-020 | Floor opening framing (2→3) | ~36"×144" in 2F ceiling | 1 | ⚪ Not defined — see CT-020 |
 | second-floor-joists | CT-010 | TJI | 9.5" depth, span N-S | ~17 | 🟡 Not fully rendered |
@@ -606,7 +606,7 @@ Three third-floor walls defined: north (120" with 36" loft door), south (120" wi
 | north-3 wall | CT-001–005 | 2×6 SPF | 120", 1 door 36"×80" | 1 wall | ✅ Data defined |
 | south-3 wall | CT-001–005 | 2×6 SPF | 120", 1 door 36"×80" at pos 80" | 1 wall | ✅ Data defined |
 | east-3 wall | CT-001–005 | 2×6 SPF | 36", no openings | 1 wall | ✅ Data defined |
-| west-3 wall | — | Shed roof slope 84"→116" | 166" (height constants only) | 1 wall | 🟡 Partial — no WallElevation |
+| west-3 wall | — | Shed roof slope 84"→96" | 166" (height constants only) | 1 wall | 🟡 Partial — no WallElevation |
 | roof-deck-joists | CT-010 | TJI | — | — | ⚪ Not defined |
 | roof-deck-subfloor | CT-011 | 3/4" OSB | — | — | ⚪ Not defined |
 | roof-deck-rim | CT-009 | Rim board | — | — | ⚪ Not defined |
@@ -758,7 +758,7 @@ For each zone, track what's defined at each documentation level.
 
 7. **Roof deck** — SKUs purchased but no framing data, no rendering. Top of the load path and critical for MN snow loads.
 
-8. **West wall third floor** — Height constants exist (`WEST_F3_LOW_H=84"`, `WEST_F3_HIGH_H=116"` — shed roof slope) but no WallElevation definition.
+8. **West wall third floor** — Height constants exist (`WEST_F3_LOW_H=84"`, `WEST_F3_HIGH_H=96"` — shed roof slope) but no WallElevation definition.
 
 9. **Wall sheathing layer (CT-015)** — Structural bracing element. Critical for lateral load path. SKU known but no data or rendering.
 

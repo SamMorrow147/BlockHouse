@@ -30,6 +30,8 @@ import {
   WCAB_L, WCAB_W1, WCAB_W2,
   ROOF_POLYISO_T, ROOF_POLYISO_R, ROOF_COVERBOARD_T, ROOF_EPDM_T,
   ROOF_PARAPET_H, ROOF_FLASHING_LAP, ROOF_COPING_W,
+  CMU_TOTAL_H, ROOF_MEMBRANE_TURNDOWN, ROOF_DRIP_EDGE_W, ROOF_TERM_BAR_W, ROOF_COPING_H,
+  CMU_T, FR_GAP,
 } from "@/lib/framing-data";
 import { computeStairLayout } from "@/lib/stair-calculator";
 import { FW_IN, planPosToElevationX } from "@/lib/plan-geometry";
@@ -538,7 +540,7 @@ export function WallElevationView({
             CMU shell is 184" tall from slab. On first-floor walls (slab level),
             CMU covers the full wall + beyond — no sheathing needed.
             On second-floor walls, CMU extends 57.75" above the 2nd floor deck.
-            Sheathing covers from T.O. CMU (57.75") to top of wall (116").
+            Sheathing covers from T.O. CMU (57.75") to top of wall (96").
             On third-floor partial walls, CMU is gone entirely — full height sheathing.
             On first-floor walls, skip entirely (CMU covers everything). ── */}
         {showSheathing && (() => {
@@ -559,7 +561,7 @@ export function WallElevationView({
 
           // Height where CMU stops (above this floor's deck)
           const CMU_TOTAL = 184; // 23 courses × 8"
-          const FLOOR2_DECK = 116 + TJI_DEPTH + SUBFLOOR_T; // 126.25"
+          const FLOOR2_DECK = 96 + TJI_DEPTH + SUBFLOOR_T; // 126.25"
           const cmuAboveDeck = isSecondFloor ? (CMU_TOTAL - FLOOR2_DECK) : 0;
           // Sheathing zone
           const zoneBot = cmuAboveDeck;  // bottom of sheathing
@@ -681,7 +683,7 @@ export function WallElevationView({
           if (isFirstFloor) return null;
 
           const CMU_TOTAL = 184;
-          const FLOOR2_DECK = 116 + TJI_DEPTH + SUBFLOOR_T;
+          const FLOOR2_DECK = 96 + TJI_DEPTH + SUBFLOOR_T;
           const cmuAboveDeck = isSecondFloor ? (CMU_TOTAL - FLOOR2_DECK) : 0;
           const zoneBot = cmuAboveDeck;
           const zoneTop = wallH;
@@ -746,26 +748,26 @@ export function WallElevationView({
                 fill="rgba(210,200,180,0.08)" stroke="none" />
 
               {/* Per-joist: ledger cleat + joist cross-section.
-                  Cleat stays at jx (on the wall face / stud position).
-                  Joist sits to the SIDE of the cleat:
-                    • all except last → joist to the RIGHT  (jx + SW)
-                    • last (right-end stud) → joist to the LEFT (jx - SW) */}
+                  Stud is at jx. Ledger cleat sits BESIDE the stud (not on top):
+                    • all except last → ledger to the RIGHT  (jx + SW), joist directly above ledger (same X)
+                    • last (right-end stud) → ledger to the LEFT (jx - SW), joist directly above ledger (same X) */}
               {joistXs.map((jx, i) => {
                 const isLast = i === joistXs.length - 1;
-                const joistX = isLast ? jx - SW : jx + SW;
+                const ledgerX = isLast ? jx - SW : jx + SW;
+                const joistX = ledgerX; // Joist directly above ledger
                 return (
                   <g key={`seat${i}`}>
-                    {/* Ledger cleat — vertical bearer on wall face */}
+                    {/* Ledger cleat — vertical bearer beside stud (not on top) */}
                     <g
                       onMouseEnter={(e) => showTip(e, `north-bath-cleat-${i}`, `2×4 Ledger Cleat — bears bath joist, toe-nailed to bottom plate`,
                         `${fmtDec(SW)}" × ${fmtDec(ledgerH)}" (face × height)`,
-                        `x: ${fmtDec(jx)}"  y: ${fmtDec(PLATE_H)}"`)}
+                        `x: ${fmtDec(ledgerX)}"  y: ${fmtDec(PLATE_H)}"`)}
                       onMouseMove={moveTip}
                       onMouseLeave={hideTip}
                       style={{ cursor: "crosshair" }}
                     >
                       <rect
-                        x={wx(jx)} y={wy(PLATE_H, ledgerH)}
+                        x={wx(ledgerX)} y={wy(PLATE_H, ledgerH)}
                         width={px(SW)} height={px(ledgerH)}
                         fill="#fff" stroke={SC} strokeWidth="0.7" />
                     </g>
@@ -1952,8 +1954,8 @@ export function WallElevationView({
           const sBottomEdge = sl.stringer.bottomEdge;  // [[stairEndX, plumbCutY], [seatCutX, landH]]
           const soffitPts = [
             `${wx(sBottomEdge[0][0] - 4)},${wy(sBottomEdge[0][1] + 3)}`, // plumb-cut corner (left 4", up 4")
-            `${wx(sBottomEdge[0][0] - 24)},${wy(126)}`,             // step point — left 24", up to 126"
-            `${wx(sBottomEdge[0][0] - 26)},${wy(114)}`,             // step left 26", up to 114"
+            `${wx(sBottomEdge[0][0] - 24)},${wy(108)}`,             // step left 24" (was 126; −18″)
+            `${wx(sBottomEdge[0][0] - 26)},${wy(96)}`,              // step left 26" (was 114; −18″)
             `${wx(sl.soffit.x1)},${wy(0)}`,                       // floor across to landing
             `${wx(sl.soffit.x1)},${wy(sl.soffit.y2)}`,            // up to landing height
             `${wx(sBottomEdge[1][0])},${wy(sBottomEdge[1][1])}`,  // seat cut (stringer base)
@@ -2115,7 +2117,7 @@ export function WallElevationView({
         {isNorth && (() => {
           const f2y          = FLOOR2_IN;
           const f2Layout     = computeWallLayout(secondFloorNorthWall);
-          const CMU_TOTAL_H  = 23 * CMU_BLOCK_H;
+          // CMU_TOTAL_H imported from framing-data (184")
           const F2_FILL      = "rgba(220,210,190,0.45)";
           const F2_BK        = "#222";
           const offsetRect   = (r: Rect): Rect => ({ ...r, y: r.y + f2y });
@@ -2127,7 +2129,7 @@ export function WallElevationView({
             stairWidth:     STAIR_WIDTH,
             floor2Height:   FLOOR2_IN,
             stairStartX:    STAIR2_START_X,
-            wallHeightInches: 116,
+            wallHeightInches: 96,
             stringerDepth:  STAIR_STRINGER_DEPTH,
             stringerFace:   STAIR_STRINGER_FACE,
             treadThickness: STAIR_TREAD_T,
@@ -2256,9 +2258,9 @@ export function WallElevationView({
                     const f2Bottom = f2sl.stringer.bottomEdge.map(([x, y]): [number, number] => [x, y + f2y]);
                     const f2SoffitPts = [
                       `${wx(f2Bottom[0][0] - 4)},${wy(f2Bottom[0][1] + 3)}`,  // plumb-cut corner (left 4", up 4")
-                      `${wx(f2Bottom[0][0] - 24)},${wy(f2y + 126)}`,           // step point — left 24", up to f2y+126"
-                      `${wx(f2Bottom[0][0] - 26)},${wy(f2y + 114)}`,           // step left 26", up to f2y+114"
-                      `${wx(f2Bottom[0][0] + 109)},${wy(f2y + 2)}`,             // right 135", down 102" → f2y+2"
+                      `${wx(f2Bottom[0][0] - 24)},${wy(f2y + 110)}`,           // step left 24" (−16" total from original +126)
+                      `${wx(f2Bottom[0][0] - 26)},${wy(f2y + 98)}`,            // step left 26" (−16" from original +114)
+                      `${wx(f2Bottom[0][0] + 85)},${wy(f2y + 2)}`,              // deck knee (−24" vs +109 — 2′ left)
                       `${wx(f2sl.soffit.x1)},${wy(f2y)}`,                      // deck across to landing
                       `${wx(f2sl.soffit.x1)},${wy(f2sl.soffit.y2 + f2y)}`,    // up to landing height
                       `${wx(f2Bottom[1][0])},${wy(f2Bottom[1][1])}`,           // seat cut (stringer base)
@@ -2600,7 +2602,7 @@ export function WallElevationView({
           const s2Layout   = computeWallLayout(secondFloorSouthWall);
           const wallLen2   = s2Layout.totalLengthInches;
           const s2Offset   = (r: Rect): Rect => ({ ...r, y: r.y + f2y });
-          const CMU_TOTAL_H = 23 * CMU_BLOCK_H;
+          // CMU_TOTAL_H imported from framing-data (184")
           const jBase2     = f2y + secondFloorSouthWall.wallHeightInches;
           const jTop2      = jBase2 + TJI_DEPTH;
           const JOIST_W2   = SW;
@@ -3226,7 +3228,7 @@ export function WallElevationView({
           const f2Layout = computeWallLayout(f2Wall);
           const wallLen2 = f2Layout.totalLengthInches;
           const f2Offset = (r: Rect): Rect => ({ ...r, y: r.y + f2y });
-          const CMU_TOTAL_H = 23 * CMU_BLOCK_H;
+          // CMU_TOTAL_H imported from framing-data (184")
           const jBase2   = f2y + f2Wall.wallHeightInches;
           const jTop2    = jBase2 + TJI_DEPTH;
           const jFill2   = "#e8e4dc";
@@ -3588,7 +3590,7 @@ export function WallElevationView({
 
         {/* ── Third floor — west wall: plumb wall + knee wall slope ──
             Standard framing: build plumb to low side (84"), double top plate,
-            then triangular knee wall on top creates the pitch from 84" to 116".
+            then triangular knee wall on top creates the pitch from 84" to 96".
             This gives a continuous horizontal top plate for the diaphragm chord,
             uniform stud lengths in the main wall, and the slope framed separately. ── */}
         {isWest && (() => {
@@ -3602,7 +3604,7 @@ export function WallElevationView({
           const KW    = "#8b5e3c"; // knee wall color
           const OC    = wall.studSpacingOC;     // 16"
           const LOW_H = WEST_F3_LOW_H;          // 84" — plumb wall height
-          const HIGH_H = WEST_F3_HIGH_H;        // 116" — high end total
+          const HIGH_H = WEST_F3_HIGH_H;        // 96" — high end total
 
           // ── MAIN WALL — uniform height to low side (84") ──
           const mainWallH = LOW_H;
@@ -4299,6 +4301,108 @@ export function WallElevationView({
                   textAnchor="middle" pointerEvents="none" fontWeight="700">
                   ROOF ASSEMBLY — R-49 · 42 PSF · hover for layer detail
                 </text>
+
+                {/* ── EPDM-to-CMU Transition Detail (both sides) ──
+                    Shows the membrane path from roof deck down to CMU top, over the
+                    CMU top course, and 2-3" down the exterior face with drip edge.
+                    Drawn at left and right edges of the wall where E/W walls meet. ── */}
+                {[0, wallLen].map((edgeX, si) => {
+                  const side = si === 0 ? "left" : "right";
+                  // CMU exterior face position (9" outside frame edge)
+                  const cmuExtX = si === 0 ? -CMU_EXT_SIDE : wallLen + CMU_EXT_SIDE;
+                  // CMU interior face (1" gap from frame)
+                  const cmuIntX = si === 0 ? -(CMU_EXT_SIDE - CMU_T) : wallLen + (CMU_EXT_SIDE - CMU_T);
+                  // Frame outer face
+                  const frameOutX = si === 0 ? -FR_GAP : wallLen + FR_GAP;
+
+                  const memColor = "#b91c1c";    // red-700 for membrane path
+                  const memSW    = 2.2;
+                  const copColor = "#71717a";     // zinc-500 for metal coping/flashing
+                  const copSW    = 2;
+                  const dripColor = "#0369a1";    // sky-700 for drip edge
+                  const dripSW   = 1.5;
+
+                  // Membrane path: roof edge → down frame exterior → over CMU top → down CMU exterior
+                  const pathPoints = [
+                    [frameOutX, deckTop],                           // start at roof deck level on frame face
+                    [frameOutX, CMU_TOTAL_H],                       // down exposed wood frame to CMU top
+                    [cmuExtX, CMU_TOTAL_H],                         // across CMU top (8" wide)
+                    [cmuExtX, CMU_TOTAL_H - ROOF_MEMBRANE_TURNDOWN], // 3" down exterior CMU face
+                  ];
+                  const pathD = pathPoints.map(([x, y], i) =>
+                    `${i === 0 ? "M" : "L"}${wx(x)} ${wy(y)}`).join(" ");
+
+                  // Coping cap at parapet top (sits above the EPDM termination)
+                  const copingY = deckTop + (aboveDeckLayers.length + 1) * gap + 2;
+                  const copL = si === 0 ? frameOutX - 3 : frameOutX - 3;
+                  const copR = si === 0 ? frameOutX + 6 : frameOutX + 6;
+
+                  // Drip edge at CMU termination (small kick-out)
+                  const dripY = CMU_TOTAL_H - ROOF_MEMBRANE_TURNDOWN;
+                  const dripKick = si === 0 ? cmuExtX - ROOF_DRIP_EDGE_W : cmuExtX + ROOF_DRIP_EDGE_W;
+
+                  return (
+                    <g key={`membrane-path-${side}`}>
+                      {/* Membrane path line */}
+                      <g
+                        onMouseEnter={(e) => showTip(e, `roof-membrane-${side}`,
+                          "EPDM-to-CMU Transition — Self-Adhered Membrane",
+                          `Runs ${fmtDec(deckTop - CMU_TOTAL_H)}" down frame + ${fmtDec(CMU_T + FR_GAP)}" across CMU top + ${ROOF_MEMBRANE_TURNDOWN}" down exterior`,
+                          `${side} edge · Frame face → T.O. CMU (${CMU_TOTAL_H}") → drip edge (${CMU_TOTAL_H - ROOF_MEMBRANE_TURNDOWN}")`)}
+                        onMouseMove={moveTip}
+                        onMouseLeave={hideTip}
+                        style={{ cursor: "crosshair" }}
+                      >
+                        <path d={pathD} fill="none" stroke={memColor} strokeWidth={memSW}
+                          strokeLinecap="round" strokeLinejoin="round" />
+                      </g>
+
+                      {/* Drip edge flashing at CMU termination */}
+                      <g
+                        onMouseEnter={(e) => showTip(e, `roof-drip-${side}`,
+                          "Metal Drip-Edge Flashing",
+                          `Set into mortar joint at course 22/23 · kicks out ${ROOF_DRIP_EDGE_W}" from CMU face`,
+                          `y: ${fmtDec(dripY)}" · Sealed with polyurethane caulk`)}
+                        onMouseMove={moveTip}
+                        onMouseLeave={hideTip}
+                        style={{ cursor: "crosshair" }}
+                      >
+                        <line x1={wx(cmuExtX)} y1={wy(dripY)}
+                          x2={wx(dripKick)} y2={wy(dripY)}
+                          stroke={dripColor} strokeWidth={dripSW} strokeLinecap="round" />
+                        {/* Small triangle indicator for drip */}
+                        <line x1={wx(dripKick)} y1={wy(dripY)}
+                          x2={wx(dripKick)} y2={wy(dripY - 1.5)}
+                          stroke={dripColor} strokeWidth={dripSW} strokeLinecap="round" />
+                      </g>
+
+                      {/* Termination bar indicator at roof parapet top */}
+                      <g
+                        onMouseEnter={(e) => showTip(e, `roof-term-bar-${side}`,
+                          "Aluminum Termination Bar",
+                          `${fmtDec(ROOF_TERM_BAR_W)}" wide · mechanically fastened to wood framing`,
+                          `Secures EPDM at parapet top · sealed with caulk`)}
+                        onMouseMove={moveTip}
+                        onMouseLeave={hideTip}
+                        style={{ cursor: "crosshair" }}
+                      >
+                        <rect x={wx(Math.min(frameOutX, frameOutX - 1.5))} y={wy(deckTop + 2, ROOF_TERM_BAR_W)}
+                          width={px(3)} height={px(ROOF_TERM_BAR_W)}
+                          fill={copColor} stroke="none" opacity={0.7} />
+                      </g>
+
+                      {/* Label for the transition detail */}
+                      <text
+                        x={wx(si === 0 ? cmuExtX - 2 : cmuExtX + 2)}
+                        y={wy((deckTop + CMU_TOTAL_H) / 2)}
+                        fontSize="5" fill={memColor} fontFamily="ui-monospace,monospace"
+                        textAnchor={si === 0 ? "end" : "start"} pointerEvents="none"
+                        fontWeight="600" writingMode="tb" letterSpacing="0.5">
+                        MEMBRANE PATH
+                      </text>
+                    </g>
+                  );
+                })}
               </g>
             );
           }
@@ -4330,6 +4434,82 @@ export function WallElevationView({
                   textAnchor="middle" pointerEvents="none" fontWeight="700">
                   ROOF ASSEMBLY — R-49 · 42 PSF · hover for layer detail
                 </text>
+
+                {/* ── EPDM-to-CMU Transition (East wall, both sides) ── */}
+                {[0, wallLen].map((edgeX, si) => {
+                  const side = si === 0 ? "left" : "right";
+                  const cmuExtX = si === 0 ? -CMU_EXT_SIDE : wallLen + CMU_EXT_SIDE;
+                  const cmuIntX = si === 0 ? -(CMU_EXT_SIDE - CMU_T) : wallLen + (CMU_EXT_SIDE - CMU_T);
+                  const frameOutX = si === 0 ? -FR_GAP : wallLen + FR_GAP;
+                  const memColor = "#b91c1c";
+                  const memSW    = 2.2;
+                  const dripColor = "#0369a1";
+                  const dripSW   = 1.5;
+                  const copColor = "#71717a";
+                  const dripY = CMU_TOTAL_H - ROOF_MEMBRANE_TURNDOWN;
+                  const dripKick = si === 0 ? cmuExtX - ROOF_DRIP_EDGE_W : cmuExtX + ROOF_DRIP_EDGE_W;
+                  const pathPoints = [
+                    [frameOutX, deckTop],
+                    [frameOutX, CMU_TOTAL_H],
+                    [cmuExtX, CMU_TOTAL_H],
+                    [cmuExtX, dripY],
+                  ];
+                  const pathD = pathPoints.map(([x, y], i) =>
+                    `${i === 0 ? "M" : "L"}${wx(x)} ${wy(y)}`).join(" ");
+                  return (
+                    <g key={`membrane-path-e-${side}`}>
+                      <g
+                        onMouseEnter={(e) => showTip(e, `roof-membrane-e-${side}`,
+                          "EPDM-to-CMU Transition — Self-Adhered Membrane",
+                          `Runs ${fmtDec(deckTop - CMU_TOTAL_H)}" down frame + ${fmtDec(CMU_T + FR_GAP)}" across CMU top + ${ROOF_MEMBRANE_TURNDOWN}" down exterior`,
+                          `${side} edge · Frame face → T.O. CMU → drip edge`)}
+                        onMouseMove={moveTip}
+                        onMouseLeave={hideTip}
+                        style={{ cursor: "crosshair" }}
+                      >
+                        <path d={pathD} fill="none" stroke={memColor} strokeWidth={memSW}
+                          strokeLinecap="round" strokeLinejoin="round" />
+                      </g>
+                      <g
+                        onMouseEnter={(e) => showTip(e, `roof-drip-e-${side}`,
+                          "Metal Drip-Edge Flashing",
+                          `Set into mortar joint · kicks out ${ROOF_DRIP_EDGE_W}" from CMU face`,
+                          `y: ${fmtDec(dripY)}"`)}
+                        onMouseMove={moveTip}
+                        onMouseLeave={hideTip}
+                        style={{ cursor: "crosshair" }}
+                      >
+                        <line x1={wx(cmuExtX)} y1={wy(dripY)}
+                          x2={wx(dripKick)} y2={wy(dripY)}
+                          stroke={dripColor} strokeWidth={dripSW} strokeLinecap="round" />
+                        <line x1={wx(dripKick)} y1={wy(dripY)}
+                          x2={wx(dripKick)} y2={wy(dripY - 1.5)}
+                          stroke={dripColor} strokeWidth={dripSW} strokeLinecap="round" />
+                      </g>
+                      <g
+                        onMouseEnter={(e) => showTip(e, `roof-term-bar-e-${side}`,
+                          "Aluminum Termination Bar",
+                          `${fmtDec(ROOF_TERM_BAR_W)}" wide · mechanically fastened`,
+                          `Secures EPDM at parapet top`)}
+                        onMouseMove={moveTip}
+                        onMouseLeave={hideTip}
+                        style={{ cursor: "crosshair" }}
+                      >
+                        <rect x={wx(Math.min(frameOutX, frameOutX - 1.5))} y={wy(deckTop + 2, ROOF_TERM_BAR_W)}
+                          width={px(3)} height={px(ROOF_TERM_BAR_W)}
+                          fill={copColor} stroke="none" opacity={0.7} />
+                      </g>
+                      <text
+                        x={wx(si === 0 ? cmuExtX - 2 : cmuExtX + 2)}
+                        y={wy((deckTop + CMU_TOTAL_H) / 2)}
+                        fontSize="5" fill={memColor} fontFamily="ui-monospace,monospace"
+                        textAnchor={si === 0 ? "end" : "start"} pointerEvents="none"
+                        fontWeight="600" writingMode="tb" letterSpacing="0.5">
+                        MEMBRANE PATH
+                      </text>
+                    </g>
+                  );
+                })}
               </g>
             );
           }
@@ -4365,6 +4545,84 @@ export function WallElevationView({
                 textAnchor="middle" pointerEvents="none" fontWeight="700">
                 ROOF ASSEMBLY — R-49 · 42 PSF · hover for detail
               </text>
+
+              {/* ── EPDM-to-CMU Transition (West wall, both sides) ──
+                  Left edge = south side (shed roof high point), right = north (low point) */}
+              {[0, wallLen].map((edgeX, si) => {
+                const side = si === 0 ? "left" : "right";
+                const cmuExtX = si === 0 ? -CMU_EXT_SIDE : wallLen + CMU_EXT_SIDE;
+                const frameOutX = si === 0 ? -FR_GAP : wallLen + FR_GAP;
+                const memColor = "#b91c1c";
+                const memSW    = 2.2;
+                const dripColor = "#0369a1";
+                const dripSW   = 1.5;
+                const copColor = "#71717a";
+                // West wall shed roof: left edge at yLeft (high), right at yRight (low)
+                const roofEdgeY = si === 0 ? yLeft : yRight;
+                const dripY = CMU_TOTAL_H - ROOF_MEMBRANE_TURNDOWN;
+                const dripKick = si === 0 ? cmuExtX - ROOF_DRIP_EDGE_W : cmuExtX + ROOF_DRIP_EDGE_W;
+                const pathPoints = [
+                  [frameOutX, roofEdgeY],
+                  [frameOutX, CMU_TOTAL_H],
+                  [cmuExtX, CMU_TOTAL_H],
+                  [cmuExtX, dripY],
+                ];
+                const pathD = pathPoints.map(([x, y], i) =>
+                  `${i === 0 ? "M" : "L"}${wx(x)} ${wy(y)}`).join(" ");
+                return (
+                  <g key={`membrane-path-w-${side}`}>
+                    <g
+                      onMouseEnter={(e) => showTip(e, `roof-membrane-w-${side}`,
+                        "EPDM-to-CMU Transition — Self-Adhered Membrane",
+                        `Runs ${fmtDec(roofEdgeY - CMU_TOTAL_H)}" down frame + ${fmtDec(CMU_T + FR_GAP)}" across CMU top + ${ROOF_MEMBRANE_TURNDOWN}" down exterior`,
+                        `${side} edge · Frame face → T.O. CMU → drip edge`)}
+                      onMouseMove={moveTip}
+                      onMouseLeave={hideTip}
+                      style={{ cursor: "crosshair" }}
+                    >
+                      <path d={pathD} fill="none" stroke={memColor} strokeWidth={memSW}
+                        strokeLinecap="round" strokeLinejoin="round" />
+                    </g>
+                    <g
+                      onMouseEnter={(e) => showTip(e, `roof-drip-w-${side}`,
+                        "Metal Drip-Edge Flashing",
+                        `Set into mortar joint · kicks out ${ROOF_DRIP_EDGE_W}" from CMU face`,
+                        `y: ${fmtDec(dripY)}"`)}
+                      onMouseMove={moveTip}
+                      onMouseLeave={hideTip}
+                      style={{ cursor: "crosshair" }}
+                    >
+                      <line x1={wx(cmuExtX)} y1={wy(dripY)}
+                        x2={wx(dripKick)} y2={wy(dripY)}
+                        stroke={dripColor} strokeWidth={dripSW} strokeLinecap="round" />
+                      <line x1={wx(dripKick)} y1={wy(dripY)}
+                        x2={wx(dripKick)} y2={wy(dripY - 1.5)}
+                        stroke={dripColor} strokeWidth={dripSW} strokeLinecap="round" />
+                    </g>
+                    <g
+                      onMouseEnter={(e) => showTip(e, `roof-term-bar-w-${side}`,
+                        "Aluminum Termination Bar",
+                        `${fmtDec(ROOF_TERM_BAR_W)}" wide · mechanically fastened`,
+                        `Secures EPDM at parapet top`)}
+                      onMouseMove={moveTip}
+                      onMouseLeave={hideTip}
+                      style={{ cursor: "crosshair" }}
+                    >
+                      <rect x={wx(Math.min(frameOutX, frameOutX - 1.5))} y={wy(roofEdgeY + 2, ROOF_TERM_BAR_W)}
+                        width={px(3)} height={px(ROOF_TERM_BAR_W)}
+                        fill={copColor} stroke="none" opacity={0.7} />
+                    </g>
+                    <text
+                      x={wx(si === 0 ? cmuExtX - 2 : cmuExtX + 2)}
+                      y={wy((roofEdgeY + CMU_TOTAL_H) / 2)}
+                      fontSize="5" fill={memColor} fontFamily="ui-monospace,monospace"
+                      textAnchor={si === 0 ? "end" : "start"} pointerEvents="none"
+                      fontWeight="600" writingMode="tb" letterSpacing="0.5">
+                      MEMBRANE PATH
+                    </text>
+                  </g>
+                );
+              })}
             </g>
           );
         })()}

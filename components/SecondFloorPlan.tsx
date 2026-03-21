@@ -7,7 +7,7 @@ import {
   FR_GAP, FR_D, INT_D,
   secondFloorSouthWall, secondFloorNorthWall,
   secondFloorWestWall, secondFloorEastWall,
-  STAIR_TREAD_DEPTH, STAIR_WIDTH, STAIR_MAIN_STEPS,
+  STAIR_TREAD_DEPTH, STAIR_WIDTH, STAIR_MAIN_STEPS, STAIR_LAND_POST_W,
   STAIR_LAND_RISERS, STAIR_TOTAL_RISERS,
   STAIR2_START_X, STAIR2_TOTAL_RISERS, STAIR2_LAND_TOP_W, STAIR2_LAND_BOT_W,
   PARTITION_WALL_R, PARTITION_V_OFFSET,
@@ -156,14 +156,10 @@ export function SecondFloorPlan() {
   const wellB = stairN_plan;    // 169.5"
 
   // ── Second floor stair (going UP to third floor) ──────────────────
-  // Per framing-data: STAIR2_START_X = 180 (elevation X on north wall, bottom of run)
-  // Runs from 180" to 36" in elevation X (going west=up)
-  // In plan: elevation X → plan X (north wall mirrored): planX = FW_OUT + 286 - elevX
-  // Bottom: planX = 9 + 286 - 180 = 115
-  // Top:    planX = 9 + 286 - 36 = 259
-  const STAIR2_TREADS = STAIR2_TOTAL_RISERS - 1; // 16 treads
-  const stair2BotX = FW_OUT + nTotalLen - STAIR2_START_X;  // 115
-  const stair2TopX = stair2BotX + STAIR2_TREADS * STAIR_TREAD_DEPTH; // 115 + 16×9 = 259
+  // planX = FW_OUT + nTotalLen − STAIR2_START_X (north wall mirrored from elevation X)
+  const STAIR2_TREADS = STAIR2_TOTAL_RISERS - 1; // treads = risers − 1
+  const stair2BotX = FW_OUT + nTotalLen - STAIR2_START_X;
+  const stair2TopX = stair2BotX + STAIR2_TREADS * STAIR_TREAD_DEPTH;
   const stair2N = FS_IN;
   const stair2S = FS_IN - STAIR_WIDTH;
 
@@ -172,8 +168,8 @@ export function SecondFloorPlan() {
   const botLandR = stair2BotX;                       // 115
 
   // Top landing (at third floor, but shown as the arrival point)
-  const topLandL = stair2TopX;                        // 259
-  const topLandR = stair2TopX + STAIR2_LAND_TOP_W;   // 259 + 36 = 295 (at west wall)
+  const topLandL = stair2TopX;
+  const topLandR = stair2TopX + STAIR2_LAND_TOP_W;
 
   // ── Stud layouts ──────────────────────────────────────────────────
   const nStuds = computeWallLayout(secondFloorSouthWall).studs; // south exterior = top
@@ -240,7 +236,7 @@ export function SecondFloorPlan() {
         {/* ── Title ─────────────────────────────────────────────────── */}
         <text className="fp-title" x={AL} y={AT - 28}>02 — SECOND LEVEL FLOOR PLAN</text>
         <text className="fp-sub" x={AL} y={AT - 12}>
-          SCALE: 3px = 1&quot;  |  8&quot; CMU WALLS  |  2×6 WOOD FRAME  |  DECK @ {fmt(TJI_DEPTH + SUBFLOOR_T + 116)} AFF
+          SCALE: 3px = 1&quot;  |  8&quot; CMU WALLS  |  2×6 WOOD FRAME  |  DECK @ {fmt(TJI_DEPTH + SUBFLOOR_T + 96)} AFF
         </text>
 
         {/* ══ CMU WALLS ══════════════════════════════════════════════ */}
@@ -470,6 +466,26 @@ export function SecondFloorPlan() {
                 x={px((topLandL + topLandR) / 2)} y={py(stair2S + SW / 2)}>
                 3RD FL LANDING
               </text>
+
+              {/* 4×4 posts — same plan coordinates as 1st floor (continuous through stairwell) */}
+              {(() => {
+                const P = STAIR_LAND_POST_W;
+                const platL = PARTITION_WALL_R + INT_D;
+                const platR = NW_R;
+                const platT = FS_IN - STAIR_WIDTH;
+                const stairR = platR + STAIR_MAIN_STEPS * STAIR_TREAD_DEPTH;
+                const posts: { x: number; y: number }[] = [
+                  { x: platR, y: platT - P },
+                  { x: platL - P, y: platT - P },
+                  { x: stairR, y: platT - P },
+                ];
+                return posts.map((p, i) => (
+                  <rect key={`f2-landing-post-${i}`}
+                    x={px(p.x)} y={py(p.y)}
+                    width={pf(P)} height={pf(P)}
+                    fill="#e8d8b8" stroke="#8b7348" strokeWidth="1.4" />
+                ));
+              })()}
             </g>
           );
         })()}

@@ -35,12 +35,12 @@
  *    vertPartition             Bathroom door wall definition (28″ door) line 128
  *
  *  STAIR PARAMETERS                                          line 141
- *    STAIR_TOTAL_RISERS . 17     Total risers floor-to-floor
- *    STAIR_TREAD_DEPTH .. 10"    Tread depth (run per step)
- *    STAIR_LAND_RISERS .. 3      Risers in landing zone
+ *    STAIR_TOTAL_RISERS . 14     Total risers floor-to-floor (106.25/14 = 7.59" riser)
+ *    STAIR_TREAD_DEPTH .. 9"     Tread depth (run per step)
+ *    STAIR_LAND_RISERS .. 2      Risers in landing zone (platform 15.18")
  *    STAIR_WIDTH ........ 36"    Stair / landing width (code min.)
- *    STAIR_APPR_STEPS ... 2      N-S approach steps (floor plan)
- *    STAIR_MAIN_STEPS ... 13     Main run treads E-W (floor plan)
+ *    STAIR_APPR_STEPS ... 1      N-S approach steps (floor plan)
+ *    STAIR_MAIN_STEPS ... 11     Main run treads E-W (floor plan)
  *
  *  STAIR LANDING DETAIL LUMBER                               line 151
  *    STAIR_TREAD_T ...... 1.0"   5/4×12 tread board
@@ -128,7 +128,7 @@ export const horizPartition: WallElevation = {
   id: "horiz-partition",
   name: "Kitchen / Bath Partition (horizontal)",
   totalLengthInches: HORIZ_PART_LENGTH,
-  wallHeightInches: 116,
+  wallHeightInches: 96,
   studSpacingOC: 16,
   sections: [{ lengthInches: HORIZ_PART_LENGTH }],
   openings: [],
@@ -138,7 +138,7 @@ export const vertPartition: WallElevation = {
   id: "vert-partition",
   name: "Bathroom Door Wall",
   totalLengthInches: VERT_PART_LENGTH,
-  wallHeightInches: 116,
+  wallHeightInches: 96,
   studSpacingOC: 16,
   sections: [
     { lengthInches: BATH_DOOR_RO, label: `${BATH_DOOR_RO}" door RO` },
@@ -152,7 +152,7 @@ export const bathroomEastWall: WallElevation = {
   id: "bathroom-east",
   name: "Bathroom (east side)",
   totalLengthInches: VERT_PART_LENGTH,
-  wallHeightInches: 116,
+  wallHeightInches: 96,
   studSpacingOC: 16,
   sections: [{ lengthInches: VERT_PART_LENGTH }],
   openings: [],
@@ -160,13 +160,13 @@ export const bathroomEastWall: WallElevation = {
 
 // ═══ STAIR PARAMETERS ═══════════════════════════════════════════════
 
-export const STAIR_TOTAL_RISERS = 17;
+export const STAIR_TOTAL_RISERS = 14;
 export const STAIR_TREAD_DEPTH  = 9;
 export const STAIR_NOSING       = 1;    // tread nosing overhang past riser face
-export const STAIR_LAND_RISERS  = 4;
+export const STAIR_LAND_RISERS  = 2;
 export const STAIR_WIDTH        = 36;
-export const STAIR_APPR_STEPS   = 3;
-export const STAIR_MAIN_STEPS   = 12;
+export const STAIR_APPR_STEPS   = 1;
+export const STAIR_MAIN_STEPS   = 11;
 
 // Stair landing detail lumber
 export const STAIR_TREAD_T      = 1.0;
@@ -183,8 +183,10 @@ export const STAIR_STRINGER_DEPTH = 11.25;   // 2×12 actual depth
 export const STAIR_STRINGER_FACE  = 1.5;     // 2×12 face width
 
 // Second floor stair (north wall, straight run — no landing)
-export const STAIR2_START_X       = 180;   // shifted so stair lands at 36" top landing
-export const STAIR2_TOTAL_RISERS  = 17;
+// Elevation X at east end of main run; plan bottom landing west edge = (FW_OUT+nLen) − this.
+// 159.5 → plan stair2BotX 135.5", bot land 99.5"–135.5" (aligned w/ 1F stairwell west edge).
+export const STAIR2_START_X       = 159.5;
+export const STAIR2_TOTAL_RISERS  = 14;
 export const STAIR2_LAND_TOP_W    = 36;
 export const STAIR2_LAND_BOT_W    = 36;
 
@@ -329,6 +331,16 @@ export const ROOF_SCUPPER_H     = 4;      // scupper opening height
 export const ROOF_SCUPPER_COUNT = 2;      // primary scuppers on low side
 export const ROOF_SNOW_LOAD     = 42;     // design roof snow load (psf)
 
+// ── EPDM-to-CMU Transition Detail ──
+// Self-adhered membrane runs from roof edge down exposed wood frame
+// to CMU top, over the CMU top course, and 2-3" down exterior CMU face.
+// See EPDM_ROOF_DETAIL.md §3a for full specification.
+export const CMU_TOTAL_H        = 184;    // total CMU height: 23 courses × 8"
+export const ROOF_MEMBRANE_TURNDOWN = 3;  // membrane runs 3" down exterior CMU face
+export const ROOF_DRIP_EDGE_W   = 0.5;   // drip edge kicks out 1/2" from CMU face
+export const ROOF_TERM_BAR_W    = 1.5;   // termination bar width (aluminum)
+export const ROOF_COPING_H      = 2;     // coping cap height above parapet top
+
 // ═══ EXTERIOR WALLS ═════════════════════════════════════════════════
 /**
  * CMU shell with wood frame built 1″ off the interior CMU face.
@@ -351,7 +363,7 @@ export const initialWalls: Record<string, WallElevation> = {
     id: "south",
     name: "South Wall",
     totalLengthInches: 286,
-    wallHeightInches: 116,
+    wallHeightInches: 96,
     studSpacingOC: 16,
     anchorBolts: [6, 66, 122, 170, 236, 280],
     sections: [
@@ -393,7 +405,7 @@ export const initialWalls: Record<string, WallElevation> = {
     id: "north",
     name: "North Wall",
     totalLengthInches: 286,
-    wallHeightInches: 116,
+    wallHeightInches: 96,
     studSpacingOC: 16,
     anchorBolts: [6, 72, 144, 216, 280],
     sections: [
@@ -423,7 +435,7 @@ export const initialWalls: Record<string, WallElevation> = {
     id: "west",
     name: "West Wall",
     totalLengthInches: 166,
-    wallHeightInches: 116,
+    wallHeightInches: 96,
     studSpacingOC: 16,
     sections: [
       { lengthInches: 40, label: "40\" / 2.5 bays" },
@@ -475,7 +487,7 @@ export const initialWalls: Record<string, WallElevation> = {
     id: "east",
     name: "East Wall",
     totalLengthInches: 166,
-    wallHeightInches: 116,
+    wallHeightInches: 96,
     studSpacingOC: 16,
     anchorBolts: [6, 72, 138, 160],
     sections: [
@@ -521,7 +533,7 @@ export const THIRD_FLOOR_H  = 90;    // third floor wall height — 7'6", loft l
 
 // West wall third floor — full width, shed roof sloping low-left → high-right
 export const WEST_F3_LOW_H  = 84;    // low end (left/west) wall height at 3rd floor — 7'0"
-export const WEST_F3_HIGH_H = 116;   // high end (right/east) wall height — matches north wall 3rd floor
+export const WEST_F3_HIGH_H = 96;    // high end (right/east) wall height — matches north wall 3rd floor
 
 export const thirdFloorEastWall: WallElevation = {
   id: "east-3" as WallId,
@@ -601,7 +613,7 @@ export const secondFloorNorthWall: WallElevation = {
   id: "north-2" as WallId,
   name: "North Wall — Second Floor",
   totalLengthInches: 286,
-  wallHeightInches: 116,
+  wallHeightInches: 96,
   studSpacingOC: 16,
   sections: [
     { lengthInches: 151, label: "151\" (east of stair)" },
@@ -616,7 +628,7 @@ export const secondFloorSouthWall: WallElevation = {
   id: "south-2" as WallId,
   name: "South Wall — Second Floor",
   totalLengthInches: 286,
-  wallHeightInches: 116,
+  wallHeightInches: 96,
   studSpacingOC: 16,
   sections: [
     { lengthInches: 166, label: "166\" left of window" },
@@ -629,7 +641,7 @@ export const secondFloorSouthWall: WallElevation = {
       type: "window",
       widthInches: 40,
       heightInches: 40,
-      sillHeightInches: 9.75,  // 136" from slab − FLOOR2_IN (126.25") ≈ 9.75" above deck
+      sillHeightInches: 29.75,  // 136" from slab − FLOOR2_IN (106.25") = 29.75" above deck — aligned with CMU opening
       positionFromLeftInches: 166,
       label: "3'4\" × 3'4\" CMU window",
       headerSpec: {
@@ -647,7 +659,7 @@ export const secondFloorWestWall: WallElevation = {
   id: "west-2" as WallId,
   name: "West Wall — Second Floor",
   totalLengthInches: 166,
-  wallHeightInches: 116,
+  wallHeightInches: 96,
   studSpacingOC: 16,
   sections: [
     { lengthInches: 48, label: "48\" left of window" },
@@ -659,7 +671,7 @@ export const secondFloorWestWall: WallElevation = {
       type: "window",
       widthInches: 71,          // fills full CMU opening (48" to 119")
       heightInches: 40,         // 3'4" picture window — header top lands at T.O. CMU
-      sillHeightInches: 8.5,
+      sillHeightInches: 28.5,  // header top at CMU top: 77.75 - 9.25 (header) - 40 (window) = 28.5"
       positionFromLeftInches: 48,
       label: "5'11\" × 3'4\"",
       openingSubtype: "Picture Window",
@@ -678,7 +690,7 @@ export const secondFloorEastWall: WallElevation = {
   id: "east-2" as WallId,
   name: "East Wall — Second Floor",
   totalLengthInches: 166,
-  wallHeightInches: 116,
+  wallHeightInches: 96,
   studSpacingOC: 16,
   sections: [
     { lengthInches: 54, label: "54\" left of window" },
@@ -691,7 +703,7 @@ export const secondFloorEastWall: WallElevation = {
       type: "window",
       widthInches: 40,
       heightInches: 40,
-      sillHeightInches: 9.75,   // 136" from slab − FLOOR2_IN (126.25") ≈ 9.75" above deck
+      sillHeightInches: 29.75,   // 136" from slab − FLOOR2_IN (106.25") = 29.75" above deck — aligned with CMU opening
       positionFromLeftInches: 54,
       label: "3'4\" × 3'4\" CMU window",
       headerSpec: {

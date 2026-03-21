@@ -18,6 +18,7 @@ import {
   ROOF_COVERBOARD_T, ROOF_EPDM_T, ROOF_PARAPET_H,
   ROOF_FLASHING_LAP, ROOF_COPING_W, ROOF_SCUPPER_COUNT,
   ROOF_SNOW_LOAD,
+  CMU_TOTAL_H, ROOF_MEMBRANE_TURNDOWN,
 } from "./framing-data";
 
 /* ═══ Types ═══════════════════════════════════════════════════════════════ */
@@ -869,14 +870,17 @@ export function computeCutList(wall: WallElevation): CutListSummary {
       code: "RF FLSH",
     });
 
-    // Termination bar
-    const termBarCount = Math.ceil(perimeterLF / 10);
+    // Termination bar — Menards SKU 1519706 (Model C043491), 10' EPDM Aluminum, $9.99/ea
+    // Need bars at: (1) roof parapet perimeter, (2) CMU drip-edge termination perimeter
+    const termBarRoofCount = Math.ceil(perimeterLF / 10);       // parapet top
+    const termBarCMUCount  = Math.ceil(perimeterLF / 10);       // CMU drip edge
+    const termBarTotal     = termBarRoofCount + termBarCMUCount;
     pieces.push({
-      label: `Aluminum Termination Bar (10' lengths)`,
+      label: `Aluminum Termination Bar 10' — SKU 1519706 (${termBarRoofCount} parapet + ${termBarCMUCount} CMU drip edge)`,
       length: snap8(120),
       category: "Roof Assembly",
       chip: "#8BA0B4",
-      qty: termBarCount,
+      qty: termBarTotal,
       code: "RF TBAR",
     });
 
@@ -888,6 +892,83 @@ export function computeCutList(wall: WallElevation): CutListSummary {
       chip: "#8BA0B4",
       qty: perimeterLF,
       code: "RF COP",
+    });
+
+    // ── EPDM-to-CMU Transition Materials ──
+    // Self-adhered membrane runs from roof edge (FLOOR3_IN) down exposed wood frame
+    // to CMU top (CMU_TOTAL_H), over CMU top (CMU_T + FR_GAP wide), and 3" down
+    // exterior CMU face. Applied on all 4 walls at perimeter.
+
+    // Exposed wood frame height above CMU (varies slightly per FLOOR2_IN calc, use nominal)
+    const FLOOR2_IN_NOM = 106.25;
+    const exposedFrameH = (FLOOR2_IN_NOM + 96 + TJI_DEPTH + SUBFLOOR_T) - CMU_TOTAL_H; // ~48.5"
+    const cmuCapWidth   = CMU_T + FR_GAP;                    // 9" across CMU top
+    const turndownH     = ROOF_MEMBRANE_TURNDOWN;            // 3" down exterior
+
+    // Total membrane run per lineal foot of perimeter:
+    // vertical down frame + horizontal over CMU top + vertical down CMU exterior
+    const memRunPerLF   = exposedFrameH + cmuCapWidth + turndownH; // ~80.5"
+    const memTotalSqIn  = memRunPerLF * perimeterIn;         // total membrane area
+    const memTotalSqFt  = Math.ceil(memTotalSqIn / 144 * 1.15); // +15% waste
+
+    pieces.push({
+      label: `Self-Adhered Membrane (Ice & Water Shield / Blueskin) — CMU Transition (${memTotalSqFt} SF)`,
+      length: 0,
+      category: "Roof Assembly — CMU Transition",
+      chip: "#b91c1c",
+      qty: memTotalSqFt,
+      code: "RF SAMB",
+    });
+
+    // Self-adhered membrane typically comes in 36" wide × 75' rolls = 225 SF/roll
+    const samRollSF  = 225;
+    const samRolls   = Math.ceil(memTotalSqFt / samRollSF);
+    pieces.push({
+      label: `Self-Adhered Membrane Rolls (36" × 75' = 225 SF/roll)`,
+      length: 0,
+      category: "Roof Assembly — CMU Transition",
+      chip: "#b91c1c",
+      qty: samRolls,
+      code: "RF SAMR",
+    });
+
+    // Drip-edge flashing at CMU termination — metal, full perimeter
+    pieces.push({
+      label: `Metal Drip-Edge Flashing (at CMU mortar joint, ${perimeterLF} LF)`,
+      length: 0,
+      category: "Roof Assembly — CMU Transition",
+      chip: "#0369a1",
+      qty: perimeterLF,
+      code: "RF DRIP",
+    });
+
+    // Polyurethane caulk for sealing reglets and termination bar fasteners
+    // ~1 tube per 30 LF of termination bar (2 runs = parapet + CMU)
+    const caulkTubes = Math.ceil((perimeterLF * 2) / 30);
+    pieces.push({
+      label: `Polyurethane Caulk — Sikaflex (10.1 oz tubes)`,
+      length: 0,
+      category: "Roof Assembly — CMU Transition",
+      chip: "#71717a",
+      qty: caulkTubes,
+      code: "RF CAULK",
+    });
+
+    // Masonry water repellent for CMU below drip edge
+    // Coverage ~150 SF/gal; CMU exterior face below drip edge ≈ perimeter × (CMU_TOTAL_H - FLOOR2_IN_NOM) / 144
+    // But we only need the zone BELOW the transition — just treating the top few feet is sufficient
+    // Treat ~4' below drip edge on all 4 walls
+    const sealerZoneH   = 48; // 4 feet below drip edge
+    const sealerSqIn    = perimeterIn * sealerZoneH;
+    const sealerSqFt    = Math.ceil(sealerSqIn / 144);
+    const sealerGal     = Math.ceil(sealerSqFt / 150);
+    pieces.push({
+      label: `Masonry Water Repellent — Silane/Siloxane (${sealerSqFt} SF coverage, ${sealerGal} gal)`,
+      length: 0,
+      category: "Roof Assembly — CMU Transition",
+      chip: "#71717a",
+      qty: sealerGal,
+      code: "RF SEAL",
     });
 
     // Scuppers — through-wall drainage, 2 primary + 2 overflow

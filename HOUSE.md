@@ -35,11 +35,11 @@
 
 - Subfloor (main):          0"
 - Bottom plate top:         1.5"  → PLATE_H
-- Stud top:                 113"  (computed from wallHeightInches − TOP_H = 116 − 3.0)
-- Top plate top:            116"  → wallHeightInches
-- TJI joist bottom:         116"
-- TJI joist top:            127.875" (116 + TJI_DEPTH)
-- Second floor subfloor:    128.625" (116 + TJI_DEPTH + SUBFLOOR_T)
+- Stud top:                 93"  (computed from wallHeightInches − TOP_H = 96 − 3.0)
+- Top plate top:            96"  → wallHeightInches
+- TJI joist bottom:         96"
+- TJI joist top:            107.875" (96 + TJI_DEPTH)
+- Second floor subfloor:    108.625" (96 + TJI_DEPTH + SUBFLOOR_T)
 - Bathroom raised floor:    22.698" (STAIR_LAND_RISERS × rise; matches landing)
 
 ## How To Make Changes
@@ -123,7 +123,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 
 ## South Wall — 286" (23'-10") total
 
-**Source:** `initialWalls.south` in framing-data.ts. `wallHeightInches: 116`. One door 39" × 80" at positionFromLeftInches 127. Stud override: `south-stud-12` dx +1.5".
+**Source:** `initialWalls.south` in framing-data.ts. `wallHeightInches: 96`. One door 39" × 80" at positionFromLeftInches 127. Stud override: `south-stud-12` dx +1.5".
 
 ### south-bp-0 — Bottom plate (left of door)
 
@@ -152,7 +152,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** south-tp-0-1
 - **Member:** 2×6 × 192" (lower course, first piece)
 - **Count:** 1
-- **Location:** x=0" to 192", y=113" in elevation
+- **Location:** x=0" to 192", y=93" in elevation
 - **Plan position:** full wall span (splice at 192")
 - **Connected to:** studs (end nail), splice with tp-0-2
 - **Controls:** MAX_PLATE_LENGTH_IN (192) in layout-calculator; W > 192 triggers splice
@@ -163,7 +163,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** south-tp-0-2
 - **Member:** 2×6 × 94"
 - **Count:** 1
-- **Location:** x=192" to 286", y=113" in elevation
+- **Location:** x=192" to 286", y=93" in elevation
 - **Connected to:** studs (end nail), splice with tp-0-1
 - **Controls:** computed from totalLengthInches − MAX_PLATE_LENGTH_IN
 - **Notes:** Second piece of lower course.
@@ -173,7 +173,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** south-tp-1-1
 - **Member:** 2×6 × 96"
 - **Count:** 1
-- **Location:** x=0" to 96", y=114.5" in elevation
+- **Location:** x=0" to 96", y=94.5" in elevation
 - **Connected to:** lower top plate, studs (end nail)
 - **Controls:** studSpacingOC × 6 = 96" (staggered splice)
 - **Notes:** Upper course staggered so splice not over lower splice.
@@ -183,7 +183,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** south-tp-1-2
 - **Member:** 2×6 × 190"
 - **Count:** 1
-- **Location:** x=96" to 286", y=114.5" in elevation
+- **Location:** x=96" to 286", y=94.5" in elevation
 - **Connected to:** lower top plate, studs (end nail)
 - **Controls:** computed from totalLengthInches − 96
 - **Notes:** Upper course second piece.
@@ -191,12 +191,12 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 ### south-stud-0 through south-stud-22 — Studs
 
 - **ID:** south-stud-0 through south-stud-22
-- **Member:** 2×6 × 111.5" (full-height) or shorter (jack, cripple)
+- **Member:** 2×6 × 91.5" (full-height) or shorter (jack, cripple)
 - **Count:** 23
-- **Location:** x at 16" OC from 0" to 284.5"; full studs y=1.5", height 111.5"; jacks/cripples vary
+- **Location:** x at 16" OC from 0" to 284.5"; full studs y=1.5", height 91.5"; jacks/cripples vary
 - **Plan position:** varies; elevation X maps to plan X (south wall)
 - **Connected to:** bottom plate (toe nail), top plate (end nail); kings/jacks also to header (face nail)
-- **Controls:** studSpacingOC 16, openings, wallHeightInches 116; STUD_BASE = PLATE_H, STUD_H = H − PLATE_H − TOP_H = 116 − 1.5 − 3.0 = 111.5"
+- **Controls:** studSpacingOC 16, openings, wallHeightInches 96; STUD_BASE = PLATE_H, STUD_H = H − PLATE_H − TOP_H = 96 − 1.5 − 3.0 = 91.5"
 - **Notes:** Includes full studs, left/right king, jacks, cripples above header, end king. `south-stud-12` has studOverrides dx +1.5" in framing-data.
 
 ### south-hdr-0 — Header
@@ -208,7 +208,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **Plan position:** over door rough opening
 - **Connected to:** king studs, jack studs (face nail); cripples above (end nail)
 - **Controls:** `initialWalls.south.openings[0].headerSpec` — depth 7.25", 3 plies; review with engineer for MN snow load
-- **Notes:** Cripple zone above header is now taller (36" at 116" wall vs. 10.5" at 96" wall).
+- **Notes:** Cripple zone above header: 96 − 80 − 7.25 = 8.75".
 
 ### south-open-0 — Door opening
 
@@ -219,14 +219,14 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **Plan position:** SD_L to SD_R (plan-geometry)
 - **Connected to:** N/A
 - **Controls:** `initialWalls.south.openings[0]` (positionFromLeftInches 127, widthInches 39, heightInches 80)
-- **Notes:** Door at floor; no sill.
+- **Notes:** Front entry storefront glass door. See "Front Entry — Door Frame Detail" card for head/jamb/sill cross-sections and hardware schedule. Frame: 16-GA hollow metal (HM) set into CMU. Glass: 1" insulated tempered (low-E, argon). Threshold: ADA-compliant aluminum saddle, 1/2" max height. Weatherstrip: EPDM compression bulb (head & jambs) + automatic door sweep (bottom).
 
 ### south-rim-left — Rim board (left)
 
 - **ID:** south-rim-left
 - **Member:** 1.25" × 11.875" (rim × TJI depth)
 - **Count:** 1
-- **Location:** x=0" to 1.5", y=116" in elevation
+- **Location:** x=0" to 1.5", y=96" in elevation
 - **Plan position:** east end of south wall at top plate
 - **Connected to:** top plate (bearing), TJI joists (end bearing)
 - **Controls:** TJI_RIM_T 1.5, TJI_DEPTH 11.875; jBase = wallHeightInches
@@ -237,7 +237,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** south-rim-right
 - **Member:** 1.25" × 11.875"
 - **Count:** 1
-- **Location:** x=284.5" to 286", y=116" in elevation
+- **Location:** x=284.5" to 286", y=96" in elevation
 - **Connected to:** top plate (bearing), TJI joists (end bearing)
 - **Controls:** computed from totalLengthInches − TJI_RIM_T
 - **Notes:** Closes joist bay at right.
@@ -247,7 +247,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** south-tji-0 through south-tji-16
 - **Member:** TJI (2 × 1.5" flange visible in elevation) × 11.875" depth
 - **Count:** 17
-- **Location:** x from 16.75" to 267.75" at 16" OC (centers); y=116" in elevation
+- **Location:** x from 16.75" to 267.75" at 16" OC (centers); y=96" in elevation
 - **Plan position:** along south wall at second-floor level
 - **Connected to:** rim boards, top plate (bearing); subfloor (face nail)
 - **Controls:** TJI_OC 16, TJI_RIM_T, totalLengthInches; JOIST_W = SW 1.5; positions from TJI_OC + joistOffset to lastJoistX
@@ -258,17 +258,17 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** south-subfloor
 - **Member:** 3/4" OSB × 286"
 - **Count:** 1
-- **Location:** x=0" to 286", y=127.875" (top of TJI) in elevation
+- **Location:** x=0" to 286", y=107.875" (top of TJI) in elevation
 - **Plan position:** full south wall at second floor
 - **Connected to:** TJI flanges (face nail)
-- **Controls:** SUBFLOOR_T 0.75, totalLengthInches; jTop = wallHeightInches + TJI_DEPTH
+- **Controls:** SUBFLOOR_T 0.75, totalLengthInches; jTop = wallHeightInches (96) + TJI_DEPTH
 - **Notes:** Second-floor deck.
 
 ---
 
 ## North Wall — 286" (23'-10") total
 
-**Source:** `initialWalls.north`. `wallHeightInches: 116`. One window 40" × 48", sill 36", positionFromLeftInches 151. Includes bathroom zone, partition overlay, stair, and floor joists.
+**Source:** `initialWalls.north`. `wallHeightInches: 96`. One window 40" × 48", sill 36", positionFromLeftInches 151. Includes bathroom zone, partition overlay, stair, and floor joists.
 
 ### north-bp-0 — Bottom plate
 
@@ -286,7 +286,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** north-tp-0-1, north-tp-0-2, north-tp-1-1, north-tp-1-2
 - **Member:** 2×6 spliced (same as south: 192" + 94" lower; 96" + 190" upper)
 - **Count:** 4
-- **Location:** y=113" and 114.5"; x spans 0–286" (splice at 192" lower, 96" upper)
+- **Location:** y=93" and 94.5"; x spans 0–286" (splice at 192" lower, 96" upper)
 - **Connected to:** studs (end nail)
 - **Controls:** same as south (totalLengthInches 286, MAX_PLATE_LENGTH_IN, studSpacingOC)
 - **Notes:** North elevation X mirrored: left = west in plan.
@@ -294,12 +294,12 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 ### north-stud-0 through north-stud-N — Studs
 
 - **ID:** north-stud-0 through north-stud-N (exact count from layout)
-- **Member:** 2×6 × 111.5" full-height or partial (king, jack, cripple below sill, cripple above header)
+- **Member:** 2×6 × 91.5" full-height or partial (king, jack, cripple below sill, cripple above header)
 - **Count:** Computed by layout-calculator (fillGap, kings, jacks, cripples, end king)
-- **Location:** 16" OC; full at y=1.5", height 111.5"; jacks/cripples at sill/header heights
+- **Location:** 16" OC; full at y=1.5", height 91.5"; jacks/cripples at sill/header heights
 - **Plan position:** elevation X → plan via planPosToElevationX("north", …)
 - **Connected to:** bottom plate (toe nail), top plate (end nail); jacks to sill/header (face nail)
-- **Controls:** studSpacingOC 16, openings (window 151", 40", sill 36"), wallHeightInches 116
+- **Controls:** studSpacingOC 16, openings (window 151", 40", sill 36"), wallHeightInches 96
 - **Notes:** Window has cripples below sill and above header.
 
 ### north-sill-0 — Sill plate
@@ -321,7 +321,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **Location:** x=152.5" to 190.5", y=88" (40" sill + 48" window height) in elevation
 - **Connected to:** king/jack studs (face nail), cripples above (end nail)
 - **Controls:** `initialWalls.north.openings[0].headerSpec` — depth 7.25", 3 plies; review with engineer for MN snow load
-- **Notes:** Cripple zone above header: 116 − 88 − 7.25 = 20.75".
+- **Notes:** Cripple zone above header: 96 − 88 − 7.25 = 0.75".
 
 ### north-open-0 — Window opening
 
@@ -337,9 +337,9 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 ### north-partition-vert — 2×4 partition (vertical)
 
 - **ID:** north-partition-vert
-- **Member:** 2×4 partition wall (3.5" thick) × full height 116"
+- **Member:** 2×4 partition wall (3.5" thick) × full height 96"
 - **Count:** 1
-- **Location:** x = planPosToElevationX("north", PARTITION_WALL_R + INT_D) to planPosToElevationX("north", PARTITION_WALL_R) (elevation); y=0" to 116"
+- **Location:** x = planPosToElevationX("north", PARTITION_WALL_R + INT_D) to planPosToElevationX("north", PARTITION_WALL_R) (elevation); y=0" to 96"
 - **Plan position:** x = 96" to 99.5" (PARTITION_WALL_R to PARTITION_WALL_R + INT_D), north wall zone
 - **Connected to:** north wall (end nail), backing studs (face nail)
 - **Controls:** PARTITION_WALL_R 96, INT_D 3.5; planPosToElevationX("north", …)
@@ -348,7 +348,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 ### north-backing-1, north-backing-2 — Backing studs (T-junction)
 
 - **ID:** north-backing-1, north-backing-2
-- **Member:** 2×6 × 111.5" (full height minus plates)
+- **Member:** 2×6 × 91.5" (full height minus plates)
 - **Count:** 2
 - **Location:** x = planPosToElevationX("north", PARTITION_WALL_R + SW) and PARTITION_WALL_R + 2×SW; y=1.5" in elevation
 - **Plan position:** at partition west face, 96" + 1.5" and 96" + 3" (north wall inner face)
@@ -361,7 +361,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** north-rim-left, north-rim-right
 - **Member:** 1.25" × 11.875"
 - **Count:** 2
-- **Location:** x=0 to 1.5" and x=284.5" to 286", y=116" in elevation
+- **Location:** x=0 to 1.5" and x=284.5" to 286", y=96" in elevation
 - **Connected to:** top plate (bearing), TJI joists (end bearing)
 - **Controls:** same as south (TJI_RIM_T, TJI_DEPTH, totalLengthInches)
 - **Notes:** Same logic as south wall.
@@ -371,7 +371,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** north-tji-0 through north-tji-16
 - **Member:** TJI × 11.875" depth
 - **Count:** 17
-- **Location:** x 16.75" to 267.75" at 16" OC, y=116"
+- **Location:** x 16.75" to 267.75" at 16" OC, y=96"
 - **Connected to:** rim boards, top plate (bearing), subfloor (face nail)
 - **Controls:** same as south (TJI_OC, TJI_RIM_T, totalLengthInches)
 - **Notes:** Same as south; north elevation mirrored.
@@ -381,7 +381,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** north-subfloor
 - **Member:** 3/4" OSB × 286"
 - **Count:** 1
-- **Location:** x=0" to 286", y=127.875" in elevation
+- **Location:** x=0" to 286", y=107.875" in elevation
 - **Connected to:** TJI flanges (face nail)
 - **Controls:** SUBFLOOR_T, totalLengthInches, jTop
 - **Notes:** Second-floor deck.
@@ -472,7 +472,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 
 ## West Wall — 166" (13'-10") total
 
-**Source:** `initialWalls.west`. `wallHeightInches: 116`. One door 79" × **73"** (6'7" × 5'11") at positionFromLeftInches 40. **jackCount: 2** (double jack studs). **anchorBolts: [6, 38.5, 120.5, 160]**.
+**Source:** `initialWalls.west`. `wallHeightInches: 96`. One door 79" × **73"** (6'7" × 5'11") at positionFromLeftInches 40. **jackCount: 2** (double jack studs). **anchorBolts: [6, 38.5, 120.5, 160]**.
 
 ### west-bp-0 — Bottom plate (left of door)
 
@@ -501,7 +501,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** west-tp-0, west-tp-1
 - **Member:** 2×6 × 166" (no splice; W ≤ 192)
 - **Count:** 2 (lower and upper course)
-- **Location:** x=0" to 166", y=113" and 114.5" in elevation
+- **Location:** x=0" to 166", y=93" and 94.5" in elevation
 - **Connected to:** studs (end nail)
 - **Controls:** totalLengthInches 166, TOP_H; W ≤ MAX_PLATE_LENGTH_IN so single piece per course
 - **Notes:** West elevation: left = south in plan.
@@ -509,12 +509,12 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 ### west-stud-0 through west-stud-N — Studs
 
 - **ID:** west-stud-0 through west-stud-N
-- **Member:** 2×6 × 111.5" full-height or jack (door)
+- **Member:** 2×6 × 91.5" full-height or jack (door)
 - **Count:** Computed by layout-calculator (fillGap 0–40, king left, double jacks ×2 each side, king right, fillGap 119–164.5, end king)
-- **Location:** 16" OC; full y=1.5", height 111.5"; jacks 0 to 73"
+- **Location:** 16" OC; full y=1.5", height 91.5"; jacks 0 to 73"
 - **Plan position:** elevation X maps to plan Y (west wall)
 - **Connected to:** bottom plate (toe nail), top plate (end nail); jacks to header (face nail)
-- **Controls:** studSpacingOC 16, openings (40", 79"), wallHeightInches 116, **jackCount: 2**
+- **Controls:** studSpacingOC 16, openings (40", 79"), wallHeightInches 96, **jackCount: 2**
 - **Notes:** **Double jack studs each side** per engineering review for 76" clear span LVL under two-story flat roof, northern MN snow load. Left jacks at x=41.5" and 43"; right jacks at x=115.5" and 114". Door height 73" (5'11" RO).
 
 ### west-hdr-0 — Header
@@ -525,7 +525,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **Location:** x=41.5" to 117.5", y=73" in elevation
 - **Connected to:** double jack studs (bears on, face nail to kings), cripples above (end nail)
 - **Controls:** `initialWalls.west.openings[0].headerSpec` — depth 11.25", 2 plies LVL; engineer required, 6'7" span flat roof MN snow load
-- **Notes:** LVL fits 2×6 wall without OSB spacer. Bears on double jacks each side. Cripple zone 116 − 73 − 11.25 = 31.75" above header.
+- **Notes:** LVL fits 2×6 wall without OSB spacer. Bears on double jacks each side. Cripple zone 96 − 73 − 11.25 = 11.75" above header.
 
 ### west-open-0 — Door opening
 
@@ -552,7 +552,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 
 ## East Wall — 166" (13'-10") total
 
-**Source:** `initialWalls.east`. `wallHeightInches: 116`. One window 72" × 48", sill 36", positionFromLeftInches 72.
+**Source:** `initialWalls.east`. `wallHeightInches: 96`. One window 72" × 48", sill 36", positionFromLeftInches 72.
 
 ### east-bp-0 — Bottom plate
 
@@ -570,7 +570,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** east-tp-0, east-tp-1
 - **Member:** 2×6 × 166"
 - **Count:** 2
-- **Location:** x=0" to 166", y=113" and 114.5" in elevation
+- **Location:** x=0" to 166", y=93" and 94.5" in elevation
 - **Connected to:** studs (end nail)
 - **Controls:** totalLengthInches 166, TOP_H
 - **Notes:** East elevation mirrored: left = north in plan.
@@ -578,12 +578,12 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 ### east-stud-0 through east-stud-N — Studs
 
 - **ID:** east-stud-0 through east-stud-N
-- **Member:** 2×6 × 111.5" full-height or jack/cripple (window)
+- **Member:** 2×6 × 91.5" full-height or jack/cripple (window)
 - **Count:** Computed by layout-calculator (fillGap to 72, king left, double jacks ×2 each side, sill, cripples below, king right, header, cripples above, fillGap, end king)
-- **Location:** 16" OC; full at y=1.5", height 111.5"; jacks/cripples at sill/header
+- **Location:** 16" OC; full at y=1.5", height 91.5"; jacks/cripples at sill/header
 - **Plan position:** elevation X → plan Y via planPosToElevationX("east", …)
 - **Connected to:** bottom plate (toe nail), top plate (end nail); jacks to sill/header (face nail)
-- **Controls:** EAST_WIN_POS 72, opening 72×48 sill 36, studSpacingOC 16, wallHeightInches 116, **jackCount: 2**
+- **Controls:** EAST_WIN_POS 72, opening 72×48 sill 36, studSpacingOC 16, wallHeightInches 96, **jackCount: 2**
 - **Notes:** **Double jack studs each side** per engineering review for 69" clear span LVL under two-story flat roof, northern MN snow load. Left jacks at x=73.5" and 75"; right jacks at x=139" and 140.5". Window has cripples below sill and above header.
 
 ### east-sill-0 — Sill plate
@@ -604,7 +604,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **Location:** x=73.5" to 141", y=84" in elevation
 - **Connected to:** king/jack studs (face nail), cripples above (end nail)
 - **Controls:** `initialWalls.east.openings[0].headerSpec` — depth 9.25", LVL; engineer required, 6' span flat roof MN snow load. LVL fits 2×6 wall without spacer.
-- **Notes:** Cripple zone 116 − 84 − 9.25 = 22.75" above header.
+- **Notes:** Cripple zone 96 − 84 − 9.25 = 2.75" above header.
 
 ### east-open-0 — Window opening
 
@@ -621,7 +621,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 
 ## Interior — Horizontal Partition (Kitchen/Bath)
 
-**Source:** `horizPartition` in framing-data.ts. id: `horiz-partition`. `wallHeightInches: 116`. totalLengthInches = HORIZ_PART_LENGTH = 81.5". No openings in horizPartition; used for elevation view only (InteriorPartitionDetails right panel).
+**Source:** `horizPartition` in framing-data.ts. id: `horiz-partition`. `wallHeightInches: 96`. totalLengthInches = HORIZ_PART_LENGTH = 81.5". No openings in horizPartition; used for elevation view only (InteriorPartitionDetails right panel).
 
 ### horiz-partition-bp-0 — Bottom plate
 
@@ -639,7 +639,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** horiz-partition-tp-0, horiz-partition-tp-1
 - **Member:** 2×6 × 81.5"
 - **Count:** 2
-- **Location:** x=0" to 81.5", y=113" and 114.5" in elevation
+- **Location:** x=0" to 81.5", y=93" and 94.5" in elevation
 - **Connected to:** studs (end nail)
 - **Controls:** totalLengthInches 81.5, TOP_H
 - **Notes:** W ≤ 192 so no splice.
@@ -647,12 +647,12 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 ### horiz-partition-stud-0 through horiz-partition-stud-N — Studs
 
 - **ID:** horiz-partition-stud-0 through horiz-partition-stud-N
-- **Member:** 2×6 × 111.5" (2×4 partition; INT_SW 1.5 in plan — elevation shows 2×6 cross-section for consistency with exterior)
+- **Member:** 2×6 × 91.5" (2×4 partition; INT_SW 1.5 in plan — elevation shows 2×6 cross-section for consistency with exterior)
 - **Count:** Computed by fillGap(0, 81.5−SW) + end king; 16" OC
-- **Location:** x at 16" OC from 0 to 80"; y=1.5", height 111.5"
+- **Location:** x at 16" OC from 0 to 80"; y=1.5", height 91.5"
 - **Plan position:** along horizontal partition (kitchen/bath)
 - **Connected to:** bottom plate (toe nail), top plate (end nail)
-- **Controls:** studSpacingOC 16, totalLengthInches 81.5, wallHeightInches 116
+- **Controls:** studSpacingOC 16, totalLengthInches 81.5, wallHeightInches 96
 - **Notes:** horizPartition has openings: [] in framing-data; layout produces only field studs + end king.
 
 ### horiz-partition-hdr-*, horiz-partition-open-*
@@ -664,7 +664,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 
 ## Interior — Vertical Partition (Bathroom Door Wall)
 
-**Source:** `vertPartition` in framing-data.ts. id: `vert-partition`. `wallHeightInches: 116`. totalLengthInches = VERT_PART_LENGTH = 50". One door 28" RO at positionFromLeftInches 0.
+**Source:** `vertPartition` in framing-data.ts. id: `vert-partition`. `wallHeightInches: 96`. totalLengthInches = VERT_PART_LENGTH = 50". One door 28" RO at positionFromLeftInches 0.
 
 ### vert-partition-bp-0 — Bottom plate (left of door)
 
@@ -692,7 +692,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **ID:** vert-partition-tp-0, vert-partition-tp-1
 - **Member:** 2×6 × 50"
 - **Count:** 2
-- **Location:** x=0" to 50", y=113" and 114.5" in elevation
+- **Location:** x=0" to 50", y=93" and 94.5" in elevation
 - **Connected to:** studs (end nail)
 - **Controls:** totalLengthInches 50, TOP_H
 - **Notes:** No splice.
@@ -700,12 +700,12 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 ### vert-partition-stud-0 through vert-partition-stud-N — Studs
 
 - **ID:** vert-partition-stud-0 through vert-partition-stud-N
-- **Member:** 2×6 × 111.5" full-height or jack (door)
+- **Member:** 2×6 × 91.5" full-height or jack (door)
 - **Count:** Computed by layout (fillGap 0–0, king left, jacks, king right, header, opening, cripples above, fillGap 28–48.5, end king)
-- **Location:** 16" OC; full y=1.5", height 111.5"; jacks 0 to 80"
+- **Location:** 16" OC; full y=1.5", height 91.5"; jacks 0 to 80"
 - **Plan position:** vertical partition (bathroom door wall) in plan
 - **Connected to:** bottom plate (toe nail), top plate (end nail); jacks to header (face nail)
-- **Controls:** BATH_DOOR_RO 28, VERT_PART_LENGTH 50, studSpacingOC 16, wallHeightInches 116
+- **Controls:** BATH_DOOR_RO 28, VERT_PART_LENGTH 50, studSpacingOC 16, wallHeightInches 96
 - **Notes:** VERT_PART_LENGTH = EAST_WIN_POS − FR_D − PARTITION_V_OFFSET = 72 − 5.5 − 16.5 = 50".
 
 ### vert-partition-hdr-0 — Header
@@ -716,7 +716,7 @@ Spacing: 6' OC maximum; within 12" of plate ends; within 3" of high-load jack st
 - **Location:** x=1.5" to 26.5", y=80" in elevation
 - **Connected to:** king/jack studs (face nail), cripples above (end nail)
 - **Controls:** HEADER_D = 5.5 (layout-calculator default) — no headerSpec; non-bearing interior partition
-- **Notes:** Bathroom door rough opening. Adequate for non-bearing partition. Cripple zone 116 − 80 − 5.5 = 30.5".
+- **Notes:** Bathroom door rough opening. Adequate for non-bearing partition. Cripple zone 96 − 80 − 5.5 = 10.5".
 
 ### vert-partition-open-0 — Door opening
 
@@ -833,7 +833,7 @@ Member IDs generated:
 
 **Source:** `secondFloorNorthWall` in framing-data.ts
 **Length:** 286" (23'-10") — same as first floor
-**Height:** 116" (9'-8") — same as first floor
+**Height:** 96" (8'-0") — same as first floor
 **Studs:** 2×6 @ 16" OC — no openings, clean wall
 **Anchor bolts:** [6, 72, 138, 204, 280] — five bolts, 72" OC max
 
@@ -846,14 +846,14 @@ Member IDs generated:
 
 ### Second Floor Stair (straight run, no landing)
 - Straight run uses all 17 risers — no landing risers subtracted
-- stairStartX: 180" (bottom of run, at second floor deck)
+- stairStartX: 159.5" (bottom of run, at second floor deck; plan-aligns w/ 1F stairwell)
 - stairEndX: 36" (top of run, at third floor)
 - Total risers: 17 @ 7.566" each (all in main run)
 - Total treads: 16 @ 9" run + 1" nosing
 - Horizontal run: 144" (16 × 9")
 - Stringer: 2×12 notched, 11.25" deep, ~4.2" throat ✓
 - Stringer bottom: horizontal seat cut bearing on second floor deck
-- Bottom landing: 36" clear deck x=180" to x=216" (second floor)
+- Bottom landing: 36" clear deck x=159.5" to x=195.5" (second floor)
 - Top landing: 36" clear deck x=36" to x=72" (third floor)
 - Controls: STAIR2_START_X, STAIR_TREAD_DEPTH, STAIR2_TOTAL_RISERS
 
@@ -861,15 +861,15 @@ Member IDs generated:
 | Item | Value |
 |------|-------|
 | Wall length | 286" |
-| Wall height | 116" |
-| Stud height | 111.5" |
+| Wall height | 96" |
+| Stud height | 91.5" |
 | CMU zone | 0"–55.375" |
-| Wood only zone | 55.375"–116" |
-| Third floor line | 128.625" above second floor deck |
-| Stair bottom x | 180" |
+| Wood only zone | 55.375"–96" |
+| Third floor line | 108.625" above second floor deck |
+| Stair bottom x | 159.5" |
 | Stair top x | 36" |
-| Bottom landing | x=180"–216", y=0 |
-| Top landing | x=36"–72", y=128.625" |
+| Bottom landing | x=159.5"–195.5", y=0 |
+| Top landing | x=36"–72", y=108.625" |
 
 ---
 
@@ -879,17 +879,17 @@ TJI joists, rim boards, and subfloor appear only on **South** and **North** wall
 
 ### Rim boards
 
-- **south-rim-left**, **south-rim-right** — 1.5" × 11.875"; x=0 and 284.5–286", y=96". Controls: TJI_RIM_T, TJI_DEPTH, totalLengthInches.
+- **south-rim-left**, **south-rim-right** — 1.5" × 11.875"; x=0 and 284.5–286", y=96". Controls: TJI_RIM_T, TJI_DEPTH, totalLengthInches, wallHeightInches.
 - **north-rim-left**, **north-rim-right** — Same; north elevation mirrored.
 
 ### TJI joists
 
-- **south-tji-0 through south-tji-16** — 17 joists; x centers 16.75" to 267.75" at 16" OC; y=96". Controls: TJI_OC 16, TJI_RIM_T 1.5, TJI_DEPTH 11.875, totalLengthInches 286; JOIST_W = SW 1.5.
+- **south-tji-0 through south-tji-16** — 17 joists; x centers 16.75" to 267.75" at 16" OC; y=96". Controls: TJI_OC 16, TJI_RIM_T 1.5, TJI_DEPTH 11.875, totalLengthInches 286, wallHeightInches 96; JOIST_W = SW 1.5.
 - **north-tji-0 through north-tji-16** — Same count and spacing.
 
 ### Subfloor
 
-- **south-subfloor** — 3/4" OSB; x=0–286", y=107.875" (top of TJI). Controls: SUBFLOOR_T 0.75, wallHeightInches, TJI_DEPTH.
+- **south-subfloor** — 3/4" OSB; x=0–286", y=107.875" (top of TJI). Controls: SUBFLOOR_T 0.75, wallHeightInches 96, TJI_DEPTH 11.875.
 - **north-subfloor** — Same.
 
 All positions computed in WallElevation from layout.totalLengthInches, layout.wallHeightInches, and framing-data constants (no direct editing of plan-geometry for floor system).
