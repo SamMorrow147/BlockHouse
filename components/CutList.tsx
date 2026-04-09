@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import type { WallElevation } from "@/lib/types";
 import { computeCutList, type CutLine } from "@/lib/cut-list";
 
@@ -414,6 +415,8 @@ export function CutList({
     () => floors ? floors.map(() => true) : []
   );
 
+  const [expanded, setExpanded] = useState(false);
+
   const toggleFloor = (i: number) =>
     setActiveFloors(prev => prev.map((v, idx) => idx === i ? !v : v));
 
@@ -460,41 +463,83 @@ export function CutList({
     g.total += line.qty;
   }
 
+  const panelId = `cut-list-panel-${wall.id}`;
+
   return (
     <div style={{ width: "100%" }}>
-      {/* Header row: title + floor toggles */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        marginBottom: 6,
-        flexWrap: "wrap",
-      }}>
+      <button
+        type="button"
+        id={`${panelId}-trigger`}
+        aria-expanded={expanded}
+        aria-controls={panelId}
+        onClick={() => setExpanded((v) => !v)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          width: "100%",
+          padding: "6px 8px",
+          marginBottom: expanded ? 8 : 0,
+          textAlign: "left",
+          background: "#fafafa",
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          cursor: "pointer",
+          font: "inherit",
+          color: "inherit",
+        }}
+      >
+        <ChevronDown
+          aria-hidden
+          size={18}
+          strokeWidth={2}
+          style={{
+            flexShrink: 0,
+            color: "#6b7280",
+            transition: "transform 0.15s ease",
+            transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+          }}
+        />
         <strong style={{ fontSize: "0.82rem" }}>Cut list</strong>
         <span style={{
           fontSize: "0.72rem",
           color: "#666",
           fontFamily: "ui-monospace, monospace",
-          marginRight: "auto",
+          marginLeft: "auto",
         }}>
           {totalPieces} pieces &middot; {uniqueCuts} unique cuts
         </span>
-        {floors && floors.map((f, i) => (
-          <FloorBtn key={f.label} label={f.label} on={activeFloors[i]} toggle={() => toggleFloor(i)} />
-        ))}
-      </div>
+      </button>
 
-      {/* Category groups */}
-      {groups.length === 0 ? (
-        <div style={{ fontSize: "0.75rem", color: "#aaa", padding: "8px 0" }}>No floor selected.</div>
-      ) : groups.map((g) => (
-        <div key={g.cat}>
-          <CatHeader cat={g.cat} count={g.total} />
-          {g.lines.map((line, i) => (
-            <CutRow key={`${line.label}-${line.cutLength}-${i}`} line={line} showCat={i === 0} />
+      {expanded && (
+        <div id={panelId} role="region" aria-labelledby={`${panelId}-trigger`}>
+          {floors && floors.length > 0 && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              marginBottom: 8,
+              flexWrap: "wrap",
+            }}>
+              <span style={{ fontSize: "0.68rem", color: "#888", marginRight: 4 }}>Floors:</span>
+              {floors.map((f, i) => (
+                <FloorBtn key={f.label} label={f.label} on={activeFloors[i]} toggle={() => toggleFloor(i)} />
+              ))}
+            </div>
+          )}
+
+          {groups.length === 0 ? (
+            <div style={{ fontSize: "0.75rem", color: "#aaa", padding: "8px 0" }}>No floor selected.</div>
+          ) : groups.map((g) => (
+            <div key={g.cat}>
+              <CatHeader cat={g.cat} count={g.total} />
+              {g.lines.map((line, i) => (
+                <CutRow key={`${line.label}-${line.cutLength}-${i}`} line={line} showCat={i === 0} />
+              ))}
+            </div>
           ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }

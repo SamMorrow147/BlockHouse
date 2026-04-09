@@ -32,9 +32,10 @@ import {
   ROOF_PARAPET_H, ROOF_FLASHING_LAP, ROOF_COPING_W,
   CMU_TOTAL_H, ROOF_MEMBRANE_TURNDOWN, ROOF_DRIP_EDGE_W, ROOF_TERM_BAR_W, ROOF_COPING_H,
   CMU_T, FR_GAP,
+  STOVE_W, STOVE_SIDE_CLR, STOVE_FLUE_DIA, STOVE_FLUE_H, STOVE_THIMBLE_OD,
 } from "@/lib/framing-data";
 import { computeStairLayout } from "@/lib/stair-calculator";
-import { FW_IN, planPosToElevationX } from "@/lib/plan-geometry";
+import { FW_IN, FE_IN, planPosToElevationX } from "@/lib/plan-geometry";
 import { Toggle } from "@/components/ui/toggle";
 import { getElementMetadata } from "@/lib/element-metadata";
 
@@ -226,6 +227,7 @@ export function WallElevationView({
   const [showWrap, setShowWrap] = useState(false);
   const [showExterior, setShowExterior] = useState(false);
   const [showRoof, setShowRoof] = useState(false);
+  const [showWoodStove, setShowWoodStove] = useState(false);
   const [buildStep, setBuildStep] = useState<1 | 2>(1);
 
   const hasAnchors = (wall.anchorBolts?.length ?? 0) > 0;
@@ -243,6 +245,7 @@ export function WallElevationView({
   const plumbing = wall.id === "north" ? showPlumbing : false;
   const counter = showCounter;
   const anchors = showAnchors && hasAnchors;
+  const woodStove = wall.id === "south" ? showWoodStove : false;
 
   // Tooltip state
   const [tip, setTip] = useState<Tip | null>(null);
@@ -376,8 +379,11 @@ export function WallElevationView({
           <LayerBtn label="Stairs"     on={showStairs}   toggle={() => setShowStairs(v => !v)} />
           <LayerBtn label="Bathroom"   on={showBathroom} toggle={() => setShowBathroom(v => !v)} />
         </>}
-          {wall.id === "south" && (
+          {isSouth && (
             <LayerBtn label="Outlets" on={showOutlets} toggle={() => setShowOutlets(v => !v)} />
+          )}
+          {isSouth && (
+            <LayerBtn label="Wood Stove" on={showWoodStove} toggle={() => setShowWoodStove(v => !v)} />
           )}
           {wall.id === "north" && (
             <LayerBtn label="Sewer Outlet" on={showSewer} toggle={() => setShowSewer(v => !v)} />
@@ -1834,6 +1840,176 @@ export function WallElevationView({
                     fill="#888" stroke="none" />
                 </g>
               ))}
+            </g>
+          );
+        })()}
+
+        {/* ══ WOOD STOVE CHIMNEY — south wall through-wall installation ═══════
+            Shows: wall thimble, interior connector pipe, exterior tee + vertical
+            chimney run, wall support bracket, rain cap.
+            Elevation X for stove center = planPosToElevationX("south", stovePlanCX)
+        ═══════════════════════════════════════════════════════════════════════ */}
+        {woodStove && (() => {
+          // Stove center in plan coords: FE_IN - STOVE_SIDE_CLR - STOVE_W / 2
+          const stovePlanCX = FE_IN - STOVE_SIDE_CLR - STOVE_W / 2; // 259.5"
+          const elevX = planPosToElevationX("south", stovePlanCX);   // elev X from left
+
+          // Thimble center
+          const thimbleY = STOVE_FLUE_H;          // 30" above floor
+          const thimbleOD = STOVE_THIMBLE_OD;      // 12"
+          const flueDia = STOVE_FLUE_DIA;           // 6"
+
+          // Wall assembly depth for exterior projection
+          const wallDepth = FR_D + 1 + CMU_T;      // 5.5 + 1 + 8 = 14.5" (frame + gap + CMU)
+
+          // Interior connector pipe (from stove to wall)
+          const pipeInteriorLen = 8;               // ~8" visible inside room
+          const pipeIntL = elevX - flueDia / 2;
+          const pipeIntR = elevX + flueDia / 2;
+
+          // Exterior tee fitting
+          const teeW = flueDia + 4;                // tee body width
+          const teeH = flueDia + 8;                // tee body height (includes cleanout cap)
+
+          // Vertical chimney run — goes from tee top to above display area
+          // Show it going up past the 2nd and 3rd floor to the roof
+          const chimTopY = totalDisplayH + 36;     // extend above the top of the visible area
+          const chimBotY = thimbleY - teeH / 2;    // bottom of tee (cleanout cap)
+
+          // Chimney pipe colors
+          const EXT_FILL = "rgba(180,180,190,0.3)";
+          const EXT_STROKE = "#667";
+          const INT_FILL = "#3a3a3a";
+          const INT_STROKE = "#222";
+          const BRACKET_FILL = "#aaa";
+
+          return (
+            <g>
+              {/* ── Interior: connector pipe (double-wall black) ──────────── */}
+              {/* Visible stub coming from the room toward the wall */}
+              <rect
+                x={wx(elevX - flueDia / 2)}
+                y={wy(thimbleY + flueDia / 2)}
+                width={px(flueDia)}
+                height={px(flueDia)}
+                fill={INT_FILL} stroke={INT_STROKE} strokeWidth="1" />
+              {/* Connector pipe extending into room (shown as rect below thimble) */}
+              <rect
+                x={wx(elevX - flueDia / 2 - 0.5)}
+                y={wy(thimbleY + pipeInteriorLen, flueDia + 1)}
+                width={px(flueDia + 1)}
+                height={px(pipeInteriorLen)}
+                fill="none" stroke="#555" strokeWidth="0.8" strokeDasharray="3 2" />
+
+              {/* ── Wall thimble — insulated pass-through ────────────────── */}
+              <circle
+                cx={wx(elevX)}
+                cy={wy(thimbleY)}
+                r={px(thimbleOD / 2)}
+                fill="rgba(200,180,150,0.35)" stroke="#8b5e3c" strokeWidth="1.2" />
+              {/* Inner bore */}
+              <circle
+                cx={wx(elevX)}
+                cy={wy(thimbleY)}
+                r={px(flueDia / 2)}
+                fill="#222" stroke="#555" strokeWidth="0.8" />
+              {/* Thimble label */}
+              <text
+                x={wx(elevX + thimbleOD / 2 + 3)}
+                y={wy(thimbleY) + 3}
+                fontSize="7" fill="#8b5e3c" fontFamily="ui-monospace,monospace">
+                6&quot; CLASS A THIMBLE
+              </text>
+
+              {/* ── Exterior: tee fitting on south face ──────────────────── */}
+              {/* Tee body (shown as dashed outline — exterior side of wall) */}
+              <rect
+                x={wx(elevX - teeW / 2)}
+                y={wy(thimbleY + teeH / 2, 0)}
+                width={px(teeW)}
+                height={px(teeH)}
+                fill={EXT_FILL} stroke={EXT_STROKE} strokeWidth="1"
+                strokeDasharray="4 2" />
+              {/* Cleanout cap at bottom of tee */}
+              <rect
+                x={wx(elevX - flueDia / 2 - 1)}
+                y={wy(chimBotY + 3, 0)}
+                width={px(flueDia + 2)}
+                height={px(3)}
+                fill="#999" stroke={EXT_STROKE} strokeWidth="0.8"
+                strokeDasharray="3 2" />
+              <text
+                x={wx(elevX - teeW / 2 - 2)}
+                y={wy(chimBotY + 1.5) + 3}
+                fontSize="6" fill="#667" fontFamily="ui-monospace,monospace"
+                textAnchor="end">
+                CLEANOUT
+              </text>
+
+              {/* ── Wall support bracket ─────────────────────────────────── */}
+              {/* Horizontal bracket arms */}
+              <line
+                x1={wx(elevX - teeW / 2 - 4)}
+                y1={wy(thimbleY - teeH / 2 + 1)}
+                x2={wx(elevX + teeW / 2 + 4)}
+                y2={wy(thimbleY - teeH / 2 + 1)}
+                stroke={BRACKET_FILL} strokeWidth="2" strokeDasharray="4 2" />
+              {/* Diagonal braces */}
+              <line
+                x1={wx(elevX - teeW / 2 - 4)}
+                y1={wy(thimbleY - teeH / 2 + 1)}
+                x2={wx(elevX - flueDia / 2)}
+                y2={wy(thimbleY)}
+                stroke={BRACKET_FILL} strokeWidth="1" strokeDasharray="3 2" />
+              <line
+                x1={wx(elevX + teeW / 2 + 4)}
+                y1={wy(thimbleY - teeH / 2 + 1)}
+                x2={wx(elevX + flueDia / 2)}
+                y2={wy(thimbleY)}
+                stroke={BRACKET_FILL} strokeWidth="1" strokeDasharray="3 2" />
+
+              {/* ── Vertical chimney run (Class A triple-wall) ───────────── */}
+              {/* Main pipe body — dashed (exterior) */}
+              <rect
+                x={wx(elevX - flueDia / 2)}
+                y={wy(chimTopY, 0)}
+                width={px(flueDia)}
+                height={px(chimTopY - (thimbleY + teeH / 2))}
+                fill={EXT_FILL} stroke={EXT_STROKE} strokeWidth="1"
+                strokeDasharray="4 2" />
+
+              {/* Wall strap brackets every ~48" */}
+              {[thimbleY + 48, thimbleY + 96, thimbleY + 144, thimbleY + 192].map((sy, i) => (
+                sy < chimTopY - 12 ? (
+                  <line key={`ws${i}`}
+                    x1={wx(elevX - flueDia / 2 - 3)}
+                    y1={wy(sy)}
+                    x2={wx(elevX + flueDia / 2 + 3)}
+                    y2={wy(sy)}
+                    stroke={BRACKET_FILL} strokeWidth="1.5" strokeDasharray="3 2" />
+                ) : null
+              ))}
+
+              {/* ── Rain cap at top ──────────────────────────────────────── */}
+              <line
+                x1={wx(elevX - flueDia / 2 - 2)}
+                y1={wy(chimTopY)}
+                x2={wx(elevX + flueDia / 2 + 2)}
+                y2={wy(chimTopY)}
+                stroke={EXT_STROKE} strokeWidth="2" strokeDasharray="4 2" />
+              {/* Cap cone/hat */}
+              <path
+                d={`M ${wx(elevX - flueDia / 2 - 3)} ${wy(chimTopY)} L ${wx(elevX)} ${wy(chimTopY + 4)} L ${wx(elevX + flueDia / 2 + 3)} ${wy(chimTopY)}`}
+                fill="none" stroke={EXT_STROKE} strokeWidth="1" strokeDasharray="3 2" />
+
+              {/* Label */}
+              <text
+                x={wx(elevX + flueDia / 2 + 5)}
+                y={wy(thimbleY + 60) + 3}
+                fontSize="7" fill="#667" fontFamily="ui-monospace,monospace"
+                transform={`rotate(-90, ${wx(elevX + flueDia / 2 + 5)}, ${wy(thimbleY + 60) + 3})`}>
+                6&quot; CLASS A CHIMNEY (EXTERIOR)
+              </text>
             </g>
           );
         })()}

@@ -12,6 +12,9 @@ import {
   BATH_JOIST_OC, BATH_LEDGER_T,
   STAIR_TREAD_DEPTH, STAIR_APPR_STEPS, STAIR_WIDTH, STAIR_MAIN_STEPS,
   STAIR_LAND_RISERS, STAIR_TOTAL_RISERS, STAIR_LAND_POST_W, TJI_DEPTH, SUBFLOOR_T,
+  STOVE_W, STOVE_D, STOVE_REAR_CLR, STOVE_SIDE_CLR,
+  STOVE_FLUE_DIA, STOVE_THIMBLE_OD,
+  HEARTH_PAD_FRONT, HEARTH_PAD_SIDE, HEARTH_PAD_REAR,
 } from "@/lib/framing-data";
 import { computeWallLayout } from "@/lib/layout-calculator";
 import {
@@ -147,7 +150,8 @@ export function FloorPlan() {
   const [showBathroom, setShowBathroom] = useState(true);
   const [showCabinets, setShowCabinets] = useState(true);
   const [showSewer,    setShowSewer]    = useState(true);
-  const [showSubfloor, setShowSubfloor] = useState(false);
+  const [showSubfloor,   setShowSubfloor]   = useState(false);
+  const [showWoodStove,  setShowWoodStove]  = useState(true);
 
   // Opening objects — matched to their actual wall
   const sOp  = initialWalls.south.openings[0];   // south door  (48" × 80")
@@ -218,6 +222,7 @@ export function FloorPlan() {
         <LayerBtn label="Cabinets"     on={showCabinets}  toggle={() => setShowCabinets(v => !v)} />
         <LayerBtn label="Sewer Outlet" on={showSewer}     toggle={() => setShowSewer(v => !v)} />
         <LayerBtn label="Subfloor"     on={showSubfloor}  toggle={() => setShowSubfloor(v => !v)} />
+        <LayerBtn label="Wood Stove"   on={showWoodStove} toggle={() => setShowWoodStove(v => !v)} />
       </div>
     <svg
       viewBox={`0 0 ${svgW} ${svgH}`}
@@ -269,6 +274,14 @@ export function FloorPlan() {
           .fp-stair-cut   { fill: none; stroke: #333; stroke-width: 1.2px; stroke-dasharray: 6 3; }
           .fp-up-arrow    { fill: none; stroke: #333; stroke-width: 1px; marker-end: url(#arrowhead); }
           .fp-fixture-lbl { fill: #666; font-size: 7.5px; font-family: ui-monospace, monospace; text-anchor: middle; }
+          .fp-hearth-pad  { fill: rgba(180,160,130,0.25); stroke: #8b7348; stroke-width: 1px; stroke-dasharray: 4 2; }
+          .fp-stove       { fill: #3a3a3a; stroke: #111; stroke-width: 1.2px; }
+          .fp-stove-glass { fill: #1a1a2a; stroke: #555; stroke-width: 0.8px; }
+          .fp-stove-pipe  { fill: none; stroke: #444; stroke-width: 2px; }
+          .fp-thimble     { fill: rgba(200,180,150,0.4); stroke: #8b5e3c; stroke-width: 1.2px; }
+          .fp-thimble-bore{ fill: #fff; stroke: #666; stroke-width: 0.8px; }
+          .fp-clr-zone    { fill: none; stroke: #c44; stroke-width: 0.6px; stroke-dasharray: 3 3; }
+          .fp-stove-lbl   { fill: #ddd; font-size: 6.5px; font-family: ui-monospace, monospace; text-anchor: middle; font-weight: 700; }
         `}</style>
       <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
         <path d="M0,0 L0,6 L6,3 z" fill="#333" />
@@ -1166,6 +1179,127 @@ export function FloorPlan() {
         transform={`translate(${AL - 14} ${AT + pf(CMU_D / 2)}) rotate(-90)`}>EAST</text>
       <text className="fp-wlbl"
         transform={`translate(${AL + pf(CMU_W) + 26} ${AT + pf(CMU_D / 2)}) rotate(90)`}>WEST</text>
+
+      {/* ══ WOOD STOVE — SW CORNER ══════════════════════════════════════════
+          24"×24" stove in the SW corner with 6" rear-exit flue through the
+          south wall.  Insulated Class A thimble through CMU+frame assembly.
+          Exterior vertical chimney run rises on the south face.
+      ═════════════════════════════════════════════════════════════════════ */}
+      {showWoodStove && (() => {
+        // ── Stove position (plan coords: x→E-W, y→N-S; south=top, west=right) ──
+        const stoveR = FE_IN - STOVE_SIDE_CLR;            // 271.5" — west side of stove
+        const stoveL = stoveR - STOVE_W;                   // 247.5" — east side of stove
+        const stoveT = FN_IN + STOVE_REAR_CLR;            // 26.5"  — back (south/top) of stove
+        const stoveB = stoveT + STOVE_D;                   // 50.5"  — front (north/bottom) of stove
+        const stoveCX = (stoveL + stoveR) / 2;            // 259.5" — E-W center
+        const stoveCY = (stoveT + stoveB) / 2;            // 38.5"  — N-S center
+
+        // ── Hearth pad ──
+        const padL = stoveL - HEARTH_PAD_SIDE;            // 239.5"
+        const padR = Math.min(stoveR + HEARTH_PAD_SIDE, FE_IN); // 279.5" (clamped to west wall)
+        const padT = Math.max(stoveT - HEARTH_PAD_REAR - STOVE_REAR_CLR, FN_IN); // at south wall
+        const padB = stoveB + HEARTH_PAD_FRONT;           // 68.5"
+
+        // ── Connector pipe — runs from stove back center to south wall thimble ──
+        const pipeX = stoveCX;
+        const pipeY1 = stoveT;                             // stove back
+        const pipeY2 = FN_OUT + FR_D / 2;                 // center of frame wall
+
+        // ── Thimble — centered on pipe at south frame wall ──
+        const thimbleCX = pipeX;
+        const thimbleCY = (FN_OUT + FN_IN) / 2;           // center of frame depth
+        const thimbleR  = STOVE_THIMBLE_OD / 2;           // 6"
+        const flueR     = STOVE_FLUE_DIA / 2;             // 3"
+
+        // ── Clearance zones (36" to combustibles — dashed red) ──
+        // Only drawn where combustible framing exists (frame walls)
+        const CLR = 36; // NFPA 211 unshielded clearance
+
+        return (
+          <g>
+            {/* Hearth pad — non-combustible floor protection */}
+            <rect className="fp-hearth-pad"
+              x={px(padL)} y={py(padT)}
+              width={pf(padR - padL)} height={pf(padB - padT)} />
+            <text className="fp-fixture-lbl"
+              x={px((padL + padR) / 2)} y={py(padB - 4)}>
+              HEARTH PAD
+            </text>
+
+            {/* 36" clearance zone from stove to combustibles (dashed red) */}
+            <rect className="fp-clr-zone"
+              x={px(stoveL - CLR)} y={py(stoveT - CLR)}
+              width={pf(STOVE_W + CLR * 2)} height={pf(STOVE_D + CLR * 2)}
+              rx={pf(2)} />
+            <text style={{
+              fill: "#c44", fontSize: "6px",
+              fontFamily: "ui-monospace, monospace",
+              textAnchor: "start",
+            }} x={px(stoveL - CLR + 2)} y={py(stoveB + CLR - 2)}>
+              36&quot; CLR
+            </text>
+
+            {/* Connector pipe — 6" double-wall black pipe (stove back → thimble) */}
+            <line className="fp-stove-pipe"
+              x1={px(pipeX)} y1={py(pipeY1)}
+              x2={px(pipeX)} y2={py(pipeY2)} />
+            {/* Pipe outline (show pipe diameter) */}
+            <line style={{ fill: "none", stroke: "#888", strokeWidth: "0.5px" }}
+              x1={px(pipeX - flueR)} y1={py(pipeY1)}
+              x2={px(pipeX - flueR)} y2={py(pipeY2)} />
+            <line style={{ fill: "none", stroke: "#888", strokeWidth: "0.5px" }}
+              x1={px(pipeX + flueR)} y1={py(pipeY1)}
+              x2={px(pipeX + flueR)} y2={py(pipeY2)} />
+
+            {/* Wall thimble — insulated pass-through at south frame wall */}
+            <circle className="fp-thimble"
+              cx={px(thimbleCX)} cy={py(thimbleCY)}
+              r={pf(thimbleR)} />
+            <circle className="fp-thimble-bore"
+              cx={px(thimbleCX)} cy={py(thimbleCY)}
+              r={pf(flueR)} />
+
+            {/* Exterior pipe stub — dashed circle on CMU exterior face */}
+            <circle style={{
+              fill: "none", stroke: "#666",
+              strokeWidth: "0.8px", strokeDasharray: "3 2",
+            }}
+              cx={px(thimbleCX)} cy={py(CMU_T / 2)}
+              r={pf(flueR + 1)} />
+
+            {/* Stove body — dark rectangle */}
+            <rect className="fp-stove"
+              x={px(stoveL)} y={py(stoveT)}
+              width={pf(STOVE_W)} height={pf(STOVE_D)}
+              rx={pf(1)} />
+
+            {/* Glass door on front (north face) */}
+            <rect className="fp-stove-glass"
+              x={px(stoveL + 4)} y={py(stoveB - 2)}
+              width={pf(STOVE_W - 8)} height={pf(2)}
+              rx="1" />
+
+            {/* Stove label */}
+            <text className="fp-stove-lbl"
+              x={px(stoveCX)} y={py(stoveCY - 2)}>
+              WOOD
+            </text>
+            <text className="fp-stove-lbl"
+              x={px(stoveCX)} y={py(stoveCY + 5)}>
+              STOVE
+            </text>
+
+            {/* Thimble label */}
+            <text style={{
+              fill: "#8b5e3c", fontSize: "6px",
+              fontFamily: "ui-monospace, monospace",
+              textAnchor: "middle",
+            }} x={px(thimbleCX + 14)} y={py(thimbleCY + 1)}>
+              6&quot; THIMBLE
+            </text>
+          </g>
+        );
+      })()}
 
       {showSewer && <>
 

@@ -71,6 +71,18 @@
  *    TOILET_TANK_D ...... 7"     Toilet tank depth
  *    TOILET_BOWL_D ...... 21"    Toilet bowl depth
  *
+ *  WOOD STOVE — SW CORNER (6" flue, through-wall south)
+ *    STOVE_W ............ 24"    Stove footprint width (E-W)
+ *    STOVE_D ............ 24"    Stove footprint depth (N-S)
+ *    STOVE_REAR_CLR ..... 12"    Clearance: south wall → stove back
+ *    STOVE_SIDE_CLR ..... 18"    Clearance: west wall → stove side
+ *    STOVE_FLUE_DIA ..... 6"     Flue diameter
+ *    STOVE_FLUE_H ....... 30"    Flue collar height above floor
+ *    STOVE_THIMBLE_OD ... 12"    Insulated wall thimble OD
+ *    HEARTH_PAD_FRONT ... 18"    Pad extension in front of stove
+ *    HEARTH_PAD_SIDE .... 8"     Pad extension on each side
+ *    HEARTH_PAD_REAR .... 2"     Pad extension behind stove
+ *
  *  TJI FLOOR JOIST SYSTEM (main floor)                       line 177
  *    TJI_DEPTH .......... 9.5"    TJI joist depth (PRI-40, SKU 106-5882)
  *    TJI_FLANGE_H ....... 1.5"   TJI flange height
@@ -205,6 +217,28 @@ export const SHOWER_CURB   = 2;
 export const TOILET_W      = 14;
 export const TOILET_TANK_D = 7;
 export const TOILET_BOWL_D = 21;
+
+// ═══ WOOD STOVE — SW CORNER, 6" FLUE, THROUGH-WALL TO SOUTH ════════
+//
+//  Stove sits in the SW corner with rear flue exiting through the south
+//  wall via an insulated Class A wall thimble.  Exterior vertical chimney
+//  run rises on the south face of the CMU shell.
+//
+//  Code reference: NFPA 211, IRC M1306 (clearances to combustibles)
+//  Pipe spec: 6" Class A triple-wall (UL 103HT), e.g. DuraTech / Selkirk
+//  Connector: 6" double-wall black stove pipe (DVL / DuraBlack)
+//  Wall pass-through: DuraTech 6DT-WT insulated thimble (2" clearance)
+//
+export const STOVE_W           = 24;     // stove footprint width (E-W)
+export const STOVE_D           = 24;     // stove footprint depth (N-S)
+export const STOVE_REAR_CLR    = 12;     // clearance: south wall inner face → stove back (w/ heat shield)
+export const STOVE_SIDE_CLR    = 18;     // clearance: west wall inner face → stove right side
+export const STOVE_FLUE_DIA    = 6;      // flue diameter (inches)
+export const STOVE_FLUE_H      = 30;     // flue collar height above floor (elevation)
+export const STOVE_THIMBLE_OD  = 12;     // insulated thimble outer diameter
+export const HEARTH_PAD_FRONT  = 18;     // pad extension in front of stove door
+export const HEARTH_PAD_SIDE   = 8;      // pad extension on each side of stove
+export const HEARTH_PAD_REAR   = 2;      // pad extension behind stove (to wall)
 
 // ═══ LAUNDRY — WASHER / DRYER (north wall, far left / west end) ═══
 
@@ -529,11 +563,17 @@ export const initialWalls: Record<string, WallElevation> = {
   },
 };
 
-// ═══ THIRD FLOOR (PARTIAL) ══════════════════════════════════════════════════
-// The third floor is a partial floor on the west end above the second-floor
-// staircase. The remainder of the north wall at this level is open balcony.
-export const THIRD_FLOOR_W  = 120;   // partial north wall width at 3rd floor (10' = 120")
-export const THIRD_FLOOR_H  = 90;    // third floor wall height — 7'6", loft level
+// ═══ THIRD FLOOR (OBSERVATION DECK + STAIR STRUCTURE) ═══════════════════════
+// The third floor is a full-footprint open observation deck (no walls) with a
+// small enclosed structure in the northwest corner where the staircase arrives.
+// The structure is 6' long (E-W) × 3' wide (N-S), tucked against the north
+// and west CMU walls.
+export const THIRD_FLOOR_W  = 120;   // kept for wall elevation backward compat
+export const THIRD_FLOOR_H  = 90;    // third floor wall height — 7'6"
+
+// Stair structure dimensions (small enclosed room in NW corner)
+export const VESTIBULE_W    = 72;    // 6' east-west (plan X) — long side along long building axis
+export const VESTIBULE_D    = 36;    // 3' north-south (plan Y) — short side along short building axis
 
 // West wall third floor — full width, shed roof sloping low-left → high-right
 export const WEST_F3_LOW_H  = 84;    // low end (left/west) wall height at 3rd floor — 7'0"

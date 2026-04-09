@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollLabel, type ScrollSection } from "@/components/ScrollLabel";
 import { SecondFloorPlan } from "@/components/SecondFloorPlan";
 import { ThirdFloorPlan } from "@/components/ThirdFloorPlan";
-import { DownloadSvgButton } from "@/components/DownloadSvgButton";
+import { DownloadSvgButton, DownloadAllSvgsButton } from "@/components/DownloadSvgButton";
 
 const WALL_ORDER_TOP: WallId[] = ["south", "north"];
 const WALL_ORDER_BOTTOM: WallId[] = ["east", "west"];
@@ -79,13 +79,14 @@ export default function Home() {
       {/* ── Header ── */}
       <header className="header">
         <HamburgerMenu />
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <h1 className="text-lg font-semibold tracking-tight text-white m-0">
             Block House
           </h1>
           <span className="text-white/40 text-sm hidden sm:inline">—</span>
           <ScrollLabel sections={SCROLL_SECTIONS} />
         </div>
+        <DownloadAllSvgsButton />
       </header>
 
       <main className="main">

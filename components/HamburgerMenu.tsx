@@ -59,6 +59,14 @@ export function HamburgerMenu() {
           >
             Original blueprint
           </a>
+          <a
+            href="/Menards%20Quote.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center px-3 py-2.5 rounded-md text-sm text-white/85 hover:bg-white/10 hover:text-white transition-colors"
+          >
+            Menards quote
+          </a>
         </nav>
       </SheetContent>
     </Sheet>
