@@ -5,6 +5,12 @@ export interface HeaderSpec {
   plies: number;   // number of members
   label: string;   // human readable e.g. "(3) 2×8 w/ OSB spacer"
   note?: string;   // engineer flag if needed
+  /** Override how the header renders on the blueprint elevation drawing.
+   *  "lvl" = solid tan fill (engineered-beam look)
+   *  "built-up" = stacked ply lines
+   *  "solid" = single white rect
+   *  If omitted, rendering is auto-detected from plies count. */
+  elevStyle?: "lvl" | "built-up" | "solid";
   /** Flat 2× plate under the header (spans RO between jack studs) */
   subPlate?: {
     depth: number;   // plate thickness (e.g. 1.5" for a 2× laid flat)

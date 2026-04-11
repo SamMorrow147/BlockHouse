@@ -545,8 +545,9 @@ export const initialWalls: Record<string, WallElevation> = {
         headerSpec: {
           depth: 9.25,
           plies: 2,
-          label: "3.5\" × 9.25\" LVL beam",
-          note: "Engineer required — 6' span, flat roof, northern MN snow load. LVL fits 2×6 wall without spacer.",
+          label: "(3) 2×10 w/ plywood spacers — built-up header",
+          note: "Engineer to verify — 6' span, flat roof, northern MN snow load. (3) 2×10 + (2) ½\" plywood = 5.5\" fills 2×6 wall.",
+          elevStyle: "lvl",
         },
       },
       {

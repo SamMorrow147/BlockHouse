@@ -13,6 +13,7 @@ import { InteriorPartitionDetails } from "@/components/InteriorPartitionDetails"
 import { HamburgerMenu } from "@/components/HamburgerMenu";
 import { MeasureTape } from "@/components/MeasureTape";
 import { CutList, type FloorDef } from "@/components/CutList";
+import { HeaderDetail, type HeaderFloorDef } from "@/components/HeaderDetail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollLabel, type ScrollSection } from "@/components/ScrollLabel";
@@ -48,6 +49,12 @@ const secondFloorWalls: Partial<Record<string, WallElevation>> = {
 };
 
 const northFloors: FloorDef[] = [
+  { label: "1st Floor", wall: initialWalls.north },
+  { label: "2nd Floor", wall: secondFloorNorthWall },
+  { label: "3rd Floor", wall: thirdFloorNorthWall },
+];
+
+const northHeaderFloors: HeaderFloorDef[] = [
   { label: "1st Floor", wall: initialWalls.north },
   { label: "2nd Floor", wall: secondFloorNorthWall },
   { label: "3rd Floor", wall: thirdFloorNorthWall },
@@ -178,6 +185,14 @@ export default function Home() {
                       }
                     </div>
                   </div>
+                  <div className="wall-data-row" style={{ marginTop: 4 }}>
+                    <div className="wall-data-summary">
+                      {id === "north"
+                        ? <HeaderDetail wall={wall} floors={northHeaderFloors} />
+                        : <HeaderDetail wall={wall} />
+                      }
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -235,6 +250,11 @@ export default function Home() {
                   <div className="wall-data-row">
                     <div className="wall-data-summary">
                       <CutList wall={wall} openingsFrom={secondFloorWalls[id]} />
+                    </div>
+                  </div>
+                  <div className="wall-data-row" style={{ marginTop: 4 }}>
+                    <div className="wall-data-summary">
+                      <HeaderDetail wall={wall} />
                     </div>
                   </div>
                 </CardContent>

@@ -465,12 +465,13 @@ export function WallElevationView({
             `Lumber: ${LUMBER_2x6_FACE}" × ${LUMBER_2x6_DEPTH}" (2×6)  ·  Length: ${fmtDec(r.height)}"`))}
           {layout.headers.map((r: HeaderRect) => {
             const spec = r.headerSpec;
-            const isLVL = spec && spec.label.includes("LVL");
-            const isBuiltUp = spec && spec.plies >= 3;
-            const isSolid = spec && spec.plies === 1;
+            const style = spec?.elevStyle;
+            const isLVL = style === "lvl" || (!style && spec && spec.label.includes("LVL"));
+            const isBuiltUp = style === "built-up" || (!style && spec && spec.plies >= 3);
+            const isSolid = style === "solid" || (!style && spec && spec.plies === 1);
 
             if (isLVL) {
-              return hoverGroup(r.id, "LVL Beam", r.width, r.height, r.x, r.y,
+              return hoverGroup(r.id, r.label, r.width, r.height, r.x, r.y,
                 <rect
                   x={wx(r.x)} y={wy(r.y, r.height)} width={px(r.width)} height={px(r.height)}
                   fill="#d4c9a8" stroke="#333" strokeWidth="1.5" strokeLinecap="square"
@@ -478,7 +479,7 @@ export function WallElevationView({
               );
             }
 
-            if (isBuiltUp) {
+            if (isBuiltUp && spec) {
               const plies = spec.plies;
               const plyH  = r.height / plies;
               return hoverGroup(r.id, r.label, r.width, r.height, r.x, r.y,
